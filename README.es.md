@@ -31,6 +31,18 @@ Actualmente el repositorio ofrece una **estructura base de carpetas y documentac
 - Se añadieron entregables iniciales en `docs/`, `workflows/`, `services/brasaland-api/` y `uis/executive-dashboard/`.
 - Existe metadata del paquete compartido en `packages/shared/package.json` (`@repo/shared-types`), pero aún no hay runner de workspace en raíz.
 
+## Novedades recientes
+
+- API MVP operativa en `services/brasaland-api/` con endpoints de ventas, mercados, finanzas, export CSV y auditoría.
+- Dashboard ejecutivo MVP en `uis/executive-dashboard/` conectado al API local y con modo demo fallback.
+- Suite QA reproducible y auto-contenida:
+	- `workflows/scripts/smoke_api.sh`
+	- `workflows/scripts/integration_api.sh`
+	- `workflows/scripts/integration_data_api.sh`
+- CI encadenada en GitHub Actions:
+	- `Smoke API` -> `Integration API` -> `Integration Data API`
+- Documentación ES/EN alineada en README raíz, `services/`, `uis/`, `workflows/` y submódulos principales.
+
 ---
 
 ## Estructura del repositorio

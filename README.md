@@ -31,6 +31,18 @@ The repository currently provides a **base folder structure and documentation sk
 - Initial deliverables were added under `docs/`, `workflows/`, `services/brasaland-api/`, and `uis/executive-dashboard/`.
 - Shared package metadata exists in `packages/shared/package.json` (`@repo/shared-types`), but no workspace runner is configured at root.
 
+## Recent updates
+
+- MVP API running in `services/brasaland-api/` with sales, market, finance, CSV export, and audit endpoints.
+- MVP executive dashboard in `uis/executive-dashboard/`, connected to local API with demo fallback mode.
+- Reproducible, self-contained QA suite:
+	- `workflows/scripts/smoke_api.sh`
+	- `workflows/scripts/integration_api.sh`
+	- `workflows/scripts/integration_data_api.sh`
+- Chained CI in GitHub Actions:
+	- `Smoke API` -> `Integration API` -> `Integration Data API`
+- ES/EN documentation aligned across root README, `services/`, `uis/`, `workflows/`, and main submodules.
+
 ---
 
 ## Repository structure
