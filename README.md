@@ -78,6 +78,16 @@ ai-engineering-company-project-monorepo/
 4. **Review** each top-level folder `README.md` to understand intended responsibilities (`uis/`, `services/`, `data/`, `skills/`, etc.).
 5. **Start implementing** milestone deliverables in `uis/` and `services/`, reusing `packages/shared/` and `data/` as needed.
 
+Quick local tip (Brasaland API):
+
+```bash
+cd services/brasaland-api
+python -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+python -m uvicorn app.main:app --host 0.0.0.0 --port 8000
+```
+
 ---
 
 ## Milestones (reference)

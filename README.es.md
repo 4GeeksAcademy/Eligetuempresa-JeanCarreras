@@ -78,6 +78,16 @@ ai-engineering-company-project-monorepo/
 4. **Revisa** los `README.md` de cada carpeta raíz para entender responsabilidades (`uis/`, `services/`, `data/`, `skills/`, etc.).
 5. **Empieza a implementar** entregables por hito en `uis/` y `services/`, reutilizando `packages/shared/` y `data/` según corresponda.
 
+Tip rapido para entorno local (API Brasaland):
+
+```bash
+cd services/brasaland-api
+python -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+python -m uvicorn app.main:app --host 0.0.0.0 --port 8000
+```
+
 ---
 
 ## Hitos (referencia)
