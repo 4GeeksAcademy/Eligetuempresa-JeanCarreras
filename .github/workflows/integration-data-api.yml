@@ -1,0 +1,34 @@
+name: Integration Data API
+
+'on':
+  workflow_run:
+    workflows:
+      - Integration API
+    types:
+      - completed
+  workflow_dispatch:
+
+jobs:
+  integration-data:
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install API dependencies
+        run: pip install -r services/brasaland-api/requirements.txt
+
+      - name: Run integration data suite
+        run: bash workflows/scripts/integration_data_api.sh
+
+      - name: Show API logs on failure
+        if: failure()
+        run: cat /tmp/uvicorn-integration-data.log || true

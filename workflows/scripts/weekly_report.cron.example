@@ -1,0 +1,3 @@
+# Brasaland weekly executive report
+# Run every Monday at 07:00 UTC
+0 7 * * 1 API_BASE=http://localhost:8000 CURRENCY=USD ENABLE_REPORT_DISPATCH=1 /workspaces/Eligetuempresa-JeanCarreras/workflows/scripts/run_weekly_report.sh >> /workspaces/Eligetuempresa-JeanCarreras/workflows/output/weekly-report.log 2>&1

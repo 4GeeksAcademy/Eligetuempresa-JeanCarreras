@@ -2,6 +2,9 @@
 
 [![4Geeks Academy](https://img.shields.io/badge/4Geeks-Academy-blue)](https://4geeksacademy.com)
 [![AI Engineering](https://img.shields.io/badge/track-AI%20Engineering-green)](https://4geeksacademy.com/es/programas-de-carrera/ingenieria-ia)
+[![Smoke API](https://github.com/4GeeksAcademy/Eligetuempresa-JeanCarreras/actions/workflows/smoke-api.yml/badge.svg)](https://github.com/4GeeksAcademy/Eligetuempresa-JeanCarreras/actions/workflows/smoke-api.yml)
+[![Integration API](https://github.com/4GeeksAcademy/Eligetuempresa-JeanCarreras/actions/workflows/integration-api.yml/badge.svg)](https://github.com/4GeeksAcademy/Eligetuempresa-JeanCarreras/actions/workflows/integration-api.yml)
+[![Integration Data API](https://github.com/4GeeksAcademy/Eligetuempresa-JeanCarreras/actions/workflows/integration-data-api.yml/badge.svg)](https://github.com/4GeeksAcademy/Eligetuempresa-JeanCarreras/actions/workflows/integration-data-api.yml)
 
 _Base template for transversal projects in the AI Engineering Career Program — 4Geeks Academy._
 
@@ -21,10 +24,11 @@ This repository is the **starter template** for transversal projects. You will w
 
 ## Current status of the template
 
-The repository currently provides a **base folder structure and documentation skeleton**. It does not include runnable apps or global scripts yet.
+The repository currently provides a **base folder structure and documentation skeleton** with an initial Brasaland-focused working baseline.
 
-- `CONTEXT.md` is a placeholder and must be replaced with your assigned company context.
-- There is no root `AGENTS.md` yet.
+- `CONTEXT.md` already includes Brasaland company context.
+- A root `AGENTS.md` is available with priorities and guardrails.
+- Initial deliverables were added under `docs/`, `workflows/`, `services/brasaland-api/`, and `uis/executive-dashboard/`.
 - Shared package metadata exists in `packages/shared/package.json` (`@repo/shared-types`), but no workspace runner is configured at root.
 
 ---

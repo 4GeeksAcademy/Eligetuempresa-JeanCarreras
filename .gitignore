@@ -1,0 +1,8 @@
+__pycache__/
+*.pyc
+
+# Runtime artifacts for local API execution
+services/brasaland-api/brasaland.db
+
+# Generated report outputs
+workflows/output/

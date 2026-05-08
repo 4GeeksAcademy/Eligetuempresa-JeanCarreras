@@ -1,0 +1,50 @@
+name: Smoke API
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  smoke-test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install API dependencies
+        run: pip install -r services/brasaland-api/requirements.txt
+
+      - name: Start API
+        run: |
+          python -m uvicorn app.main:app --host 0.0.0.0 --port 8000 > /tmp/uvicorn.log 2>&1 &
+        working-directory: services/brasaland-api
+
+      - name: Wait for API
+        run: |
+          for i in {1..30}; do
+            if curl -fsS http://localhost:8000/health > /dev/null; then
+              exit 0
+            fi
+            sleep 1
+          done
+          echo "API did not start in time"
+          cat /tmp/uvicorn.log || true
+          exit 1
+
+      - name: Run smoke tests
+        run: bash workflows/scripts/smoke_api.sh
+
+      - name: Show API logs on failure
+        if: failure()
+        run: cat /tmp/uvicorn.log || true

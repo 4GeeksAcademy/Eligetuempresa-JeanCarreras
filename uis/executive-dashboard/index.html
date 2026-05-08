@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Brasaland Executive Dashboard</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=Fraunces:opsz,wght@9..144,600&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div class="noise"></div>
+    <main class="layout">
+      <header class="hero">
+        <p class="eyebrow">Brasaland Digital</p>
+        <h1>Executive Pulse</h1>
+        <p class="subtitle">Vista consolidada de la cadena para decisiones semanales en Colombia y Florida.</p>
+        <p class="status" id="statusText">Cargando datos...</p>
+      </header>
+
+      <section class="filters" aria-label="Filtros del dashboard">
+        <label>
+          Pais
+          <select id="countryFilter">
+            <option value="">Todos</option>
+            <option value="CO">Colombia</option>
+            <option value="US">Florida</option>
+          </select>
+        </label>
+        <label>
+          Desde
+          <input id="startDate" type="date" />
+        </label>
+        <label>
+          Hasta
+          <input id="endDate" type="date" />
+        </label>
+        <button id="applyFilters" type="button">Aplicar filtros</button>
+      </section>
+
+      <section class="cards" aria-label="KPIs clave">
+        <article class="card accent-coral">
+          <h2>Ventas semanales</h2>
+          <p class="metric" id="weeklySales">-</p>
+          <p class="detail">Consolidado USD</p>
+        </article>
+
+        <article class="card accent-amber">
+          <h2>Ticket promedio</h2>
+          <p class="metric" id="avgTicket">-</p>
+          <p class="detail">Cadena completa</p>
+        </article>
+
+        <article class="card accent-teal">
+          <h2>Locales activos</h2>
+          <p class="metric" id="activeStores">-</p>
+          <p class="detail">Con ventas en ultima hora</p>
+        </article>
+      </section>
+
+      <section class="market-panel">
+        <h2>Comparativo por mercado (WoW)</h2>
+        <div class="market-grid" id="marketGrid"></div>
+      </section>
+
+      <section class="finance-panel">
+        <h2>KPIs financieros estimados</h2>
+        <div class="finance-grid">
+          <article class="finance-card">
+            <p class="finance-label">Ingresos</p>
+            <p class="finance-value" id="financeRevenue">-</p>
+          </article>
+          <article class="finance-card">
+            <p class="finance-label">COGS estimado</p>
+            <p class="finance-value" id="financeCogs">-</p>
+          </article>
+          <article class="finance-card">
+            <p class="finance-label">Utilidad bruta</p>
+            <p class="finance-value" id="financeProfit">-</p>
+          </article>
+          <article class="finance-card">
+            <p class="finance-label">Margen bruto</p>
+            <p class="finance-value" id="financeMargin">-</p>
+          </article>
+        </div>
+      </section>
+
+      <section class="table-panel">
+        <h2>Ventas por local</h2>
+        <table>
+          <thead>
+            <tr>
+              <th>Local</th>
+              <th>Mercado</th>
+              <th>Ventas</th>
+              <th>Ticket promedio</th>
+              <th>Tickets</th>
+            </tr>
+          </thead>
+          <tbody id="storeRows"></tbody>
+        </table>
+      </section>
+
+      <section class="trend-panel">
+        <h2>Tendencia diaria</h2>
+        <div class="trend-bars" id="trendBars"></div>
+      </section>
+    </main>
+
+    <script src="app.js"></script>
+  </body>
+</html>

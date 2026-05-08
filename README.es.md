@@ -2,6 +2,9 @@
 
 [![4Geeks Academy](https://img.shields.io/badge/4Geeks-Academy-blue)](https://4geeksacademy.com)
 [![AI Engineering](https://img.shields.io/badge/track-AI%20Engineering-green)](https://4geeksacademy.com/es/programas-de-carrera/ingenieria-ia)
+[![Smoke API](https://github.com/4GeeksAcademy/Eligetuempresa-JeanCarreras/actions/workflows/smoke-api.yml/badge.svg)](https://github.com/4GeeksAcademy/Eligetuempresa-JeanCarreras/actions/workflows/smoke-api.yml)
+[![Integration API](https://github.com/4GeeksAcademy/Eligetuempresa-JeanCarreras/actions/workflows/integration-api.yml/badge.svg)](https://github.com/4GeeksAcademy/Eligetuempresa-JeanCarreras/actions/workflows/integration-api.yml)
+[![Integration Data API](https://github.com/4GeeksAcademy/Eligetuempresa-JeanCarreras/actions/workflows/integration-data-api.yml/badge.svg)](https://github.com/4GeeksAcademy/Eligetuempresa-JeanCarreras/actions/workflows/integration-data-api.yml)
 
 _Plantilla base para proyectos transversales del Programa de Carrera en Ingeniería de IA — 4Geeks Academy._
 
@@ -21,10 +24,11 @@ Este repositorio es la **plantilla de inicio** para los proyectos transversales.
 
 ## Estado actual de la plantilla
 
-Actualmente el repositorio ofrece una **estructura base de carpetas y documentación**, pero todavía no incluye aplicaciones ejecutables ni scripts globales en la raíz.
+Actualmente el repositorio ofrece una **estructura base de carpetas y documentación** con una primera base funcional orientada a Brasaland.
 
-- `CONTEXT.md` es un placeholder y debe sustituirse por el contexto de la empresa asignada.
-- No existe todavía un `AGENTS.md` en la raíz.
+- `CONTEXT.md` ya contiene el contexto de Brasaland.
+- Existe un `AGENTS.md` en la raíz con guardrails y prioridades de agentes.
+- Se añadieron entregables iniciales en `docs/`, `workflows/`, `services/brasaland-api/` y `uis/executive-dashboard/`.
 - Existe metadata del paquete compartido en `packages/shared/package.json` (`@repo/shared-types`), pero aún no hay runner de workspace en raíz.
 
 ---

@@ -7,4 +7,15 @@ Each subfolder inside `uis/` must correspond to **one specific user interface** 
 - **Main purpose**: to centralize in a single place all the frontend applications that support the company's use cases.
 - **Recommendation**: document in this file (or in sub-READMEs) the applications you add, their objective, the technology used, and how to run them.
 
+## Current interfaces
+
+### `executive-dashboard`
+
+MVP executive dashboard for Brasaland.
+
+- Objective: display weekly sales, average ticket, and market comparison for leadership.
+- Stack: HTML + CSS + JavaScript.
+- Documentation (EN): `uis/executive-dashboard/README.md`.
+- Documentation (ES): `uis/executive-dashboard/README.es.md`.
+
 > _Spanish version: [README.es.md](./README.es.md)._

@@ -1,0 +1,55 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "brasaland: smoke api",
+      "type": "shell",
+      "command": "bash",
+      "args": [
+        "workflows/scripts/smoke_api.sh"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "group": "test",
+      "problemMatcher": []
+    },
+    {
+      "label": "brasaland: integration api",
+      "type": "shell",
+      "command": "bash",
+      "args": [
+        "workflows/scripts/integration_api.sh"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "group": "test",
+      "problemMatcher": []
+    },
+    {
+      "label": "brasaland: integration data api",
+      "type": "shell",
+      "command": "bash",
+      "args": [
+        "workflows/scripts/integration_data_api.sh"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "group": "test",
+      "problemMatcher": []
+    },
+    {
+      "label": "brasaland: qa all",
+      "dependsOrder": "sequence",
+      "dependsOn": [
+        "brasaland: smoke api",
+        "brasaland: integration api",
+        "brasaland: integration data api"
+      ],
+      "group": "test",
+      "problemMatcher": []
+    }
+  ]
+}
