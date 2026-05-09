@@ -130,6 +130,19 @@
       },
       "group": "test",
       "problemMatcher": []
+    },
+    {
+      "label": "brasaland: bootstrap api env",
+      "type": "shell",
+      "command": "bash",
+      "args": [
+        "scripts/bootstrap_api_env.sh"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "group": "build",
+      "problemMatcher": []
     }
   ]
 }

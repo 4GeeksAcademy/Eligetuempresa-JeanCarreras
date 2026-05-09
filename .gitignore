@@ -1,5 +1,7 @@
 __pycache__/
 *.pyc
+.venv/
+**/.venv/
 
 # Runtime artifacts for local API execution
 services/brasaland-api/brasaland.db

@@ -7,6 +7,19 @@ This folder contains **helper scripts** for the monorepo: development automation
 
 ## Available scripts
 
+### `bootstrap_api_env.sh`
+
+Prepares the Brasaland API local environment in one command.
+
+- Creates a venv at `services/brasaland-api/.venv` (or `VENV_DIR` if set).
+- Installs/updates dependencies from `services/brasaland-api/requirements.txt`.
+
+Example:
+
+```bash
+bash scripts/bootstrap_api_env.sh
+```
+
 ### `run_api_local.sh`
 
 Starts Brasaland API locally with robust Python resolution.

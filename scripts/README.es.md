@@ -7,6 +7,19 @@ Esta carpeta contiene **scripts auxiliares** del monorepo: automatizaciones de d
 
 ## Scripts disponibles
 
+### `bootstrap_api_env.sh`
+
+Prepara entorno local de la API de Brasaland en un comando.
+
+- Crea venv en `services/brasaland-api/.venv` (o `VENV_DIR` si se define).
+- Instala/actualiza dependencias desde `services/brasaland-api/requirements.txt`.
+
+Ejemplo:
+
+```bash
+bash scripts/bootstrap_api_env.sh
+```
+
 ### `run_api_local.sh`
 
 Levanta la API de Brasaland en local de forma robusta.
