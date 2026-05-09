@@ -588,6 +588,7 @@ def get_sales_daily_trend(
 def get_inactivity_alerts(
     window_minutes: int = Query(default=60, ge=15, le=240),
     country: Literal["CO", "US"] | None = Query(default=None),
+    role: str = Depends(require_roles({"operations", "executive", "admin"})),
 ) -> InactivityAlertResponse:
     now = datetime.now(timezone.utc)
     alerts: list[InactivityAlert] = []
@@ -628,6 +629,14 @@ def get_inactivity_alerts(
                 )
 
     total_stores = len(stores)
+
+    write_audit_log(
+        role,
+        "read_inactivity_alerts",
+        "success",
+        f"country={country or 'ALL'}",
+        f"window_minutes={window_minutes}, alerts={len(alerts)}",
+    )
 
     return InactivityAlertResponse(
         window_minutes=window_minutes,

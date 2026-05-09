@@ -143,6 +143,18 @@ finance_bad_status="$(curl -sS -o /dev/null -w "%{http_code}" \
   "$API_BASE/api/v1/finance/kpis?currency=USD")"
 assert_status "finance token invalido" "401" "$finance_bad_status"
 
+# 10) inactivity alerts with executive role (allowed)
+alerts_exec_status="$(curl -sS -o /dev/null -w "%{http_code}" \
+  -H "X-API-Role: executive" \
+  -H "X-API-Token: $EXEC_TOKEN" \
+  "$API_BASE/api/v1/alerts/inactivity?window_minutes=60")"
+assert_status "alerts inactivity con executive" "200" "$alerts_exec_status"
+
+# 11) inactivity alerts without role (forbidden)
+alerts_no_role_status="$(curl -sS -o /dev/null -w "%{http_code}" \
+  "$API_BASE/api/v1/alerts/inactivity?window_minutes=60")"
+assert_status "alerts inactivity sin role" "403" "$alerts_no_role_status"
+
 echo ""
 echo "Resultado integration: PASS=$PASS_COUNT FAIL=$FAIL_COUNT"
 

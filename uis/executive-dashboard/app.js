@@ -2,6 +2,8 @@ const API_BASE = "http://localhost:8000";
 const DEFAULT_CURRENCY = "USD";
 const FINANCE_ROLE = "executive";
 const FINANCE_TOKEN = "brasaland-executive-token";
+const ALERTS_ROLE = "executive";
+const ALERTS_TOKEN = "brasaland-executive-token";
 
 const statusText = document.getElementById("statusText");
 const weeklySalesEl = document.getElementById("weeklySales");
@@ -195,7 +197,10 @@ async function loadDashboard() {
   try {
     const [summary, alerts, stores, trend, markets, finance] = await Promise.all([
       fetchJson(`/api/v1/sales/summary?period=week&${query}`),
-      fetchJson(`/api/v1/alerts/inactivity?window_minutes=60&${query}`),
+      fetchJsonWithHeaders(`/api/v1/alerts/inactivity?window_minutes=60&${query}`, {
+        "X-API-Role": ALERTS_ROLE,
+        "X-API-Token": ALERTS_TOKEN,
+      }),
       fetchJson(`/api/v1/sales/by-store?${query}`),
       fetchJson(`/api/v1/sales/daily-trend?${query}`),
       fetchJson(`/api/v1/markets/summary?${query}`),
