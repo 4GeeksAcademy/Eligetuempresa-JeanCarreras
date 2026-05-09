@@ -121,6 +121,7 @@ class InactivityAlertResponse(BaseModel):
     critical_alerts: int
     warning_alerts: int
     critical_ratio_pct: float
+    risk_level: Literal["low", "medium", "high"]
     generated_at: datetime
     alerts: list[InactivityAlert]
 
@@ -670,6 +671,12 @@ def get_inactivity_alerts(
     critical_alerts = len([item for item in alerts if item.severity == "critical"])
     warning_alerts = len([item for item in alerts if item.severity == "warning"])
     critical_ratio_pct = round((critical_alerts / total_stores) * 100, 2) if total_stores > 0 else 0.0
+    if critical_ratio_pct >= 50:
+        risk_level: Literal["low", "medium", "high"] = "high"
+    elif critical_ratio_pct >= 20:
+        risk_level = "medium"
+    else:
+        risk_level = "low"
 
     write_audit_log(
         role,
@@ -687,6 +694,7 @@ def get_inactivity_alerts(
         critical_alerts=critical_alerts,
         warning_alerts=warning_alerts,
         critical_ratio_pct=critical_ratio_pct,
+        risk_level=risk_level,
         generated_at=now,
         alerts=alerts,
     )
