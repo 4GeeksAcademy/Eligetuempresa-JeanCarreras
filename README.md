@@ -102,6 +102,12 @@ To run full local QA in one command:
 bash scripts/run_qa_local.sh
 ```
 
+To run full dev cycle (restart + QA + cleanup):
+
+```bash
+bash scripts/dev_cycle.sh
+```
+
 Optional (manual bootstrap if needed):
 
 ```bash

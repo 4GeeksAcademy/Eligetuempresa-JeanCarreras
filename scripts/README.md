@@ -71,4 +71,25 @@ Example:
 bash scripts/run_qa_local.sh
 ```
 
+### `dev_cycle.sh`
+
+Runs a full local development cycle:
+
+1. Cleans API port.
+2. Starts API in background.
+3. Runs `run_qa_local.sh`.
+4. Stops API when done.
+
+Example:
+
+```bash
+bash scripts/dev_cycle.sh
+```
+
+Optional variables:
+
+- `HOST` (default: `0.0.0.0`)
+- `PORT` (default: `8000`)
+- `LOG_FILE` (default: `/tmp/uvicorn-dev-cycle.log`)
+
 > _Spanish version: [README.es.md](./README.es.md)._

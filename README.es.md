@@ -102,6 +102,12 @@ Para ejecutar toda la QA local en un comando:
 bash scripts/run_qa_local.sh
 ```
 
+Para ejecutar ciclo de desarrollo completo (restart + QA + cleanup):
+
+```bash
+bash scripts/dev_cycle.sh
+```
+
 Opcional (si necesitas bootstrap manual):
 
 ```bash

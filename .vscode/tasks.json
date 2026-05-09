@@ -104,6 +104,19 @@
       },
       "group": "test",
       "problemMatcher": []
+    },
+    {
+      "label": "brasaland: dev cycle",
+      "type": "shell",
+      "command": "bash",
+      "args": [
+        "scripts/dev_cycle.sh"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "group": "test",
+      "problemMatcher": []
     }
   ]
 }
