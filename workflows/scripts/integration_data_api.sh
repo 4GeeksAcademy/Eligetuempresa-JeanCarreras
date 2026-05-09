@@ -219,6 +219,59 @@ adjust_negative_status="$(curl -sS -o /dev/null -w "%{http_code}" \
   -d "$adjust_negative_payload")"
 assert_status "adjust points negativo invalido" "400" "$adjust_negative_status"
 
+# 18) Inventory stock invalid limit should return 422
+inventory_invalid_limit_status="$(curl -sS -o /dev/null -w "%{http_code}" \
+  -H "X-API-Role: operations" \
+  -H "X-API-Token: $OPS_TOKEN" \
+  "$API_BASE/api/v1/inventory/stock?limit=0")"
+assert_status "inventory stock limit invalido" "422" "$inventory_invalid_limit_status"
+
+# 19) Smart orders invalid days_history should return 422
+smart_orders_invalid_days_status="$(curl -sS -o /dev/null -w "%{http_code}" \
+  -H "X-API-Role: executive" \
+  -H "X-API-Token: $EXEC_TOKEN" \
+  "$API_BASE/api/v1/orders/recommendations?days_history=6")"
+assert_status "smart orders days_history invalido" "422" "$smart_orders_invalid_days_status"
+
+# 20) Smart orders invalid target_days should return 422
+smart_orders_invalid_target_status="$(curl -sS -o /dev/null -w "%{http_code}" \
+  -H "X-API-Role: executive" \
+  -H "X-API-Token: $EXEC_TOKEN" \
+  "$API_BASE/api/v1/orders/recommendations?target_days=2")"
+assert_status "smart orders target_days invalido" "422" "$smart_orders_invalid_target_status"
+
+# 21) Smart orders with operations role should return payload
+smart_orders_body="$(curl -fsS \
+  -H "X-API-Role: operations" \
+  -H "X-API-Token: $OPS_TOKEN" \
+  "$API_BASE/api/v1/orders/recommendations?country=CO&currency=COP")"
+assert_contains "smart orders contiene recomendaciones" '"recommendations"' "$smart_orders_body"
+
+# 22) Inventory receipt with zero qty should return 400
+receipt_zero_qty_status="$(curl -sS -o /dev/null -w "%{http_code}" \
+  -X POST "$API_BASE/api/v1/inventory/receipts" \
+  -H "Content-Type: application/json" \
+  -H "X-API-Role: operations" \
+  -H "X-API-Token: $OPS_TOKEN" \
+  -d '{"store_id":"med-001","sku":"CHICKEN","received_qty":0,"currency":"COP"}')"
+assert_status "inventory receipt qty cero" "400" "$receipt_zero_qty_status"
+
+# 23) Inventory receipt for unknown stock row should return 404
+receipt_unknown_stock_status="$(curl -sS -o /dev/null -w "%{http_code}" \
+  -X POST "$API_BASE/api/v1/inventory/receipts" \
+  -H "Content-Type: application/json" \
+  -H "X-API-Role: operations" \
+  -H "X-API-Token: $OPS_TOKEN" \
+  -d '{"store_id":"med-001","sku":"NO-SKU","received_qty":1,"currency":"COP"}')"
+assert_status "inventory receipt stock inexistente" "404" "$receipt_unknown_stock_status"
+
+# 24) Inventory receipts list with invalid offset should return 422
+inventory_receipts_invalid_offset_status="$(curl -sS -o /dev/null -w "%{http_code}" \
+  -H "X-API-Role: executive" \
+  -H "X-API-Token: $EXEC_TOKEN" \
+  "$API_BASE/api/v1/inventory/receipts?offset=-1")"
+assert_status "inventory receipts offset invalido" "422" "$inventory_receipts_invalid_offset_status"
+
 # 14) Executive ask unsupported question should return guidance payload
 exec_unknown_body="$(curl -fsS \
   -H "X-API-Role: executive" \

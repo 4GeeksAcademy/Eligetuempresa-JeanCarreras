@@ -124,6 +124,28 @@ Variables opcionales:
 - `PORT` (default: `8000`)
 - `LOG_FILE` (default: `/tmp/uvicorn-dev-cycle.log`)
 
+### `run_dashboard_local.sh`
+
+Levanta en un comando la API y el dashboard ejecutivo local.
+
+- Reutiliza una API ya levantada en el puerto configurado, o la inicia si no existe.
+- Inicia un servidor HTTP local para `uis/executive-dashboard`.
+- Mantiene el proceso en primer plano hasta `Ctrl+C`.
+- Limpia los procesos iniciados por el script al salir.
+
+Ejemplo:
+
+```bash
+bash scripts/run_dashboard_local.sh
+```
+
+Variables opcionales:
+
+- `API_HOST` (default: `0.0.0.0`)
+- `API_PORT` (default: `8000`)
+- `DASHBOARD_HOST` (default: `0.0.0.0`)
+- `DASHBOARD_PORT` (default: `4173`)
+
 ### `check_env.sh`
 
 Valida prerequisitos locales antes de ejecutar scripts operativos.

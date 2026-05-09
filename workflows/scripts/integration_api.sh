@@ -192,6 +192,19 @@ alerts_no_role_status="$(curl -sS -o /dev/null -w "%{http_code}" \
   "$API_BASE/api/v1/alerts/inactivity?window_minutes=60")"
 assert_status "alerts inactivity sin role" "403" "$alerts_no_role_status"
 
+# 15.1) alerts inactivity respects opening hours with deterministic reference time
+alerts_opening_hours_body="$(curl -fsS \
+  -H "X-API-Role: executive" \
+  -H "X-API-Token: $EXEC_TOKEN" \
+  "$API_BASE/api/v1/alerts/inactivity?window_minutes=60&opening_hours_only=true&reference_at=2026-05-09T08:30:00Z")"
+assert_contains "alerts inactivity horario apertura" '"total_stores":0' "$alerts_opening_hours_body"
+
+alerts_opening_hours_disabled_body="$(curl -fsS \
+  -H "X-API-Role: executive" \
+  -H "X-API-Token: $EXEC_TOKEN" \
+  "$API_BASE/api/v1/alerts/inactivity?window_minutes=60&opening_hours_only=false&reference_at=2026-05-09T08:30:00Z")"
+assert_contains "alerts inactivity sin filtro horario" '"total_stores":4' "$alerts_opening_hours_disabled_body"
+
 # 14) alerts SLA with executive role (allowed)
 alerts_sla_status="$(curl -sS -o /dev/null -w "%{http_code}" \
   -H "X-API-Role: executive" \
@@ -340,6 +353,91 @@ adjust_points_exec_status="$(curl -sS -o /dev/null -w "%{http_code}" \
   -H "X-API-Token: $EXEC_TOKEN" \
   -d "$adjust_points_payload")"
 assert_status "adjust points executive prohibido" "403" "$adjust_points_exec_status"
+
+# 30) inventory stock with operations role (allowed)
+inventory_status="$(curl -sS -o /dev/null -w "%{http_code}" \
+  -H "X-API-Role: operations" \
+  -H "X-API-Token: $OPS_TOKEN" \
+  "$API_BASE/api/v1/inventory/stock?country=CO&limit=10")"
+assert_status "inventory stock operations" "200" "$inventory_status"
+
+inventory_body="$(curl -fsS \
+  -H "X-API-Role: operations" \
+  -H "X-API-Token: $OPS_TOKEN" \
+  "$API_BASE/api/v1/inventory/stock?country=US&limit=10")"
+assert_contains "inventory stock payload" '"current_stock"' "$inventory_body"
+
+# 31) smart order recommendations with executive role (allowed)
+smart_orders_status="$(curl -sS -o /dev/null -w "%{http_code}" \
+  -H "X-API-Role: executive" \
+  -H "X-API-Token: $EXEC_TOKEN" \
+  "$API_BASE/api/v1/orders/recommendations?country=CO&currency=COP&days_history=14&target_days=7")"
+assert_status "smart orders executive" "200" "$smart_orders_status"
+
+smart_orders_body="$(curl -fsS \
+  -H "X-API-Role: executive" \
+  -H "X-API-Token: $EXEC_TOKEN" \
+  "$API_BASE/api/v1/orders/recommendations?country=US&currency=USD&days_history=14&target_days=7")"
+assert_contains "smart orders payload" '"recommended_order_qty"' "$smart_orders_body"
+assert_contains "smart orders risk" '"risk_level"' "$smart_orders_body"
+assert_contains "smart orders trazabilidad" '"days_history"' "$smart_orders_body"
+
+# 32) smart order recommendations without role (forbidden)
+smart_orders_no_role_status="$(curl -sS -o /dev/null -w "%{http_code}" \
+  "$API_BASE/api/v1/orders/recommendations?country=CO")"
+assert_status "smart orders sin role" "403" "$smart_orders_no_role_status"
+
+# 33) inventory receipt with operations role (allowed) and recommendation auto-close
+inventory_receipt_payload='{"store_id":"med-001","sku":"CHICKEN","received_qty":5,"unit_cost":12100,"currency":"COP","note":"recepcion central"}'
+inventory_receipt_status="$(curl -sS -o /dev/null -w "%{http_code}" \
+  -X POST "$API_BASE/api/v1/inventory/receipts?days_history=14&target_days=7" \
+  -H "Content-Type: application/json" \
+  -H "X-API-Role: operations" \
+  -H "X-API-Token: $OPS_TOKEN" \
+  -d "$inventory_receipt_payload")"
+assert_status "inventory receipt operations" "201" "$inventory_receipt_status"
+
+inventory_receipt_body="$(curl -fsS \
+  -X POST "$API_BASE/api/v1/inventory/receipts?days_history=14&target_days=7" \
+  -H "Content-Type: application/json" \
+  -H "X-API-Role: operations" \
+  -H "X-API-Token: $OPS_TOKEN" \
+  -d '{"store_id":"med-001","sku":"CHICKEN","received_qty":1,"currency":"COP"}')"
+assert_contains "inventory receipt payload" '"recommendation_after"' "$inventory_receipt_body"
+assert_contains "inventory receipt cierre" '"recommendation_status":"closed"' "$inventory_receipt_body"
+
+# 34) inventory receipt with executive role (forbidden)
+inventory_receipt_exec_status="$(curl -sS -o /dev/null -w "%{http_code}" \
+  -X POST "$API_BASE/api/v1/inventory/receipts" \
+  -H "Content-Type: application/json" \
+  -H "X-API-Role: executive" \
+  -H "X-API-Token: $EXEC_TOKEN" \
+  -d '{"store_id":"med-001","sku":"CHICKEN","received_qty":1,"currency":"COP"}')"
+assert_status "inventory receipt executive prohibido" "403" "$inventory_receipt_exec_status"
+
+# 35) inventory receipts list with executive role (allowed)
+inventory_receipts_status="$(curl -sS -o /dev/null -w "%{http_code}" \
+  -H "X-API-Role: executive" \
+  -H "X-API-Token: $EXEC_TOKEN" \
+  "$API_BASE/api/v1/inventory/receipts?country=CO&limit=10")"
+assert_status "inventory receipts list executive" "200" "$inventory_receipts_status"
+
+inventory_receipts_body="$(curl -fsS \
+  -H "X-API-Role: executive" \
+  -H "X-API-Token: $EXEC_TOKEN" \
+  "$API_BASE/api/v1/inventory/receipts?store_id=med-001&sku=CHICKEN&limit=10")"
+assert_contains "inventory receipts payload" '"received_qty"' "$inventory_receipts_body"
+
+inventory_receipts_offset_status="$(curl -sS -o /dev/null -w "%{http_code}" \
+  -H "X-API-Role: executive" \
+  -H "X-API-Token: $EXEC_TOKEN" \
+  "$API_BASE/api/v1/inventory/receipts?store_id=med-001&limit=5&offset=1")"
+assert_status "inventory receipts offset" "200" "$inventory_receipts_offset_status"
+
+# 36) inventory receipts list without role (forbidden)
+inventory_receipts_no_role_status="$(curl -sS -o /dev/null -w "%{http_code}" \
+  "$API_BASE/api/v1/inventory/receipts?limit=5")"
+assert_status "inventory receipts list sin role" "403" "$inventory_receipts_no_role_status"
 
 # 22) executive ask with executive role (allowed)
 exec_ask_status="$(curl -sS -o /dev/null -w "%{http_code}" \

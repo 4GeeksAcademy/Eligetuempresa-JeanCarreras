@@ -259,6 +259,88 @@ class AlertActionCreated(BaseModel):
     updated_by_role: str
 
 
+class InventoryStockRow(BaseModel):
+    store_id: str
+    store_name: str
+    country: Literal["CO", "US"]
+    market: str
+    sku: str
+    item_name: str
+    category: str
+    unit: str
+    current_stock: float
+    min_stock: float
+    last_updated: datetime
+
+
+class SmartOrderRecommendationRow(BaseModel):
+    store_id: str
+    store_name: str
+    country: Literal["CO", "US"]
+    market: str
+    sku: str
+    item_name: str
+    category: str
+    unit: str
+    current_stock: float
+    min_stock: float
+    expected_daily_usage: float
+    projected_days_of_cover: float
+    target_days_of_cover: int
+    recommended_order_qty: float
+    estimated_unit_cost: float | None
+    estimated_order_cost: float | None
+    currency: Literal["COP", "USD"]
+    risk_level: Literal["ok", "warning", "critical"]
+
+
+class SmartOrderRecommendationResponse(BaseModel):
+    country: Literal["CO", "US"] | None
+    currency: Literal["COP", "USD"]
+    days_history: int
+    target_days_of_cover: int
+    generated_at: datetime
+    recommendations: list[SmartOrderRecommendationRow]
+
+
+class InventoryReceiptCreate(BaseModel):
+    store_id: str
+    sku: str
+    received_qty: float
+    unit_cost: float | None = None
+    currency: Literal["COP", "USD"] = "USD"
+    note: str | None = None
+
+
+class InventoryReceiptResult(BaseModel):
+    receipt_id: int
+    store_id: str
+    sku: str
+    previous_stock: float
+    current_stock: float
+    received_qty: float
+    estimated_receipt_cost: float | None
+    currency: Literal["COP", "USD"]
+    recommendation_status: Literal["open", "closed"]
+    recommendation_after: SmartOrderRecommendationRow
+    updated_at: datetime
+
+
+class InventoryReceiptRow(BaseModel):
+    id: int
+    store_id: str
+    store_name: str
+    country: Literal["CO", "US"]
+    market: str
+    sku: str
+    received_qty: float
+    unit_cost: float | None
+    currency: Literal["COP", "USD"]
+    note: str | None
+    received_at: datetime
+    received_by_role: str
+
+
 DB_PATH = Path(__file__).resolve().parent.parent / "brasaland.db"
 FX_COP_PER_USD = 3950.0
 DEFAULT_API_TOKEN = "brasaland-dev-token"
@@ -272,6 +354,109 @@ ESTIMATED_COGS_RATIO_BY_COUNTRY: dict[str, float] = {
     "CO": 0.56,
     "US": 0.49,
 }
+SKU_CONSUMPTION_PER_TICKET: dict[str, float] = {
+    "CHICKEN": 0.22,
+    "POTATO": 0.18,
+}
+SKU_LOCALIZED_NAMES: dict[str, dict[str, str]] = {
+    "CHICKEN": {"CO": "Pollo entero", "US": "Whole chicken"},
+    "POTATO": {"CO": "Papa criolla", "US": "Potato"},
+}
+SUPPLIER_SKU_BY_COUNTRY: dict[str, dict[str, str]] = {
+    "CO": {"CHICKEN": "SKU-POLLO", "POTATO": "SKU-PAPA"},
+    "US": {"CHICKEN": "SKU-CHICKEN", "POTATO": "SKU-POTATO"},
+}
+STORE_OPENING_HOURS: dict[str, tuple[int, int]] = {
+    "med-001": (10, 22),
+    "med-002": (10, 22),
+    "mia-001": (10, 22),
+    "mia-002": (10, 22),
+}
+
+
+def is_store_open_at(local_time: datetime, opening_hour: int, closing_hour: int) -> bool:
+    current_minutes = local_time.hour * 60 + local_time.minute
+    opening_minutes = opening_hour * 60
+    closing_minutes = closing_hour * 60
+
+    if opening_minutes < closing_minutes:
+        return opening_minutes <= current_minutes < closing_minutes
+
+    # Supports overnight schedules, e.g., 18:00 to 02:00.
+    return current_minutes >= opening_minutes or current_minutes < closing_minutes
+
+
+def market_label(country: str) -> str:
+    return "Colombia" if country == "CO" else "Florida"
+
+
+def build_smart_order_recommendation_row(
+    *,
+    store_id: str,
+    store_name: str,
+    country_code: str,
+    sku: str,
+    item_name: str,
+    category: str,
+    unit: str,
+    current_stock: float,
+    min_stock: float,
+    tickets: int,
+    days_history: int,
+    target_days: int,
+    currency: Literal["COP", "USD"],
+    latest_price_by_country_sku: dict[tuple[str, str], tuple[str, float]],
+) -> SmartOrderRecommendationRow:
+    normalized_sku = sku.upper()
+    expected_daily_tickets = tickets / days_history if days_history > 0 else 0.0
+
+    base_usage = SKU_CONSUMPTION_PER_TICKET.get(normalized_sku, 0.06)
+    expected_daily_usage = max(expected_daily_tickets * base_usage, 0.01)
+    projected_days_of_cover = current_stock / expected_daily_usage if expected_daily_usage > 0 else 0.0
+
+    target_stock_qty = max(target_days * expected_daily_usage, min_stock)
+    recommended_order_qty = max(0.0, target_stock_qty - current_stock)
+
+    if projected_days_of_cover < 2:
+        risk_level: Literal["ok", "warning", "critical"] = "critical"
+    elif projected_days_of_cover < 4:
+        risk_level = "warning"
+    else:
+        risk_level = "ok"
+
+    supplier_sku = SUPPLIER_SKU_BY_COUNTRY.get(country_code, {}).get(normalized_sku)
+    estimated_unit_cost: float | None = None
+    estimated_order_cost: float | None = None
+    if supplier_sku is not None:
+        price_pair = latest_price_by_country_sku.get((country_code, supplier_sku))
+        if price_pair is not None:
+            source_currency, source_price = price_pair
+            converted_unit = convert_amount(source_price, source_currency, currency)
+            estimated_unit_cost = round(converted_unit, 4)
+            estimated_order_cost = round(converted_unit * recommended_order_qty, 2)
+
+    localized_item_name = SKU_LOCALIZED_NAMES.get(normalized_sku, {}).get(country_code, item_name)
+
+    return SmartOrderRecommendationRow(
+        store_id=store_id,
+        store_name=store_name,
+        country=country_code,
+        market=market_label(country_code),
+        sku=normalized_sku,
+        item_name=localized_item_name,
+        category=category,
+        unit=unit,
+        current_stock=round(current_stock, 3),
+        min_stock=round(min_stock, 3),
+        expected_daily_usage=round(expected_daily_usage, 3),
+        projected_days_of_cover=round(projected_days_of_cover, 2),
+        target_days_of_cover=target_days,
+        recommended_order_qty=round(recommended_order_qty, 3),
+        estimated_unit_cost=estimated_unit_cost,
+        estimated_order_cost=estimated_order_cost,
+        currency=currency,
+        risk_level=risk_level,
+    )
 
 
 def get_db() -> Connection:
@@ -502,6 +687,39 @@ def init_db() -> None:
             )
             """
         )
+        db.execute(
+            """
+            CREATE TABLE IF NOT EXISTS stock_levels (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                store_id TEXT NOT NULL,
+                sku TEXT NOT NULL,
+                item_name TEXT NOT NULL,
+                category TEXT NOT NULL,
+                unit TEXT NOT NULL,
+                current_stock REAL NOT NULL,
+                min_stock REAL NOT NULL,
+                updated_at TEXT NOT NULL,
+                UNIQUE(store_id, sku),
+                FOREIGN KEY(store_id) REFERENCES stores(id)
+            )
+            """
+        )
+        db.execute(
+            """
+            CREATE TABLE IF NOT EXISTS inventory_receipts (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                store_id TEXT NOT NULL,
+                sku TEXT NOT NULL,
+                received_qty REAL NOT NULL,
+                unit_cost REAL,
+                currency TEXT NOT NULL,
+                note TEXT,
+                received_at TEXT NOT NULL,
+                received_by_role TEXT NOT NULL,
+                FOREIGN KEY(store_id) REFERENCES stores(id)
+            )
+            """
+        )
 
         db.executemany(
             """
@@ -692,6 +910,28 @@ def init_db() -> None:
                 VALUES (?, ?, ?, ?)
                 """,
                 loyalty_seed,
+            )
+
+        existing_stock = db.execute("SELECT COUNT(*) AS c FROM stock_levels").fetchone()["c"]
+        if existing_stock == 0:
+            now_iso = datetime.now(timezone.utc).isoformat()
+            stock_seed: list[tuple[str, str, str, str, str, float, float, str]] = [
+                ("med-001", "CHICKEN", "Pollo entero", "protein", "kg", 48.0, 26.0, now_iso),
+                ("med-001", "POTATO", "Papa criolla", "produce", "kg", 33.0, 18.0, now_iso),
+                ("med-002", "CHICKEN", "Pollo entero", "protein", "kg", 41.0, 24.0, now_iso),
+                ("med-002", "POTATO", "Papa criolla", "produce", "kg", 30.0, 16.0, now_iso),
+                ("mia-001", "CHICKEN", "Whole chicken", "protein", "kg", 54.0, 30.0, now_iso),
+                ("mia-001", "POTATO", "Potato", "produce", "kg", 38.0, 22.0, now_iso),
+                ("mia-002", "CHICKEN", "Whole chicken", "protein", "kg", 35.0, 28.0, now_iso),
+                ("mia-002", "POTATO", "Potato", "produce", "kg", 23.0, 19.0, now_iso),
+            ]
+            db.executemany(
+                """
+                INSERT INTO stock_levels (
+                    store_id, sku, item_name, category, unit, current_stock, min_stock, updated_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                stock_seed,
             )
 
 
@@ -969,11 +1209,17 @@ def get_inactivity_alerts(
     window_minutes: int = Query(default=60, ge=15, le=240),
     country: Literal["CO", "US"] | None = Query(default=None),
     severity_filter: Literal["warning", "critical"] | None = Query(default=None, alias="severity"),
+    opening_hours_only: bool = Query(default=True),
+    reference_at: datetime | None = Query(default=None),
     limit: int = Query(default=20, ge=1, le=100),
     role: str = Depends(require_roles({"operations", "executive", "admin"})),
 ) -> InactivityAlertResponse:
-    now = datetime.now(timezone.utc)
+    now = reference_at or datetime.now(timezone.utc)
+    if now.tzinfo is None:
+        now = now.replace(tzinfo=timezone.utc)
+
     alerts: list[InactivityAlert] = []
+    monitored_stores = 0
 
     with get_db() as db:
         stores = db.execute(
@@ -1000,6 +1246,18 @@ def get_inactivity_alerts(
         latest_actions_by_store = {row["store_id"]: row for row in alert_action_rows}
 
         for store in stores:
+            try:
+                local_now = now.astimezone(ZoneInfo(store["timezone"]))
+            except Exception:
+                local_now = now
+
+            opening_hours = STORE_OPENING_HOURS.get(store["id"], (10, 22))
+            store_is_open = is_store_open_at(local_now, opening_hours[0], opening_hours[1])
+            if opening_hours_only and not store_is_open:
+                continue
+
+            monitored_stores += 1
+
             row = db.execute(
                 "SELECT MAX(sold_at) AS last_sale_at FROM sales_events WHERE store_id = ?",
                 (store["id"],),
@@ -1067,7 +1325,7 @@ def get_inactivity_alerts(
 
     alerts.sort(key=lambda item: item.minutes_without_sales, reverse=True)
 
-    total_stores = len(stores)
+    total_stores = monitored_stores if opening_hours_only else len(stores)
     raw_alerts_count = len(alerts)
 
     if severity_filter is not None:
@@ -1089,7 +1347,10 @@ def get_inactivity_alerts(
         "read_inactivity_alerts",
         "success",
         f"country={country or 'ALL'}",
-        f"window_minutes={window_minutes}, severity={severity_filter or 'ALL'}, alerts={len(alerts)}",
+        (
+            f"window_minutes={window_minutes}, severity={severity_filter or 'ALL'}, "
+            f"opening_hours_only={opening_hours_only}, monitored_stores={total_stores}, alerts={len(alerts)}"
+        ),
     )
 
     return InactivityAlertResponse(
@@ -1327,6 +1588,370 @@ def get_finance_kpis(
         gross_margin_pct=round(margin_pct, 2),
         generated_at=datetime.now(timezone.utc),
     )
+
+
+@app.get("/api/v1/inventory/stock", response_model=list[InventoryStockRow])
+def get_inventory_stock(
+    country: Literal["CO", "US"] | None = Query(default=None),
+    store_id: str | None = Query(default=None),
+    limit: int = Query(default=200, ge=1, le=500),
+    role: str = Depends(require_roles({"operations", "executive", "admin"})),
+) -> list[InventoryStockRow]:
+    with get_db() as db:
+        rows = db.execute(
+            """
+            SELECT st.id AS store_id, st.name AS store_name, st.country,
+                   sl.sku, sl.item_name, sl.category, sl.unit,
+                   sl.current_stock, sl.min_stock, sl.updated_at
+            FROM stock_levels sl
+            JOIN stores st ON st.id = sl.store_id
+            WHERE (? IS NULL OR st.country = ?)
+              AND (? IS NULL OR st.id = ?)
+            ORDER BY st.id ASC, sl.sku ASC
+            LIMIT ?
+            """,
+            (country, country, store_id, store_id, limit),
+        ).fetchall()
+
+    output: list[InventoryStockRow] = []
+    for row in rows:
+        updated_at = parse_datetime_or_none(row["updated_at"]) or datetime.now(timezone.utc)
+        output.append(
+            InventoryStockRow(
+                store_id=row["store_id"],
+                store_name=row["store_name"],
+                country=row["country"],
+                market=market_label(row["country"]),
+                sku=row["sku"],
+                item_name=row["item_name"],
+                category=row["category"],
+                unit=row["unit"],
+                current_stock=round(float(row["current_stock"]), 3),
+                min_stock=round(float(row["min_stock"]), 3),
+                last_updated=updated_at,
+            )
+        )
+
+    write_audit_log(
+        role,
+        "read_inventory_stock",
+        "success",
+        f"country={country or 'ALL'}",
+        f"store_id={store_id or 'ALL'}, rows={len(output)}",
+    )
+    return output
+
+
+@app.get("/api/v1/orders/recommendations", response_model=SmartOrderRecommendationResponse)
+def get_smart_order_recommendations(
+    country: Literal["CO", "US"] | None = Query(default=None),
+    currency: Literal["COP", "USD"] = Query(default="USD"),
+    days_history: int = Query(default=14, ge=7, le=60),
+    target_days: int = Query(default=7, ge=3, le=21),
+    only_at_risk: bool = Query(default=False),
+    limit: int = Query(default=200, ge=1, le=500),
+    role: str = Depends(require_roles({"operations", "executive", "admin"})),
+) -> SmartOrderRecommendationResponse:
+    now = datetime.now(timezone.utc)
+    start_at = now - timedelta(days=days_history)
+
+    with get_db() as db:
+        stock_rows = db.execute(
+            """
+            SELECT st.id AS store_id, st.name AS store_name, st.country,
+                   sl.sku, sl.item_name, sl.category, sl.unit,
+                   sl.current_stock, sl.min_stock
+            FROM stock_levels sl
+            JOIN stores st ON st.id = sl.store_id
+            WHERE (? IS NULL OR st.country = ?)
+            ORDER BY st.id ASC, sl.sku ASC
+            """,
+            (country, country),
+        ).fetchall()
+
+        sales_rows = db.execute(
+            """
+            SELECT se.store_id, COUNT(*) AS tickets
+            FROM sales_events se
+            JOIN stores st ON st.id = se.store_id
+            WHERE se.sold_at >= ? AND se.sold_at < ?
+              AND (? IS NULL OR st.country = ?)
+            GROUP BY se.store_id
+            """,
+            (start_at.isoformat(), now.isoformat(), country, country),
+        ).fetchall()
+
+        supplier_rows = db.execute(
+            """
+            SELECT supplier_id, sku, country, currency, price
+            FROM supplier_prices
+            WHERE (? IS NULL OR country = ?)
+            ORDER BY country ASC, sku ASC, valid_from DESC
+            """,
+            (country, country),
+        ).fetchall()
+
+    tickets_by_store = {row["store_id"]: int(row["tickets"]) for row in sales_rows}
+
+    latest_price_by_country_sku: dict[tuple[str, str], tuple[str, float]] = {}
+    for row in supplier_rows:
+        key = (row["country"], row["sku"])
+        if key not in latest_price_by_country_sku:
+            latest_price_by_country_sku[key] = (row["currency"], float(row["price"]))
+
+    recommendations: list[SmartOrderRecommendationRow] = []
+    for row in stock_rows:
+        recommendations.append(
+            build_smart_order_recommendation_row(
+                store_id=row["store_id"],
+                store_name=row["store_name"],
+                country_code=row["country"],
+                sku=row["sku"],
+                item_name=row["item_name"],
+                category=row["category"],
+                unit=row["unit"],
+                current_stock=float(row["current_stock"]),
+                min_stock=float(row["min_stock"]),
+                tickets=tickets_by_store.get(row["store_id"], 0),
+                days_history=days_history,
+                target_days=target_days,
+                currency=currency,
+                latest_price_by_country_sku=latest_price_by_country_sku,
+            )
+        )
+
+    recommendations.sort(
+        key=lambda item: (
+            0 if item.risk_level == "critical" else 1 if item.risk_level == "warning" else 2,
+            item.projected_days_of_cover,
+        )
+    )
+
+    if only_at_risk:
+        recommendations = [item for item in recommendations if item.risk_level != "ok"]
+    recommendations = recommendations[:limit]
+
+    write_audit_log(
+        role,
+        "read_smart_order_recommendations",
+        "success",
+        f"country={country or 'ALL'}",
+        (
+            f"days_history={days_history}, target_days={target_days}, only_at_risk={only_at_risk}, "
+            f"rows={len(recommendations)}"
+        ),
+    )
+
+    return SmartOrderRecommendationResponse(
+        country=country,
+        currency=currency,
+        days_history=days_history,
+        target_days_of_cover=target_days,
+        generated_at=now,
+        recommendations=recommendations,
+    )
+
+
+@app.post("/api/v1/inventory/receipts", response_model=InventoryReceiptResult, status_code=201)
+def create_inventory_receipt(
+    payload: InventoryReceiptCreate,
+    days_history: int = Query(default=14, ge=7, le=60),
+    target_days: int = Query(default=7, ge=3, le=21),
+    role: str = Depends(require_roles({"operations", "admin"})),
+) -> InventoryReceiptResult:
+    if payload.received_qty <= 0:
+        write_audit_log(role, "create_inventory_receipt", "rejected", payload.store_id, "received_qty <= 0")
+        raise HTTPException(status_code=400, detail="received_qty must be greater than zero")
+
+    now = datetime.now(timezone.utc)
+    normalized_sku = payload.sku.upper()
+
+    with get_db() as db:
+        stock_row = db.execute(
+            """
+            SELECT st.id AS store_id, st.name AS store_name, st.country,
+                   sl.sku, sl.item_name, sl.category, sl.unit,
+                   sl.current_stock, sl.min_stock
+            FROM stock_levels sl
+            JOIN stores st ON st.id = sl.store_id
+            WHERE st.id = ? AND sl.sku = ?
+            """,
+            (payload.store_id, normalized_sku),
+        ).fetchone()
+
+        if stock_row is None:
+            write_audit_log(
+                role,
+                "create_inventory_receipt",
+                "rejected",
+                payload.store_id,
+                f"stock row not found for sku={normalized_sku}",
+            )
+            raise HTTPException(status_code=404, detail="stock row not found for store_id and sku")
+
+        previous_stock = float(stock_row["current_stock"])
+        current_stock = previous_stock + float(payload.received_qty)
+
+        db.execute(
+            """
+            UPDATE stock_levels
+            SET current_stock = ?, updated_at = ?
+            WHERE store_id = ? AND sku = ?
+            """,
+            (current_stock, now.isoformat(), payload.store_id, normalized_sku),
+        )
+
+        receipt_cursor = db.execute(
+            """
+            INSERT INTO inventory_receipts (
+                store_id, sku, received_qty, unit_cost, currency, note, received_at, received_by_role
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                payload.store_id,
+                normalized_sku,
+                float(payload.received_qty),
+                payload.unit_cost,
+                payload.currency,
+                (payload.note or "")[:500],
+                now.isoformat(),
+                role,
+            ),
+        )
+
+        sales_row = db.execute(
+            """
+            SELECT COUNT(*) AS tickets
+            FROM sales_events
+            WHERE store_id = ? AND sold_at >= ? AND sold_at < ?
+            """,
+            (payload.store_id, (now - timedelta(days=days_history)).isoformat(), now.isoformat()),
+        ).fetchone()
+        tickets = int(sales_row["tickets"]) if sales_row is not None else 0
+
+        supplier_rows = db.execute(
+            """
+            SELECT supplier_id, sku, country, currency, price
+            FROM supplier_prices
+            WHERE country = ?
+            ORDER BY sku ASC, valid_from DESC
+            """,
+            (stock_row["country"],),
+        ).fetchall()
+
+    latest_price_by_country_sku: dict[tuple[str, str], tuple[str, float]] = {}
+    for row in supplier_rows:
+        key = (row["country"], row["sku"])
+        if key not in latest_price_by_country_sku:
+            latest_price_by_country_sku[key] = (row["currency"], float(row["price"]))
+
+    recommendation_after = build_smart_order_recommendation_row(
+        store_id=payload.store_id,
+        store_name=stock_row["store_name"],
+        country_code=stock_row["country"],
+        sku=normalized_sku,
+        item_name=stock_row["item_name"],
+        category=stock_row["category"],
+        unit=stock_row["unit"],
+        current_stock=current_stock,
+        min_stock=float(stock_row["min_stock"]),
+        tickets=tickets,
+        days_history=days_history,
+        target_days=target_days,
+        currency=payload.currency,
+        latest_price_by_country_sku=latest_price_by_country_sku,
+    )
+
+    recommendation_status: Literal["open", "closed"] = (
+        "closed" if recommendation_after.recommended_order_qty <= 0 and recommendation_after.risk_level == "ok" else "open"
+    )
+
+    estimated_receipt_cost = None
+    if payload.unit_cost is not None:
+        estimated_receipt_cost = round(payload.unit_cost * float(payload.received_qty), 2)
+
+    write_audit_log(
+        role,
+        "create_inventory_receipt",
+        "success",
+        payload.store_id,
+        (
+            f"sku={normalized_sku}, received_qty={payload.received_qty}, "
+            f"recommendation_status={recommendation_status}"
+        ),
+    )
+
+    return InventoryReceiptResult(
+        receipt_id=int(receipt_cursor.lastrowid),
+        store_id=payload.store_id,
+        sku=normalized_sku,
+        previous_stock=round(previous_stock, 3),
+        current_stock=round(current_stock, 3),
+        received_qty=round(float(payload.received_qty), 3),
+        estimated_receipt_cost=estimated_receipt_cost,
+        currency=payload.currency,
+        recommendation_status=recommendation_status,
+        recommendation_after=recommendation_after,
+        updated_at=now,
+    )
+
+
+@app.get("/api/v1/inventory/receipts", response_model=list[InventoryReceiptRow])
+def get_inventory_receipts(
+    country: Literal["CO", "US"] | None = Query(default=None),
+    store_id: str | None = Query(default=None),
+    sku: str | None = Query(default=None),
+    limit: int = Query(default=30, ge=1, le=200),
+    offset: int = Query(default=0, ge=0, le=5000),
+    role: str = Depends(require_roles({"operations", "executive", "admin"})),
+) -> list[InventoryReceiptRow]:
+    normalized_sku = sku.upper() if sku is not None else None
+
+    with get_db() as db:
+        rows = db.execute(
+            """
+            SELECT ir.id, ir.store_id, st.name AS store_name, st.country,
+                   ir.sku, ir.received_qty, ir.unit_cost, ir.currency,
+                   ir.note, ir.received_at, ir.received_by_role
+            FROM inventory_receipts ir
+            JOIN stores st ON st.id = ir.store_id
+            WHERE (? IS NULL OR st.country = ?)
+              AND (? IS NULL OR ir.store_id = ?)
+              AND (? IS NULL OR ir.sku = ?)
+            ORDER BY ir.id DESC
+            LIMIT ?
+                        OFFSET ?
+            """,
+                        (country, country, store_id, store_id, normalized_sku, normalized_sku, limit, offset),
+        ).fetchall()
+
+    output: list[InventoryReceiptRow] = []
+    for row in rows:
+        output.append(
+            InventoryReceiptRow(
+                id=int(row["id"]),
+                store_id=row["store_id"],
+                store_name=row["store_name"],
+                country=row["country"],
+                market=market_label(row["country"]),
+                sku=row["sku"],
+                received_qty=round(float(row["received_qty"]), 3),
+                unit_cost=round(float(row["unit_cost"]), 4) if row["unit_cost"] is not None else None,
+                currency=row["currency"],
+                note=row["note"] or None,
+                received_at=parse_datetime_or_none(row["received_at"]) or datetime.now(timezone.utc),
+                received_by_role=row["received_by_role"],
+            )
+        )
+
+    write_audit_log(
+        role,
+        "read_inventory_receipts",
+        "success",
+        f"country={country or 'ALL'}",
+        f"store_id={store_id or 'ALL'}, sku={normalized_sku or 'ALL'}, offset={offset}, rows={len(output)}",
+    )
+    return output
 
 
 @app.get("/api/v1/audit/logs", response_model=list[AuditLogEntry])
@@ -1724,6 +2349,8 @@ def get_executive_weekly_report(
         window_minutes=60,
         country=None,
         severity_filter=None,
+        opening_hours_only=True,
+        reference_at=None,
         limit=20,
         role=role,
     )

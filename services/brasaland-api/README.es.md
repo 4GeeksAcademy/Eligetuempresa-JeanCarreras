@@ -51,6 +51,10 @@ uvicorn app.main:app --reload --port 8000
 - GET /api/v1/customers/summary?country=CO (requiere `X-API-Role` + `X-API-Token`, roles: `operations`, `executive`, `admin`)
 - GET /api/v1/customers/{customer_id} (requiere `X-API-Role` + `X-API-Token`, roles: `operations`, `executive`, `admin`)
 - POST /api/v1/customers/{customer_id}/points/adjust (requiere `X-API-Role` + `X-API-Token`, roles: `operations`, `admin`)
+- GET /api/v1/inventory/stock?country=CO&store_id=med-001&limit=100 (requiere `X-API-Role` + `X-API-Token`, roles: `operations`, `executive`, `admin`)
+- GET /api/v1/orders/recommendations?country=CO&currency=COP&days_history=14&target_days=7&only_at_risk=true (requiere `X-API-Role` + `X-API-Token`, roles: `operations`, `executive`, `admin`)
+- POST /api/v1/inventory/receipts?days_history=14&target_days=7 (requiere `X-API-Role` + `X-API-Token`, roles: `operations`, `admin`)
+- GET /api/v1/inventory/receipts?country=CO&store_id=med-001&sku=CHICKEN&limit=30&offset=0 (requiere `X-API-Role` + `X-API-Token`, roles: `operations`, `executive`, `admin`)
 
 Ejemplo de creacion de venta:
 
@@ -132,6 +136,40 @@ curl -X POST "http://localhost:8000/api/v1/customers/cus-co-001/points/adjust" \
 	-H "X-API-Role: operations" \
 	-H "X-API-Token: brasaland-operations-token" \
 	-d '{"delta_points": 15, "reason": "manual_adjustment"}'
+```
+
+Ejemplo de stock actual por local:
+
+```bash
+curl "http://localhost:8000/api/v1/inventory/stock?country=CO&limit=20" \
+	-H "X-API-Role: operations" \
+	-H "X-API-Token: brasaland-operations-token"
+```
+
+Ejemplo de pedidos inteligentes (historico + stock):
+
+```bash
+curl "http://localhost:8000/api/v1/orders/recommendations?country=US&currency=USD&days_history=14&target_days=7&only_at_risk=true" \
+	-H "X-API-Role: executive" \
+	-H "X-API-Token: brasaland-executive-token"
+```
+
+Ejemplo de recepcion de inventario (cierra recomendacion automaticamente si ya no hay riesgo):
+
+```bash
+curl -X POST "http://localhost:8000/api/v1/inventory/receipts?days_history=14&target_days=7" \
+	-H "Content-Type: application/json" \
+	-H "X-API-Role: operations" \
+	-H "X-API-Token: brasaland-operations-token" \
+	-d '{"store_id":"med-001","sku":"CHICKEN","received_qty":12,"unit_cost":12100,"currency":"COP","note":"recepcion proveedor semanal"}'
+```
+
+Ejemplo de consulta de ultimas recepciones:
+
+```bash
+curl "http://localhost:8000/api/v1/inventory/receipts?country=CO&store_id=med-001&limit=10&offset=0" \
+	-H "X-API-Role: executive" \
+	-H "X-API-Token: brasaland-executive-token"
 ```
 
 ## Siguiente iteracion

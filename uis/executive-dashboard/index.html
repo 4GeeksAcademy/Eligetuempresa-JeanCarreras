@@ -24,6 +24,13 @@
 
       <section class="filters" aria-label="Filtros del dashboard">
         <label>
+          Moneda
+          <select id="currencyFilter">
+            <option value="USD">USD</option>
+            <option value="COP">COP</option>
+          </select>
+        </label>
+        <label>
           Pais
           <select id="countryFilter">
             <option value="">Todos</option>
@@ -39,6 +46,15 @@
           Hasta
           <input id="endDate" type="date" />
         </label>
+        <label>
+          Auto refresh
+          <select id="refreshInterval">
+            <option value="0">Manual</option>
+            <option value="15">15s</option>
+            <option value="30" selected>30s</option>
+            <option value="60">60s</option>
+          </select>
+        </label>
         <button id="applyFilters" type="button">Aplicar filtros</button>
       </section>
 
@@ -46,7 +62,7 @@
         <article class="card accent-coral">
           <h2>Ventas semanales</h2>
           <p class="metric" id="weeklySales">-</p>
-          <p class="detail">Consolidado USD</p>
+          <p class="detail" id="salesCurrencyDetail">Consolidado USD</p>
         </article>
 
         <article class="card accent-amber">
@@ -65,6 +81,74 @@
       <section class="alerts-panel">
         <h2>Locales con inactividad prioritaria</h2>
         <div class="alerts-list" id="inactivityRows"></div>
+      </section>
+
+      <section class="orders-panel">
+        <h2>Pedidos inteligentes sugeridos</h2>
+        <div class="orders-list" id="reorderRows"></div>
+        <form class="receipt-form" id="receiptForm" aria-label="Registrar recepcion de inventario">
+          <h3>Registrar recepcion de inventario</h3>
+          <div class="receipt-grid">
+            <label>
+              Local
+              <select id="receiptStoreId">
+                <option value="med-001">Brasaland Laureles</option>
+                <option value="med-002">Brasaland El Poblado</option>
+                <option value="mia-001">Brasaland Doral</option>
+                <option value="mia-002">Brasaland Kendall</option>
+              </select>
+            </label>
+            <label>
+              SKU
+              <select id="receiptSku">
+                <option value="CHICKEN">CHICKEN</option>
+                <option value="POTATO">POTATO</option>
+              </select>
+            </label>
+            <label>
+              Cantidad recibida
+              <input id="receiptQty" type="number" min="0.1" step="0.1" value="1" required />
+            </label>
+            <label>
+              Costo unitario (opcional)
+              <input id="receiptUnitCost" type="number" min="0" step="0.01" />
+            </label>
+            <label>
+              Moneda
+              <select id="receiptCurrency">
+                <option value="USD">USD</option>
+                <option value="COP">COP</option>
+              </select>
+            </label>
+            <label>
+              Nota
+              <input id="receiptNote" type="text" maxlength="120" placeholder="recepcion proveedor" />
+            </label>
+          </div>
+          <div class="receipt-actions">
+            <button id="receiptSubmit" type="submit">Registrar recepcion</button>
+            <p id="receiptStatus" class="receipt-status">Listo para registrar una recepcion.</p>
+          </div>
+        </form>
+        <div class="receipts-table-wrap">
+          <h3>Ultimas recepciones</h3>
+          <table class="receipts-table">
+            <thead>
+              <tr>
+                <th>Hora</th>
+                <th>Local</th>
+                <th>SKU</th>
+                <th>Cantidad</th>
+                <th>Costo unit.</th>
+                <th>Moneda</th>
+              </tr>
+            </thead>
+            <tbody id="receiptRows"></tbody>
+          </table>
+          <div class="receipts-actions">
+            <button id="receiptLoadMore" type="button">Ver mas</button>
+          </div>
+        </div>
       </section>
 
       <section class="market-panel">

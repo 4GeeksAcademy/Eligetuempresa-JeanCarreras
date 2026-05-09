@@ -220,6 +220,152 @@ body {
   opacity: 0.8;
 }
 
+.orders-panel {
+  margin-top: 1rem;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  padding: 1rem;
+}
+
+.orders-panel h2 {
+  margin: 0 0 0.8rem;
+}
+
+.orders-list {
+  display: grid;
+  gap: 0.6rem;
+}
+
+.order-row {
+  border: 1px solid var(--line);
+  border-left: 6px solid #1d7a7a;
+  border-radius: 12px;
+  padding: 0.65rem 0.75rem;
+  background: #fff;
+}
+
+.order-row.warning {
+  border-left-color: #c88a12;
+}
+
+.order-row.critical {
+  border-left-color: #b42318;
+}
+
+.receipt-form {
+  margin-top: 0.9rem;
+  border-top: 1px solid var(--line);
+  padding-top: 0.9rem;
+}
+
+.receipt-form h3 {
+  margin: 0 0 0.6rem;
+  font-size: 0.95rem;
+}
+
+.receipt-grid {
+  display: grid;
+  gap: 0.6rem;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+}
+
+.receipt-grid label {
+  display: flex;
+  flex-direction: column;
+  font-size: 0.82rem;
+  gap: 0.24rem;
+}
+
+.receipt-grid select,
+.receipt-grid input {
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 0.5rem 0.6rem;
+  font: inherit;
+}
+
+.receipt-actions {
+  margin-top: 0.65rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  align-items: center;
+}
+
+.receipt-actions button {
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 0.5rem 0.7rem;
+  font: inherit;
+  cursor: pointer;
+  background: #1f2933;
+  color: #fff;
+  font-weight: 600;
+}
+
+.receipt-actions button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.receipt-status {
+  margin: 0;
+  font-size: 0.82rem;
+  opacity: 0.86;
+}
+
+.receipts-table-wrap {
+  margin-top: 0.85rem;
+  border-top: 1px solid var(--line);
+  padding-top: 0.8rem;
+}
+
+.receipts-table-wrap h3 {
+  margin: 0 0 0.5rem;
+  font-size: 0.95rem;
+}
+
+.receipts-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.receipts-table th,
+.receipts-table td {
+  padding: 0.45rem 0.4rem;
+  border-bottom: 1px solid var(--line);
+  text-align: left;
+  font-size: 0.82rem;
+}
+
+.receipts-table th {
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  font-size: 0.72rem;
+}
+
+.receipts-actions {
+  margin-top: 0.6rem;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.receipts-actions button {
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 0.45rem 0.7rem;
+  font: inherit;
+  font-size: 0.82rem;
+  cursor: pointer;
+  background: #fff;
+}
+
+.receipts-actions button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
 .finance-panel {
   margin-top: 1rem;
   background: var(--card);

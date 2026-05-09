@@ -43,6 +43,20 @@
       "problemMatcher": []
     },
     {
+      "label": "brasaland: run dashboard",
+      "type": "shell",
+      "command": "bash",
+      "args": [
+        "scripts/run_dashboard_local.sh"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "isBackground": true,
+      "group": "build",
+      "problemMatcher": []
+    },
+    {
       "label": "brasaland: smoke api",
       "type": "shell",
       "command": "bash",
