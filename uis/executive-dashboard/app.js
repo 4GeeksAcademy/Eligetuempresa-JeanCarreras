@@ -22,6 +22,7 @@ const financeRevenueEl = document.getElementById("financeRevenue");
 const financeCogsEl = document.getElementById("financeCogs");
 const financeProfitEl = document.getElementById("financeProfit");
 const financeMarginEl = document.getElementById("financeMargin");
+const alertsSlaEl = document.getElementById("alertsSla");
 
 function getFormatter(currency) {
   return new Intl.NumberFormat("en-US", {
@@ -159,6 +160,10 @@ function renderFinance(finance, currency) {
   financeMarginEl.textContent = `${Number(finance.gross_margin_pct).toFixed(2)}%`;
 }
 
+function renderAlertsSla(sla) {
+  alertsSlaEl.textContent = `${Number(sla.resolved_within_sla_pct || 0).toFixed(1)}%`;
+}
+
 function getFallbackData() {
   return {
     summary: {
@@ -242,6 +247,9 @@ function getFallbackData() {
       estimated_gross_profit: 52940.3,
       gross_margin_pct: 46.34,
     },
+    alertsSla: {
+      resolved_within_sla_pct: 82.5,
+    },
   };
 }
 
@@ -272,7 +280,7 @@ async function loadDashboard() {
   statusText.textContent = "Conectando con API...";
   const query = buildQuery();
   try {
-    const [summary, alerts, stores, trend, markets, finance] = await Promise.all([
+    const [summary, alerts, stores, trend, markets, finance, alertsSla] = await Promise.all([
       fetchJson(`/api/v1/sales/summary?period=week&${query}`),
       fetchJsonWithHeaders(`/api/v1/alerts/inactivity?window_minutes=60&limit=6&${query}`, {
         "X-API-Role": ALERTS_ROLE,
@@ -285,12 +293,17 @@ async function loadDashboard() {
         "X-API-Role": FINANCE_ROLE,
         "X-API-Token": FINANCE_TOKEN,
       }),
+      fetchJsonWithHeaders(`/api/v1/alerts/inactivity/sla?days=7&sla_target_minutes=30${countryFilterEl.value ? `&country=${countryFilterEl.value}` : ""}`, {
+        "X-API-Role": ALERTS_ROLE,
+        "X-API-Token": ALERTS_TOKEN,
+      }),
     ]);
 
     renderDashboard(summary, alerts, stores);
     renderTrend(trend, summary.currency);
     renderMarkets(markets, summary.currency);
     renderFinance(finance, summary.currency);
+    renderAlertsSla(alertsSla);
     statusText.textContent = "Datos en vivo conectados al API local.";
   } catch (error) {
     const fallback = getFallbackData();
@@ -298,6 +311,7 @@ async function loadDashboard() {
     renderTrend(fallback.trend, fallback.summary.currency);
     renderMarkets(fallback.markets, fallback.summary.currency);
     renderFinance(fallback.finance, fallback.summary.currency);
+    renderAlertsSla(fallback.alertsSla);
     statusText.textContent = "API no disponible. Mostrando modo demo.";
   }
 }

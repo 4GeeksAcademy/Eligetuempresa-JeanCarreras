@@ -192,6 +192,24 @@ alerts_no_role_status="$(curl -sS -o /dev/null -w "%{http_code}" \
   "$API_BASE/api/v1/alerts/inactivity?window_minutes=60")"
 assert_status "alerts inactivity sin role" "403" "$alerts_no_role_status"
 
+# 14) alerts SLA with executive role (allowed)
+alerts_sla_status="$(curl -sS -o /dev/null -w "%{http_code}" \
+  -H "X-API-Role: executive" \
+  -H "X-API-Token: $EXEC_TOKEN" \
+  "$API_BASE/api/v1/alerts/inactivity/sla?days=7&sla_target_minutes=30")"
+assert_status "alerts sla con executive" "200" "$alerts_sla_status"
+
+alerts_sla_body="$(curl -fsS \
+  -H "X-API-Role: executive" \
+  -H "X-API-Token: $EXEC_TOKEN" \
+  "$API_BASE/api/v1/alerts/inactivity/sla?days=7&sla_target_minutes=30")"
+assert_contains "alerts sla payload" '"resolved_within_sla_pct"' "$alerts_sla_body"
+
+# 15) alerts SLA without role (forbidden)
+alerts_sla_no_role_status="$(curl -sS -o /dev/null -w "%{http_code}" \
+  "$API_BASE/api/v1/alerts/inactivity/sla?days=7")"
+assert_status "alerts sla sin role" "403" "$alerts_sla_no_role_status"
+
 echo ""
 echo "Resultado integration: PASS=$PASS_COUNT FAIL=$FAIL_COUNT"
 

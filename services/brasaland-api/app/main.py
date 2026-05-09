@@ -130,6 +130,18 @@ class InactivityAlertResponse(BaseModel):
     alerts: list[InactivityAlert]
 
 
+class InactivityAlertSlaSummary(BaseModel):
+    period_days: int
+    sla_target_minutes: int
+    total_actions: int
+    acknowledged_actions: int
+    resolved_actions: int
+    resolved_after_ack_count: int
+    avg_minutes_ack_to_resolve: float
+    resolved_within_sla_pct: float
+    generated_at: datetime
+
+
 class AlertActionCreate(BaseModel):
     store_id: str
     status: Literal["acknowledged", "resolved"]
@@ -637,7 +649,7 @@ def get_sales_daily_trend(
 def get_inactivity_alerts(
     window_minutes: int = Query(default=60, ge=15, le=240),
     country: Literal["CO", "US"] | None = Query(default=None),
-    severity: Literal["warning", "critical"] | None = Query(default=None),
+    severity_filter: Literal["warning", "critical"] | None = Query(default=None, alias="severity"),
     limit: int = Query(default=20, ge=1, le=100),
     role: str = Depends(require_roles({"operations", "executive", "admin"})),
 ) -> InactivityAlertResponse:
@@ -691,7 +703,9 @@ def get_inactivity_alerts(
                     parsed_last_sale_local = parsed_last_sale_at
 
             if minutes_without_sales > window_minutes:
-                severity: Literal["warning", "critical"] = "critical" if minutes_without_sales > (window_minutes * 2) else "warning"
+                alert_severity: Literal["warning", "critical"] = (
+                    "critical" if minutes_without_sales > (window_minutes * 2) else "warning"
+                )
                 action_row = latest_actions_by_store.get(store["id"])
                 alert_status: Literal["new", "acknowledged", "resolved"] = "new"
                 alert_owner: str | None = None
@@ -717,7 +731,7 @@ def get_inactivity_alerts(
                         market="Colombia" if store["country"] == "CO" else "Florida",
                         store_timezone=store["timezone"],
                         minutes_without_sales=minutes_without_sales,
-                        severity=severity,
+                        severity=alert_severity,
                         last_sale_at=parsed_last_sale_at,
                         last_sale_local=parsed_last_sale_local,
                         alert_status=alert_status,
@@ -726,7 +740,7 @@ def get_inactivity_alerts(
                         alert_updated_at=alert_updated_at,
                         recommended_action=(
                             "Contact store manager and validate POS/connectivity immediately"
-                            if severity == "critical"
+                            if alert_severity == "critical"
                             else "Monitor next 30 minutes and verify staffing and ticket flow"
                         ),
                     )
@@ -737,8 +751,8 @@ def get_inactivity_alerts(
     total_stores = len(stores)
     raw_alerts_count = len(alerts)
 
-    if severity is not None:
-        alerts = [item for item in alerts if item.severity == severity]
+    if severity_filter is not None:
+        alerts = [item for item in alerts if item.severity == severity_filter]
 
     alerts = alerts[:limit]
     critical_alerts = len([item for item in alerts if item.severity == "critical"])
@@ -756,7 +770,7 @@ def get_inactivity_alerts(
         "read_inactivity_alerts",
         "success",
         f"country={country or 'ALL'}",
-        f"window_minutes={window_minutes}, severity={severity or 'ALL'}, alerts={len(alerts)}",
+        f"window_minutes={window_minutes}, severity={severity_filter or 'ALL'}, alerts={len(alerts)}",
     )
 
     return InactivityAlertResponse(
@@ -770,6 +784,77 @@ def get_inactivity_alerts(
         risk_level=risk_level,
         generated_at=now,
         alerts=alerts,
+    )
+
+
+@app.get("/api/v1/alerts/inactivity/sla", response_model=InactivityAlertSlaSummary)
+def get_inactivity_alerts_sla(
+    days: int = Query(default=7, ge=1, le=30),
+    sla_target_minutes: int = Query(default=30, ge=5, le=240),
+    country: Literal["CO", "US"] | None = Query(default=None),
+    role: str = Depends(require_roles({"operations", "executive", "admin"})),
+) -> InactivityAlertSlaSummary:
+    now = datetime.now(timezone.utc)
+    start_at = now - timedelta(days=days)
+
+    with get_db() as db:
+        rows = db.execute(
+            """
+            SELECT aa.store_id, aa.status, aa.updated_at
+            FROM alert_actions aa
+            JOIN stores st ON st.id = aa.store_id
+            WHERE aa.updated_at >= ?
+              AND (? IS NULL OR st.country = ?)
+            ORDER BY aa.store_id ASC, aa.updated_at ASC, aa.id ASC
+            """,
+            (start_at.isoformat(), country, country),
+        ).fetchall()
+
+    total_actions = len(rows)
+    acknowledged_actions = len([row for row in rows if row["status"] == "acknowledged"])
+    resolved_actions = len([row for row in rows if row["status"] == "resolved"])
+
+    durations_minutes: list[float] = []
+    last_ack_by_store: dict[str, datetime] = {}
+    for row in rows:
+        updated_at = datetime.fromisoformat(row["updated_at"])
+        if updated_at.tzinfo is None:
+            updated_at = updated_at.replace(tzinfo=timezone.utc)
+
+        if row["status"] == "acknowledged":
+            last_ack_by_store[row["store_id"]] = updated_at
+            continue
+
+        if row["status"] == "resolved":
+            ack_at = last_ack_by_store.get(row["store_id"])
+            if ack_at is not None and updated_at >= ack_at:
+                durations_minutes.append((updated_at - ack_at).total_seconds() / 60)
+
+    resolved_after_ack_count = len(durations_minutes)
+    avg_minutes_ack_to_resolve = round(sum(durations_minutes) / resolved_after_ack_count, 2) if resolved_after_ack_count > 0 else 0.0
+    resolved_within_sla = len([value for value in durations_minutes if value <= sla_target_minutes])
+    resolved_within_sla_pct = (
+        round((resolved_within_sla / resolved_after_ack_count) * 100, 2) if resolved_after_ack_count > 0 else 0.0
+    )
+
+    write_audit_log(
+        role,
+        "read_inactivity_alerts_sla",
+        "success",
+        f"country={country or 'ALL'}",
+        f"days={days}, actions={total_actions}, within_sla_pct={resolved_within_sla_pct}",
+    )
+
+    return InactivityAlertSlaSummary(
+        period_days=days,
+        sla_target_minutes=sla_target_minutes,
+        total_actions=total_actions,
+        acknowledged_actions=acknowledged_actions,
+        resolved_actions=resolved_actions,
+        resolved_after_ack_count=resolved_after_ack_count,
+        avg_minutes_ack_to_resolve=avg_minutes_ack_to_resolve,
+        resolved_within_sla_pct=resolved_within_sla_pct,
+        generated_at=now,
     )
 
 

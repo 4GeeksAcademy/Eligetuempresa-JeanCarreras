@@ -153,6 +153,13 @@ alert_action_unknown_status="$(curl -sS -o /dev/null -w "%{http_code}" \
   -d "$alert_action_unknown_payload")"
 assert_status "alert action store inexistente" "404" "$alert_action_unknown_status"
 
+# 9) Alerts SLA with invalid days should return 422
+alerts_sla_invalid_days_status="$(curl -sS -o /dev/null -w "%{http_code}" \
+  -H "X-API-Role: executive" \
+  -H "X-API-Token: $EXEC_TOKEN" \
+  "$API_BASE/api/v1/alerts/inactivity/sla?days=0")"
+assert_status "alerts sla days invalido" "422" "$alerts_sla_invalid_days_status"
+
 echo ""
 echo "Resultado integration-data: PASS=$PASS_COUNT FAIL=$FAIL_COUNT"
 
