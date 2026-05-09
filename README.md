@@ -108,6 +108,12 @@ To run full dev cycle (restart + QA + cleanup):
 bash scripts/dev_cycle.sh
 ```
 
+To validate local environment prerequisites:
+
+```bash
+bash scripts/check_env.sh
+```
+
 Optional (manual bootstrap if needed):
 
 ```bash

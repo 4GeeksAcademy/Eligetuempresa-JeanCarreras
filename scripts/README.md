@@ -92,4 +92,20 @@ Optional variables:
 - `PORT` (default: `8000`)
 - `LOG_FILE` (default: `/tmp/uvicorn-dev-cycle.log`)
 
+### `check_env.sh`
+
+Validates local prerequisites before running operational scripts.
+
+Checks:
+
+- Required commands: `bash`, `curl`, `lsof`.
+- Available Python (service venv, repo root venv, or `python3`).
+- Required Python dependencies: `fastapi`, `uvicorn`, `pydantic`.
+
+Example:
+
+```bash
+bash scripts/check_env.sh
+```
+
 > _Spanish version: [README.es.md](./README.es.md)._
