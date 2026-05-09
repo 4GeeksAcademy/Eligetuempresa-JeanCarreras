@@ -42,6 +42,8 @@ uvicorn app.main:app --reload --port 8000
 - GET /api/v1/audit/logs?limit=100 (requiere `X-API-Role` + `X-API-Token`, rol: `admin`)
 - GET /api/v1/training/resources?locale=es&q=apertura (requiere `X-API-Role` + `X-API-Token`, roles: `operations`, `executive`, `admin`)
 - GET /api/v1/training/resources/{resource_id} (requiere `X-API-Role` + `X-API-Token`, roles: `operations`, `executive`, `admin`)
+- GET /api/v1/hr/resources?resource_type=onboarding&locale=es&q=vacaciones (requiere `X-API-Role` + `X-API-Token`, roles: `operations`, `executive`, `admin`)
+- GET /api/v1/hr/resources/{resource_id} (requiere `X-API-Role` + `X-API-Token`, roles: `operations`, `executive`, `admin`)
 
 Ejemplo de creacion de venta:
 
@@ -87,6 +89,14 @@ Ejemplo de catalogo de formacion:
 
 ```bash
 curl "http://localhost:8000/api/v1/training/resources?locale=es&q=apertura" \
+	-H "X-API-Role: operations" \
+	-H "X-API-Token: brasaland-operations-token"
+```
+
+Ejemplo de recursos RRHH:
+
+```bash
+curl "http://localhost:8000/api/v1/hr/resources?resource_type=onboarding&locale=es" \
 	-H "X-API-Role: operations" \
 	-H "X-API-Token: brasaland-operations-token"
 ```

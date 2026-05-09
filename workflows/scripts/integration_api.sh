@@ -237,6 +237,33 @@ training_finance_status="$(curl -sS -o /dev/null -w "%{http_code}" \
   "$API_BASE/api/v1/training/resources")"
 assert_status "training resources finance prohibido" "403" "$training_finance_status"
 
+# 19) HR resources with operations role (allowed)
+hr_list_status="$(curl -sS -o /dev/null -w "%{http_code}" \
+  -H "X-API-Role: operations" \
+  -H "X-API-Token: $OPS_TOKEN" \
+  "$API_BASE/api/v1/hr/resources?resource_type=onboarding&locale=es")"
+assert_status "hr resources operations" "200" "$hr_list_status"
+
+hr_list_body="$(curl -fsS \
+  -H "X-API-Role: operations" \
+  -H "X-API-Token: $OPS_TOKEN" \
+  "$API_BASE/api/v1/hr/resources?q=vacaciones")"
+assert_contains "hr resources payload" '"resource_type"' "$hr_list_body"
+
+# 20) HR resource detail with executive role (allowed)
+hr_detail_status="$(curl -sS -o /dev/null -w "%{http_code}" \
+  -H "X-API-Role: executive" \
+  -H "X-API-Token: $EXEC_TOKEN" \
+  "$API_BASE/api/v1/hr/resources/hr-pol-vacaciones-001")"
+assert_status "hr detail executive" "200" "$hr_detail_status"
+
+# 21) HR resources with finance role (forbidden)
+hr_finance_status="$(curl -sS -o /dev/null -w "%{http_code}" \
+  -H "X-API-Role: finance" \
+  -H "X-API-Token: $FIN_TOKEN" \
+  "$API_BASE/api/v1/hr/resources")"
+assert_status "hr resources finance prohibido" "403" "$hr_finance_status"
+
 echo ""
 echo "Resultado integration: PASS=$PASS_COUNT FAIL=$FAIL_COUNT"
 

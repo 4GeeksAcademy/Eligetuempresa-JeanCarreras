@@ -42,6 +42,8 @@ uvicorn app.main:app --reload --port 8000
 - GET /api/v1/audit/logs?limit=100 (requires `X-API-Role` + `X-API-Token`, role: `admin`)
 - GET /api/v1/training/resources?locale=es&q=opening (requires `X-API-Role` + `X-API-Token`, roles: `operations`, `executive`, `admin`)
 - GET /api/v1/training/resources/{resource_id} (requires `X-API-Role` + `X-API-Token`, roles: `operations`, `executive`, `admin`)
+- GET /api/v1/hr/resources?resource_type=onboarding&locale=es&q=vacation (requires `X-API-Role` + `X-API-Token`, roles: `operations`, `executive`, `admin`)
+- GET /api/v1/hr/resources/{resource_id} (requires `X-API-Role` + `X-API-Token`, roles: `operations`, `executive`, `admin`)
 
 Example: create sale event
 
@@ -87,6 +89,14 @@ Example: training catalog
 
 ```bash
 curl "http://localhost:8000/api/v1/training/resources?locale=es&q=opening" \
+  -H "X-API-Role: operations" \
+  -H "X-API-Token: brasaland-operations-token"
+```
+
+Example: HR resources
+
+```bash
+curl "http://localhost:8000/api/v1/hr/resources?resource_type=onboarding&locale=es" \
   -H "X-API-Role: operations" \
   -H "X-API-Token: brasaland-operations-token"
 ```

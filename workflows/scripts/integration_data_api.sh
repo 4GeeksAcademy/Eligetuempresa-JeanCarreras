@@ -174,6 +174,20 @@ training_not_found_status="$(curl -sS -o /dev/null -w "%{http_code}" \
   "$API_BASE/api/v1/training/resources/no-existe")"
 assert_status "training detail inexistente" "404" "$training_not_found_status"
 
+# 12) HR resources with invalid limit should return 422
+hr_invalid_limit_status="$(curl -sS -o /dev/null -w "%{http_code}" \
+  -H "X-API-Role: operations" \
+  -H "X-API-Token: $OPS_TOKEN" \
+  "$API_BASE/api/v1/hr/resources?limit=0")"
+assert_status "hr resources limit invalido" "422" "$hr_invalid_limit_status"
+
+# 13) HR resource detail for unknown id should return 404
+hr_not_found_status="$(curl -sS -o /dev/null -w "%{http_code}" \
+  -H "X-API-Role: operations" \
+  -H "X-API-Token: $OPS_TOKEN" \
+  "$API_BASE/api/v1/hr/resources/no-existe")"
+assert_status "hr detail inexistente" "404" "$hr_not_found_status"
+
 echo ""
 echo "Resultado integration-data: PASS=$PASS_COUNT FAIL=$FAIL_COUNT"
 

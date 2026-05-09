@@ -156,6 +156,20 @@ class TrainingResourceDetail(TrainingResourceSummary):
     content: str
 
 
+class HrResourceSummary(BaseModel):
+    id: str
+    title: str
+    resource_type: Literal["onboarding", "policy", "faq"]
+    locale: Literal["es", "en"]
+    tags: list[str]
+    version: str
+    updated_at: datetime
+
+
+class HrResourceDetail(HrResourceSummary):
+    content: str
+
+
 class AlertActionCreate(BaseModel):
     store_id: str
     status: Literal["acknowledged", "resolved"]
@@ -363,6 +377,20 @@ def init_db() -> None:
             )
             """
         )
+        db.execute(
+            """
+            CREATE TABLE IF NOT EXISTS hr_resources (
+                id TEXT PRIMARY KEY,
+                title TEXT NOT NULL,
+                resource_type TEXT NOT NULL,
+                locale TEXT NOT NULL,
+                tags TEXT NOT NULL,
+                version TEXT NOT NULL,
+                content TEXT NOT NULL,
+                updated_at TEXT NOT NULL
+            )
+            """
+        )
 
         db.executemany(
             """
@@ -454,6 +482,49 @@ def init_db() -> None:
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 training_seed,
+            )
+
+        existing_hr = db.execute("SELECT COUNT(*) AS c FROM hr_resources").fetchone()["c"]
+        if existing_hr == 0:
+            now_iso = datetime.now(timezone.utc).isoformat()
+            hr_seed = [
+                (
+                    "hr-onb-cocina-001",
+                    "Onboarding cocina - Semana 1",
+                    "onboarding",
+                    "es",
+                    "onboarding,cocina,checklist,turno",
+                    "v1.0",
+                    "Dia 1: induccion y seguridad. Dia 2-3: estaciones. Dia 4-5: evaluacion asistida en turno.",
+                    now_iso,
+                ),
+                (
+                    "hr-pol-vacaciones-001",
+                    "Politica de vacaciones y ausencias",
+                    "policy",
+                    "es",
+                    "rrhh,vacaciones,ausencias,politica",
+                    "v1.0",
+                    "Solicitud con 15 dias de anticipacion. Aprobacion por manager y validacion RRHH.",
+                    now_iso,
+                ),
+                (
+                    "hr-faq-miami-001",
+                    "FAQ RRHH Florida",
+                    "faq",
+                    "en",
+                    "hr,faq,florida,payroll",
+                    "v1.0",
+                    "Common questions: payroll dates, schedule changes, time-off requests and mandatory documents.",
+                    now_iso,
+                ),
+            ]
+            db.executemany(
+                """
+                INSERT INTO hr_resources (id, title, resource_type, locale, tags, version, content, updated_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                hr_seed,
             )
 
 
@@ -1204,6 +1275,92 @@ def get_training_resource_detail(
         id=row["id"],
         title=row["title"],
         category=row["category"],
+        locale=row["locale"],
+        tags=tags,
+        version=row["version"],
+        updated_at=updated_at,
+        content=row["content"],
+    )
+
+
+@app.get("/api/v1/hr/resources", response_model=list[HrResourceSummary])
+def get_hr_resources(
+    q: str | None = Query(default=None),
+    resource_type: Literal["onboarding", "policy", "faq"] | None = Query(default=None),
+    locale: Literal["es", "en"] | None = Query(default=None),
+    limit: int = Query(default=20, ge=1, le=100),
+    role: str = Depends(require_roles({"operations", "admin", "executive"})),
+) -> list[HrResourceSummary]:
+    search = (q or "").strip().lower()
+    with get_db() as db:
+        rows = db.execute(
+            """
+            SELECT id, title, resource_type, locale, tags, version, updated_at
+            FROM hr_resources
+            WHERE (? IS NULL OR resource_type = ?)
+              AND (? IS NULL OR locale = ?)
+            ORDER BY updated_at DESC, id ASC
+            """,
+            (resource_type, resource_type, locale, locale),
+        ).fetchall()
+
+    output: list[HrResourceSummary] = []
+    for row in rows:
+        tags = [tag.strip() for tag in row["tags"].split(",") if tag.strip()]
+        haystack = f"{row['title']} {' '.join(tags)}".lower()
+        if search and search not in haystack:
+            continue
+        updated_at = parse_datetime_or_none(row["updated_at"]) or datetime.now(timezone.utc)
+        output.append(
+            HrResourceSummary(
+                id=row["id"],
+                title=row["title"],
+                resource_type=row["resource_type"],
+                locale=row["locale"],
+                tags=tags,
+                version=row["version"],
+                updated_at=updated_at,
+            )
+        )
+
+    write_audit_log(
+        role,
+        "read_hr_resources",
+        "success",
+        f"type={resource_type or 'ALL'}",
+        f"locale={locale or 'ALL'}, q={search or '-'}, results={min(len(output), limit)}",
+    )
+    return output[:limit]
+
+
+@app.get("/api/v1/hr/resources/{resource_id}", response_model=HrResourceDetail)
+def get_hr_resource_detail(
+    resource_id: str,
+    role: str = Depends(require_roles({"operations", "admin", "executive"})),
+) -> HrResourceDetail:
+    with get_db() as db:
+        row = db.execute(
+            """
+            SELECT id, title, resource_type, locale, tags, version, content, updated_at
+            FROM hr_resources
+            WHERE id = ?
+            """,
+            (resource_id,),
+        ).fetchone()
+
+    if row is None:
+        write_audit_log(role, "read_hr_resource_detail", "rejected", resource_id, "not found")
+        raise HTTPException(status_code=404, detail="hr resource not found")
+
+    updated_at = parse_datetime_or_none(row["updated_at"]) or datetime.now(timezone.utc)
+    tags = [tag.strip() for tag in row["tags"].split(",") if tag.strip()]
+
+    write_audit_log(role, "read_hr_resource_detail", "success", resource_id, f"version={row['version']}")
+
+    return HrResourceDetail(
+        id=row["id"],
+        title=row["title"],
+        resource_type=row["resource_type"],
         locale=row["locale"],
         tags=tags,
         version=row["version"],
