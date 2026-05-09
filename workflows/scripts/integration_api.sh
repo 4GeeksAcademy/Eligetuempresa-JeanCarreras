@@ -157,6 +157,7 @@ alerts_exec_body="$(curl -fsS \
 assert_contains "alerts inactivity payload" '"severity"' "$alerts_exec_body"
 assert_contains "alerts inactivity accion" '"recommended_action"' "$alerts_exec_body"
 assert_contains "alerts inactivity timezone" '"store_timezone"' "$alerts_exec_body"
+assert_contains "alerts inactivity resumen" '"critical_alerts"' "$alerts_exec_body"
 
 # 11) inactivity alerts without role (forbidden)
 alerts_no_role_status="$(curl -sS -o /dev/null -w "%{http_code}" \

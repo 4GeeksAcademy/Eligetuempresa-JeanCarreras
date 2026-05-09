@@ -117,6 +117,9 @@ class InactivityAlertResponse(BaseModel):
     window_minutes: int
     active_stores: int
     total_stores: int
+    total_alerts: int
+    critical_alerts: int
+    warning_alerts: int
     generated_at: datetime
     alerts: list[InactivityAlert]
 
@@ -663,6 +666,8 @@ def get_inactivity_alerts(
         alerts = [item for item in alerts if item.severity == severity]
 
     alerts = alerts[:limit]
+    critical_alerts = len([item for item in alerts if item.severity == "critical"])
+    warning_alerts = len([item for item in alerts if item.severity == "warning"])
 
     write_audit_log(
         role,
@@ -676,6 +681,9 @@ def get_inactivity_alerts(
         window_minutes=window_minutes,
         active_stores=total_stores - raw_alerts_count,
         total_stores=total_stores,
+        total_alerts=len(alerts),
+        critical_alerts=critical_alerts,
+        warning_alerts=warning_alerts,
         generated_at=now,
         alerts=alerts,
     )

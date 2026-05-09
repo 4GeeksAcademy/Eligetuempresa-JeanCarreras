@@ -53,7 +53,7 @@ function renderDashboard(summary, alerts, stores) {
   weeklySalesEl.textContent = formatter.format(summary.total_sales);
   avgTicketEl.textContent = formatter.format(summary.average_ticket);
   activeStoresEl.textContent = `${alerts.active_stores}/${alerts.total_stores}`;
-  inactiveStoresEl.textContent = `${alerts.alerts.length} locales con alerta`;
+  inactiveStoresEl.textContent = `${alerts.total_alerts} alertas · ${alerts.critical_alerts} criticas · ${alerts.warning_alerts} warning`;
   renderStores(stores, summary.currency);
   renderInactivity(alerts.alerts);
 }
@@ -162,6 +162,9 @@ function getFallbackData() {
     alerts: {
       active_stores: 12,
       total_stores: 14,
+      total_alerts: 2,
+      critical_alerts: 1,
+      warning_alerts: 1,
       alerts: [
         {
           store_id: "med-001",
