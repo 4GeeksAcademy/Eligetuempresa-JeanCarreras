@@ -170,6 +170,15 @@ class HrResourceDetail(HrResourceSummary):
     content: str
 
 
+class ExecutiveAskResponse(BaseModel):
+    question: str
+    answer: str
+    sources: list[str]
+    requires_follow_up: bool
+    follow_up_questions: list[str]
+    generated_at: datetime
+
+
 class AlertActionCreate(BaseModel):
     store_id: str
     status: Literal["acknowledged", "resolved"]
@@ -1366,4 +1375,181 @@ def get_hr_resource_detail(
         version=row["version"],
         updated_at=updated_at,
         content=row["content"],
+    )
+
+
+@app.get("/api/v1/executive/ask", response_model=ExecutiveAskResponse)
+def ask_executive_metrics(
+    question: str = Query(..., min_length=5),
+    currency: Literal["COP", "USD"] = Query(default="USD"),
+    role: str = Depends(require_roles({"executive", "admin"})),
+) -> ExecutiveAskResponse:
+    now = datetime.now(timezone.utc)
+    normalized = question.strip().lower()
+
+    with get_db() as db:
+        if "vendimos" in normalized and ("florida" in normalized or "colombia" in normalized or "vs" in normalized):
+            start_at = period_start("week")
+            end_at = now
+            rows = db.execute(
+                """
+                SELECT st.country, se.total_amount, se.currency
+                FROM sales_events se
+                JOIN stores st ON st.id = se.store_id
+                WHERE se.sold_at >= ? AND se.sold_at < ?
+                """,
+                (start_at.isoformat(), end_at.isoformat()),
+            ).fetchall()
+            totals_by_country: dict[str, float] = {"CO": 0.0, "US": 0.0}
+            for row in rows:
+                totals_by_country[row["country"]] += convert_amount(row["total_amount"], row["currency"], currency)
+
+            answer = (
+                f"Semana actual: Colombia={totals_by_country['CO']:.2f} {currency}, "
+                f"Florida={totals_by_country['US']:.2f} {currency}."
+            )
+            write_audit_log(
+                role,
+                "executive_ask",
+                "success",
+                "sales_week_country_compare",
+                f"currency={currency}",
+            )
+            return ExecutiveAskResponse(
+                question=question,
+                answer=answer,
+                sources=["sales_events", "stores", "rule:sales_week_country_compare"],
+                requires_follow_up=False,
+                follow_up_questions=[],
+                generated_at=now,
+            )
+
+        if "ticket" in normalized and "alto" in normalized and ("mes" in normalized or "month" in normalized):
+            start_at = period_start("month")
+            end_at = now
+            rows = db.execute(
+                """
+                SELECT st.id, st.name, st.country, se.total_amount, se.currency
+                FROM sales_events se
+                JOIN stores st ON st.id = se.store_id
+                WHERE se.sold_at >= ? AND se.sold_at < ?
+                ORDER BY st.id
+                """,
+                (start_at.isoformat(), end_at.isoformat()),
+            ).fetchall()
+            grouped: dict[str, dict[str, float | int | str]] = {}
+            for row in rows:
+                store_id = row["id"]
+                if store_id not in grouped:
+                    grouped[store_id] = {
+                        "store_name": row["name"],
+                        "market": "Colombia" if row["country"] == "CO" else "Florida",
+                        "tickets": 0,
+                        "total": 0.0,
+                    }
+                grouped[store_id]["tickets"] += 1
+                grouped[store_id]["total"] += convert_amount(row["total_amount"], row["currency"], currency)
+
+            best_store_name = "N/A"
+            best_market = "N/A"
+            best_avg = 0.0
+            for item in grouped.values():
+                tickets = int(item["tickets"])
+                if tickets <= 0:
+                    continue
+                avg = float(item["total"]) / tickets
+                if avg > best_avg:
+                    best_avg = avg
+                    best_store_name = str(item["store_name"])
+                    best_market = str(item["market"])
+
+            answer = (
+                f"Local con mayor ticket promedio mensual: {best_store_name} "
+                f"({best_market}) con {best_avg:.2f} {currency}."
+            )
+            write_audit_log(
+                role,
+                "executive_ask",
+                "success",
+                "top_monthly_average_ticket_store",
+                f"currency={currency}",
+            )
+            return ExecutiveAskResponse(
+                question=question,
+                answer=answer,
+                sources=["sales_events", "stores", "rule:top_monthly_average_ticket_store"],
+                requires_follow_up=False,
+                follow_up_questions=[],
+                generated_at=now,
+            )
+
+        if "riesgo" in normalized and "inactividad" in normalized:
+            stores_rows = db.execute("SELECT id FROM stores").fetchall()
+            total_stores = len(stores_rows)
+            rows = db.execute(
+                """
+                SELECT st.id, MAX(se.sold_at) AS last_sale_at
+                FROM stores st
+                LEFT JOIN sales_events se ON se.store_id = st.id
+                GROUP BY st.id
+                """
+            ).fetchall()
+            critical_count = 0
+            for row in rows:
+                if row["last_sale_at"] is None:
+                    critical_count += 1
+                    continue
+                last_sale = datetime.fromisoformat(row["last_sale_at"])
+                if last_sale.tzinfo is None:
+                    last_sale = last_sale.replace(tzinfo=timezone.utc)
+                minutes_without_sales = int((now - last_sale).total_seconds() // 60)
+                if minutes_without_sales > 120:
+                    critical_count += 1
+
+            critical_ratio_pct = round((critical_count / total_stores) * 100, 2) if total_stores > 0 else 0.0
+            if critical_ratio_pct >= 50:
+                risk_level = "high"
+            elif critical_ratio_pct >= 20:
+                risk_level = "medium"
+            else:
+                risk_level = "low"
+
+            answer = (
+                f"Riesgo actual de inactividad: {risk_level.upper()} "
+                f"({critical_count}/{total_stores} locales en estado critico, {critical_ratio_pct:.2f}%)."
+            )
+            write_audit_log(
+                role,
+                "executive_ask",
+                "success",
+                "inactivity_risk_snapshot",
+                "window_minutes=120",
+            )
+            return ExecutiveAskResponse(
+                question=question,
+                answer=answer,
+                sources=["stores", "sales_events", "rule:inactivity_risk_snapshot"],
+                requires_follow_up=False,
+                follow_up_questions=[],
+                generated_at=now,
+            )
+
+    write_audit_log(
+        role,
+        "executive_ask",
+        "insufficient_data",
+        "unsupported_question",
+        normalized[:200],
+    )
+    return ExecutiveAskResponse(
+        question=question,
+        answer="informacion insuficiente para responder con trazabilidad. Formula una pregunta de ventas por pais, ticket promedio mensual o riesgo de inactividad.",
+        sources=["rule:unsupported_question"],
+        requires_follow_up=True,
+        follow_up_questions=[
+            "Cuanto vendimos esta semana en Florida vs Colombia?",
+            "Que local tiene el ticket promedio mas alto del mes?",
+            "Cual es el riesgo actual de inactividad?",
+        ],
+        generated_at=now,
     )

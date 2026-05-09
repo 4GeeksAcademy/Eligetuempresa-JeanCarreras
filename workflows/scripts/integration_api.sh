@@ -264,6 +264,26 @@ hr_finance_status="$(curl -sS -o /dev/null -w "%{http_code}" \
   "$API_BASE/api/v1/hr/resources")"
 assert_status "hr resources finance prohibido" "403" "$hr_finance_status"
 
+# 22) executive ask with executive role (allowed)
+exec_ask_status="$(curl -sS -o /dev/null -w "%{http_code}" \
+  -H "X-API-Role: executive" \
+  -H "X-API-Token: $EXEC_TOKEN" \
+  "$API_BASE/api/v1/executive/ask?question=Cuanto%20vendimos%20esta%20semana%20en%20Florida%20vs%20Colombia%3F&currency=USD")"
+assert_status "executive ask executive" "200" "$exec_ask_status"
+
+exec_ask_body="$(curl -fsS \
+  -H "X-API-Role: executive" \
+  -H "X-API-Token: $EXEC_TOKEN" \
+  "$API_BASE/api/v1/executive/ask?question=Cual%20es%20el%20riesgo%20actual%20de%20inactividad%3F")"
+assert_contains "executive ask payload" '"sources"' "$exec_ask_body"
+
+# 23) executive ask with operations role (forbidden)
+exec_ask_ops_status="$(curl -sS -o /dev/null -w "%{http_code}" \
+  -H "X-API-Role: operations" \
+  -H "X-API-Token: $OPS_TOKEN" \
+  "$API_BASE/api/v1/executive/ask?question=Cuanto%20vendimos%3F")"
+assert_status "executive ask operations prohibido" "403" "$exec_ask_ops_status"
+
 echo ""
 echo "Resultado integration: PASS=$PASS_COUNT FAIL=$FAIL_COUNT"
 

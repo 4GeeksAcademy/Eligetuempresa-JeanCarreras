@@ -44,6 +44,7 @@ uvicorn app.main:app --reload --port 8000
 - GET /api/v1/training/resources/{resource_id} (requiere `X-API-Role` + `X-API-Token`, roles: `operations`, `executive`, `admin`)
 - GET /api/v1/hr/resources?resource_type=onboarding&locale=es&q=vacaciones (requiere `X-API-Role` + `X-API-Token`, roles: `operations`, `executive`, `admin`)
 - GET /api/v1/hr/resources/{resource_id} (requiere `X-API-Role` + `X-API-Token`, roles: `operations`, `executive`, `admin`)
+- GET /api/v1/executive/ask?question=...&currency=USD (requiere `X-API-Role` + `X-API-Token`, roles: `executive`, `admin`)
 
 Ejemplo de creacion de venta:
 
@@ -99,6 +100,14 @@ Ejemplo de recursos RRHH:
 curl "http://localhost:8000/api/v1/hr/resources?resource_type=onboarding&locale=es" \
 	-H "X-API-Role: operations" \
 	-H "X-API-Token: brasaland-operations-token"
+```
+
+Ejemplo de consulta ejecutiva en lenguaje natural:
+
+```bash
+curl "http://localhost:8000/api/v1/executive/ask?question=Cuanto%20vendimos%20esta%20semana%20en%20Florida%20vs%20Colombia%3F&currency=USD" \
+	-H "X-API-Role: executive" \
+	-H "X-API-Token: brasaland-executive-token"
 ```
 
 ## Siguiente iteracion

@@ -44,6 +44,7 @@ uvicorn app.main:app --reload --port 8000
 - GET /api/v1/training/resources/{resource_id} (requires `X-API-Role` + `X-API-Token`, roles: `operations`, `executive`, `admin`)
 - GET /api/v1/hr/resources?resource_type=onboarding&locale=es&q=vacation (requires `X-API-Role` + `X-API-Token`, roles: `operations`, `executive`, `admin`)
 - GET /api/v1/hr/resources/{resource_id} (requires `X-API-Role` + `X-API-Token`, roles: `operations`, `executive`, `admin`)
+- GET /api/v1/executive/ask?question=...&currency=USD (requires `X-API-Role` + `X-API-Token`, roles: `executive`, `admin`)
 
 Example: create sale event
 
@@ -99,6 +100,14 @@ Example: HR resources
 curl "http://localhost:8000/api/v1/hr/resources?resource_type=onboarding&locale=es" \
   -H "X-API-Role: operations" \
   -H "X-API-Token: brasaland-operations-token"
+```
+
+Example: executive natural-language query
+
+```bash
+curl "http://localhost:8000/api/v1/executive/ask?question=How%20much%20did%20we%20sell%20this%20week%20in%20Florida%20vs%20Colombia%3F&currency=USD" \
+  -H "X-API-Role: executive" \
+  -H "X-API-Token: brasaland-executive-token"
 ```
 
 ## Next iteration

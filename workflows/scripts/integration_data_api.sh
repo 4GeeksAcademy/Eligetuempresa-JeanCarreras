@@ -188,6 +188,13 @@ hr_not_found_status="$(curl -sS -o /dev/null -w "%{http_code}" \
   "$API_BASE/api/v1/hr/resources/no-existe")"
 assert_status "hr detail inexistente" "404" "$hr_not_found_status"
 
+# 14) Executive ask unsupported question should return guidance payload
+exec_unknown_body="$(curl -fsS \
+  -H "X-API-Role: executive" \
+  -H "X-API-Token: $EXEC_TOKEN" \
+  "$API_BASE/api/v1/executive/ask?question=Hola%20equipo")"
+assert_contains "executive ask insuficiente" '"requires_follow_up":true' "$exec_unknown_body"
+
 echo ""
 echo "Resultado integration-data: PASS=$PASS_COUNT FAIL=$FAIL_COUNT"
 
