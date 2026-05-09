@@ -114,6 +114,8 @@ Para validar prerequisitos del entorno local:
 bash scripts/check_env.sh
 ```
 
+Nota: `run_api_local.sh` y `restart_api_local.sh` ya ejecutan este preflight automaticamente.
+
 Opcional (si necesitas bootstrap manual):
 
 ```bash

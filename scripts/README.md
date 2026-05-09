@@ -11,6 +11,8 @@ This folder contains **helper scripts** for the monorepo: development automation
 
 Starts Brasaland API locally with robust Python resolution.
 
+- Runs automatic preflight with `check_env.sh` before startup.
+
 - Resolves Python in this order:
 	- `services/brasaland-api/.venv/bin/python`
 	- `.venv/bin/python` (repo root)
@@ -45,6 +47,8 @@ Optional variables:
 ### `restart_api_local.sh`
 
 Restarts the local API in one command (`stop` + `run`).
+
+- Runs automatic preflight with `check_env.sh` before restart.
 
 Example:
 

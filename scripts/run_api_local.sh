@@ -11,6 +11,9 @@ if [[ ! -d "$SERVICE_DIR" ]]; then
   exit 1
 fi
 
+echo "Validando prerequisitos de entorno"
+bash "$ROOT_DIR/scripts/check_env.sh"
+
 PY_BIN=""
 if [[ -x "$SERVICE_DIR/.venv/bin/python" ]]; then
   PY_BIN="$SERVICE_DIR/.venv/bin/python"

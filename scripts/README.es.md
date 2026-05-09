@@ -11,6 +11,8 @@ Esta carpeta contiene **scripts auxiliares** del monorepo: automatizaciones de d
 
 Levanta la API de Brasaland en local de forma robusta.
 
+- Ejecuta preflight automatico con `check_env.sh` antes de iniciar.
+
 - Busca Python en este orden:
 	- `services/brasaland-api/.venv/bin/python`
 	- `.venv/bin/python` (raiz del repo)
@@ -45,6 +47,8 @@ Variables opcionales:
 ### `restart_api_local.sh`
 
 Reinicia la API local en un solo comando (`stop` + `run`).
+
+- Ejecuta preflight automatico con `check_env.sh` antes de reiniciar.
 
 Ejemplo:
 

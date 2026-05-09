@@ -114,6 +114,8 @@ To validate local environment prerequisites:
 bash scripts/check_env.sh
 ```
 
+Note: `run_api_local.sh` and `restart_api_local.sh` already run this preflight automatically.
+
 Optional (manual bootstrap if needed):
 
 ```bash
