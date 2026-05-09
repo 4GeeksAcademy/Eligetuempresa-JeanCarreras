@@ -5,4 +5,27 @@ This folder contains **helper scripts** for the monorepo: development automation
 - **Main purpose**: group support tools that do not belong to a specific app, agent, or pipeline but make the team’s work easier.
 - **Recommendation**: document each script (what it does, parameters, requirements, usage examples) and keep them reproducible (and safe) across environments.
 
+## Available scripts
+
+### `run_api_local.sh`
+
+Starts Brasaland API locally with robust Python resolution.
+
+- Resolves Python in this order:
+	- `services/brasaland-api/.venv/bin/python`
+	- `.venv/bin/python` (repo root)
+	- system `python3`
+- Runs `python -m uvicorn app.main:app` with configurable host/port.
+
+Example:
+
+```bash
+bash scripts/run_api_local.sh
+```
+
+Optional variables:
+
+- `HOST` (default: `0.0.0.0`)
+- `PORT` (default: `8000`)
+
 > _Spanish version: [README.es.md](./README.es.md)._

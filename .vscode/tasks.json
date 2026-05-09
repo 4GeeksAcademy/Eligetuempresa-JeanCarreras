@@ -2,6 +2,20 @@
   "version": "2.0.0",
   "tasks": [
     {
+      "label": "brasaland: run api",
+      "type": "shell",
+      "command": "bash",
+      "args": [
+        "scripts/run_api_local.sh"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "isBackground": true,
+      "group": "build",
+      "problemMatcher": []
+    },
+    {
       "label": "brasaland: smoke api",
       "type": "shell",
       "command": "bash",

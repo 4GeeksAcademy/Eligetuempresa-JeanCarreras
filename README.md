@@ -81,6 +81,12 @@ ai-engineering-company-project-monorepo/
 Quick local tip (Brasaland API):
 
 ```bash
+bash scripts/run_api_local.sh
+```
+
+Optional (manual bootstrap if needed):
+
+```bash
 cd services/brasaland-api
 python -m venv .venv
 source .venv/bin/activate
