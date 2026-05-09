@@ -303,11 +303,14 @@ def init_db() -> None:
             seed_events: list[tuple[str, str, float, str]] = []
             for day_delta in range(0, 14):
                 for hour in (12, 14, 18, 20):
-                    sold_at = (now - timedelta(days=day_delta, hours=(now.hour - hour))).replace(
+                    sold_at = (now - timedelta(days=day_delta)).replace(
+                        hour=hour,
                         minute=0,
                         second=0,
                         microsecond=0,
                     )
+                    if sold_at > now:
+                        sold_at -= timedelta(days=1)
                     seed_events.extend(
                         [
                             ("med-001", sold_at.isoformat(), 65200.0 + (day_delta * 250), "COP"),
