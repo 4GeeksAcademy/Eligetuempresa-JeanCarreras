@@ -155,6 +155,64 @@ body {
   color: #b42318;
 }
 
+.alerts-panel {
+  margin-top: 1rem;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  padding: 1rem;
+}
+
+.alerts-panel h2 {
+  margin: 0 0 0.8rem;
+}
+
+.alerts-list {
+  display: grid;
+  gap: 0.6rem;
+}
+
+.alert-row {
+  border: 1px solid var(--line);
+  border-left: 6px solid #d96f4a;
+  border-radius: 12px;
+  padding: 0.65rem 0.75rem;
+  background: #fff;
+}
+
+.alert-row.warning {
+  border-left-color: #c88a12;
+}
+
+.alert-row.critical {
+  border-left-color: #b42318;
+}
+
+.alert-store {
+  margin: 0;
+  font-weight: 700;
+}
+
+.alert-meta {
+  margin: 0.2rem 0 0;
+  font-size: 0.86rem;
+  opacity: 0.88;
+}
+
+.alert-severity {
+  margin: 0.3rem 0 0;
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.alerts-empty {
+  margin: 0;
+  font-size: 0.9rem;
+  opacity: 0.8;
+}
+
 .finance-panel {
   margin-top: 1rem;
   background: var(--card);

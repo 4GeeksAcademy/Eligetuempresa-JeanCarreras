@@ -150,6 +150,12 @@ alerts_exec_status="$(curl -sS -o /dev/null -w "%{http_code}" \
   "$API_BASE/api/v1/alerts/inactivity?window_minutes=60")"
 assert_status "alerts inactivity con executive" "200" "$alerts_exec_status"
 
+alerts_exec_body="$(curl -fsS \
+  -H "X-API-Role: executive" \
+  -H "X-API-Token: $EXEC_TOKEN" \
+  "$API_BASE/api/v1/alerts/inactivity?window_minutes=60")"
+assert_contains "alerts inactivity payload" '"severity"' "$alerts_exec_body"
+
 # 11) inactivity alerts without role (forbidden)
 alerts_no_role_status="$(curl -sS -o /dev/null -w "%{http_code}" \
   "$API_BASE/api/v1/alerts/inactivity?window_minutes=60")"

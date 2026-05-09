@@ -9,6 +9,8 @@ const statusText = document.getElementById("statusText");
 const weeklySalesEl = document.getElementById("weeklySales");
 const avgTicketEl = document.getElementById("avgTicket");
 const activeStoresEl = document.getElementById("activeStores");
+const inactiveStoresEl = document.getElementById("inactiveStores");
+const inactivityRowsEl = document.getElementById("inactivityRows");
 const storeRowsEl = document.getElementById("storeRows");
 const countryFilterEl = document.getElementById("countryFilter");
 const startDateEl = document.getElementById("startDate");
@@ -51,7 +53,31 @@ function renderDashboard(summary, alerts, stores) {
   weeklySalesEl.textContent = formatter.format(summary.total_sales);
   avgTicketEl.textContent = formatter.format(summary.average_ticket);
   activeStoresEl.textContent = `${alerts.active_stores}/${alerts.total_stores}`;
+  inactiveStoresEl.textContent = `${alerts.alerts.length} locales con alerta`;
   renderStores(stores, summary.currency);
+  renderInactivity(alerts.alerts);
+}
+
+function renderInactivity(alertRows) {
+  if (!alertRows.length) {
+    inactivityRowsEl.innerHTML = "<p class=\"alerts-empty\">Sin alertas de inactividad en este rango.</p>";
+    return;
+  }
+
+  inactivityRowsEl.innerHTML = alertRows
+    .slice(0, 6)
+    .map((item) => {
+      const severityClass = item.severity === "critical" ? "critical" : "warning";
+      const severityLabel = item.severity === "critical" ? "Critica" : "Advertencia";
+      return `
+        <article class="alert-row ${severityClass}">
+          <p class="alert-store">${item.store_name}</p>
+          <p class="alert-meta">${item.market} · ${item.minutes_without_sales} min sin ventas</p>
+          <p class="alert-severity">${severityLabel}</p>
+        </article>
+      `;
+    })
+    .join("");
 }
 
 function renderMarkets(markets, currency) {
@@ -129,6 +155,24 @@ function getFallbackData() {
     alerts: {
       active_stores: 12,
       total_stores: 14,
+      alerts: [
+        {
+          store_id: "med-001",
+          store_name: "Brasaland Laureles",
+          market: "Colombia",
+          minutes_without_sales: 158,
+          severity: "critical",
+          last_sale_at: "2026-05-08T12:00:00Z",
+        },
+        {
+          store_id: "mia-002",
+          store_name: "Brasaland Kendall",
+          market: "Florida",
+          minutes_without_sales: 85,
+          severity: "warning",
+          last_sale_at: "2026-05-08T13:30:00Z",
+        },
+      ],
     },
     stores: [
       {

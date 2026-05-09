@@ -105,6 +105,8 @@ class InactivityAlert(BaseModel):
     store_name: str
     market: str
     minutes_without_sales: int
+    severity: Literal["warning", "critical"]
+    last_sale_at: datetime | None
 
 
 class InactivityAlertResponse(BaseModel):
@@ -610,23 +612,29 @@ def get_inactivity_alerts(
                 (store["id"],),
             ).fetchone()
 
+            parsed_last_sale_at: datetime | None = None
             if row is None or row["last_sale_at"] is None:
                 minutes_without_sales = 10_000
             else:
-                last_sale_at = datetime.fromisoformat(row["last_sale_at"])
-                if last_sale_at.tzinfo is None:
-                    last_sale_at = last_sale_at.replace(tzinfo=timezone.utc)
-                minutes_without_sales = int((now - last_sale_at).total_seconds() // 60)
+                parsed_last_sale_at = datetime.fromisoformat(row["last_sale_at"])
+                if parsed_last_sale_at.tzinfo is None:
+                    parsed_last_sale_at = parsed_last_sale_at.replace(tzinfo=timezone.utc)
+                minutes_without_sales = int((now - parsed_last_sale_at).total_seconds() // 60)
 
             if minutes_without_sales > window_minutes:
+                severity: Literal["warning", "critical"] = "critical" if minutes_without_sales > (window_minutes * 2) else "warning"
                 alerts.append(
                     InactivityAlert(
                         store_id=store["id"],
                         store_name=store["name"],
                         market="Colombia" if store["country"] == "CO" else "Florida",
                         minutes_without_sales=minutes_without_sales,
+                        severity=severity,
+                        last_sale_at=parsed_last_sale_at,
                     )
                 )
+
+    alerts.sort(key=lambda item: item.minutes_without_sales, reverse=True)
 
     total_stores = len(stores)
 
