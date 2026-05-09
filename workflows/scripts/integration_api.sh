@@ -284,6 +284,26 @@ exec_ask_ops_status="$(curl -sS -o /dev/null -w "%{http_code}" \
   "$API_BASE/api/v1/executive/ask?question=Cuanto%20vendimos%3F")"
 assert_status "executive ask operations prohibido" "403" "$exec_ask_ops_status"
 
+# 24) executive weekly report with executive role (allowed)
+weekly_report_status="$(curl -sS -o /dev/null -w "%{http_code}" \
+  -H "X-API-Role: executive" \
+  -H "X-API-Token: $EXEC_TOKEN" \
+  "$API_BASE/api/v1/executive/weekly-report?currency=USD")"
+assert_status "executive weekly report" "200" "$weekly_report_status"
+
+weekly_report_body="$(curl -fsS \
+  -H "X-API-Role: executive" \
+  -H "X-API-Token: $EXEC_TOKEN" \
+  "$API_BASE/api/v1/executive/weekly-report?currency=USD")"
+assert_contains "executive weekly report payload" '"alerts_sla"' "$weekly_report_body"
+
+# 25) executive weekly report with operations role (forbidden)
+weekly_report_ops_status="$(curl -sS -o /dev/null -w "%{http_code}" \
+  -H "X-API-Role: operations" \
+  -H "X-API-Token: $OPS_TOKEN" \
+  "$API_BASE/api/v1/executive/weekly-report?currency=USD")"
+assert_status "executive weekly report operations prohibido" "403" "$weekly_report_ops_status"
+
 echo ""
 echo "Resultado integration: PASS=$PASS_COUNT FAIL=$FAIL_COUNT"
 

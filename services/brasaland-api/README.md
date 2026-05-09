@@ -45,6 +45,7 @@ uvicorn app.main:app --reload --port 8000
 - GET /api/v1/hr/resources?resource_type=onboarding&locale=es&q=vacation (requires `X-API-Role` + `X-API-Token`, roles: `operations`, `executive`, `admin`)
 - GET /api/v1/hr/resources/{resource_id} (requires `X-API-Role` + `X-API-Token`, roles: `operations`, `executive`, `admin`)
 - GET /api/v1/executive/ask?question=...&currency=USD (requires `X-API-Role` + `X-API-Token`, roles: `executive`, `admin`)
+- GET /api/v1/executive/weekly-report?currency=USD (requires `X-API-Role` + `X-API-Token`, roles: `executive`, `admin`)
 
 Example: create sale event
 

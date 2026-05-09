@@ -179,6 +179,15 @@ class ExecutiveAskResponse(BaseModel):
     generated_at: datetime
 
 
+class WeeklyExecutiveReportResponse(BaseModel):
+    currency: Literal["COP", "USD"]
+    generated_at: datetime
+    summary: SalesSummary
+    markets: list[MarketSummary]
+    inactivity: InactivityAlertResponse
+    alerts_sla: InactivityAlertSlaSummary
+
+
 class AlertActionCreate(BaseModel):
     store_id: str
     status: Literal["acknowledged", "resolved"]
@@ -1552,4 +1561,38 @@ def ask_executive_metrics(
             "Cual es el riesgo actual de inactividad?",
         ],
         generated_at=now,
+    )
+
+
+@app.get("/api/v1/executive/weekly-report", response_model=WeeklyExecutiveReportResponse)
+def get_executive_weekly_report(
+    currency: Literal["COP", "USD"] = Query(default="USD"),
+    role: str = Depends(require_roles({"executive", "admin"})),
+) -> WeeklyExecutiveReportResponse:
+    summary = get_sales_summary(period="week", currency=currency, country=None, start_date=None, end_date=None)
+    markets = get_market_summary(currency=currency, start_date=None, end_date=None, country=None)
+    inactivity = get_inactivity_alerts(
+        window_minutes=60,
+        country=None,
+        severity_filter=None,
+        limit=20,
+        role=role,
+    )
+    alerts_sla = get_inactivity_alerts_sla(days=7, sla_target_minutes=30, country=None, role=role)
+
+    write_audit_log(
+        role,
+        "read_executive_weekly_report",
+        "success",
+        "weekly_report",
+        f"currency={currency}, alerts={inactivity.total_alerts}",
+    )
+
+    return WeeklyExecutiveReportResponse(
+        currency=currency,
+        generated_at=datetime.now(timezone.utc),
+        summary=summary,
+        markets=markets,
+        inactivity=inactivity,
+        alerts_sla=alerts_sla,
     )

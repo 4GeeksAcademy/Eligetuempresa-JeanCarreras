@@ -5,22 +5,31 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 from datetime import datetime, timezone
 from pathlib import Path
 from urllib.error import URLError
-from urllib.request import urlopen
+from urllib.request import Request, urlopen
 
 
-def fetch_json(url: str) -> dict | list:
-    with urlopen(url, timeout=10) as response:
+def fetch_json(url: str, headers: dict[str, str] | None = None) -> dict | list:
+    request = Request(url, headers=headers or {})
+    with urlopen(request, timeout=10) as response:
         payload = response.read().decode("utf-8")
     return json.loads(payload)
 
 
 def build_report(api_base: str, currency: str) -> str:
-    summary = fetch_json(f"{api_base}/api/v1/sales/summary?period=week&currency={currency}")
-    markets = fetch_json(f"{api_base}/api/v1/markets/summary?currency={currency}")
-    alerts = fetch_json(f"{api_base}/api/v1/alerts/inactivity?window_minutes=60")
+    exec_token = os.getenv("BRASALAND_EXECUTIVE_TOKEN", "brasaland-executive-token")
+    headers = {
+        "X-API-Role": "executive",
+        "X-API-Token": exec_token,
+    }
+    report = fetch_json(f"{api_base}/api/v1/executive/weekly-report?currency={currency}", headers=headers)
+    summary = report["summary"]
+    markets = report["markets"]
+    alerts = report["inactivity"]
+    alerts_sla = report["alerts_sla"]
 
     lines: list[str] = []
     lines.append("# Reporte Ejecutivo Semanal - Brasaland")
@@ -33,6 +42,8 @@ def build_report(api_base: str, currency: str) -> str:
     lines.append(f"- Ventas semanales: {summary['total_sales']:.2f} {currency}")
     lines.append(f"- Ticket promedio: {summary['average_ticket']:.2f} {currency}")
     lines.append(f"- Locales activos: {alerts['active_stores']}/{alerts['total_stores']}")
+    lines.append(f"- Riesgo inactividad: {alerts['risk_level'].upper()} ({alerts['critical_ratio_pct']:.2f}% critico)")
+    lines.append(f"- SLA alertas <=30m: {alerts_sla['resolved_within_sla_pct']:.2f}%")
     lines.append("")
     lines.append("## Mercados")
     lines.append("")
