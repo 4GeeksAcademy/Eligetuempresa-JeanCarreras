@@ -49,6 +49,7 @@ Variables opcionales:
 Reinicia la API local en un solo comando (`stop` + `run`).
 
 - Ejecuta preflight automatico con `check_env.sh` antes de reiniciar.
+- Evita validacion duplicada al delegar en `run_api_local.sh`.
 
 Ejemplo:
 

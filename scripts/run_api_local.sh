@@ -11,8 +11,10 @@ if [[ ! -d "$SERVICE_DIR" ]]; then
   exit 1
 fi
 
-echo "Validando prerequisitos de entorno"
-bash "$ROOT_DIR/scripts/check_env.sh"
+if [[ "${SKIP_PREFLIGHT:-0}" != "1" ]]; then
+  echo "Validando prerequisitos de entorno"
+  bash "$ROOT_DIR/scripts/check_env.sh"
+fi
 
 PY_BIN=""
 if [[ -x "$SERVICE_DIR/.venv/bin/python" ]]; then

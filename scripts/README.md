@@ -49,6 +49,7 @@ Optional variables:
 Restarts the local API in one command (`stop` + `run`).
 
 - Runs automatic preflight with `check_env.sh` before restart.
+- Avoids duplicate validation when delegating to `run_api_local.sh`.
 
 Example:
 

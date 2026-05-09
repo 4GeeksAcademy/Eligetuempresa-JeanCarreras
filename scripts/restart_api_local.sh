@@ -12,4 +12,4 @@ bash "$ROOT_DIR/scripts/check_env.sh"
 PORT="$PORT" bash "$ROOT_DIR/scripts/stop_api_local.sh"
 
 # Start API again in foreground
-HOST="$HOST" PORT="$PORT" exec bash "$ROOT_DIR/scripts/run_api_local.sh"
+SKIP_PREFLIGHT=1 HOST="$HOST" PORT="$PORT" exec bash "$ROOT_DIR/scripts/run_api_local.sh"
