@@ -6,6 +6,7 @@ API_BASE="${API_BASE:-http://localhost:8000}"
 
 ADMIN_TOKEN="${BRASALAND_ADMIN_TOKEN:-brasaland-admin-token}"
 OPS_TOKEN="${BRASALAND_OPERATIONS_TOKEN:-brasaland-operations-token}"
+EXEC_TOKEN="${BRASALAND_EXECUTIVE_TOKEN:-brasaland-executive-token}"
 
 PASS_COUNT=0
 FAIL_COUNT=0
@@ -134,6 +135,13 @@ audit_status="$(curl -sS -o /dev/null -w "%{http_code}" \
   -H "X-API-Token: $ADMIN_TOKEN" \
   "$API_BASE/api/v1/audit/logs?limit=20")"
 assert_status "audit logs admin" "200" "$audit_status"
+
+# 7) Inactivity alerts with invalid limit should return 422
+alerts_invalid_limit_status="$(curl -sS -o /dev/null -w "%{http_code}" \
+  -H "X-API-Role: executive" \
+  -H "X-API-Token: $EXEC_TOKEN" \
+  "$API_BASE/api/v1/alerts/inactivity?window_minutes=60&limit=0")"
+assert_status "alerts inactivity limit invalido" "422" "$alerts_invalid_limit_status"
 
 echo ""
 echo "Resultado integration-data: PASS=$PASS_COUNT FAIL=$FAIL_COUNT"

@@ -65,7 +65,6 @@ function renderInactivity(alertRows) {
   }
 
   inactivityRowsEl.innerHTML = alertRows
-    .slice(0, 6)
     .map((item) => {
       const severityClass = item.severity === "critical" ? "critical" : "warning";
       const severityLabel = item.severity === "critical" ? "Critica" : "Advertencia";
@@ -241,7 +240,7 @@ async function loadDashboard() {
   try {
     const [summary, alerts, stores, trend, markets, finance] = await Promise.all([
       fetchJson(`/api/v1/sales/summary?period=week&${query}`),
-      fetchJsonWithHeaders(`/api/v1/alerts/inactivity?window_minutes=60&${query}`, {
+      fetchJsonWithHeaders(`/api/v1/alerts/inactivity?window_minutes=60&limit=6&${query}`, {
         "X-API-Role": ALERTS_ROLE,
         "X-API-Token": ALERTS_TOKEN,
       }),
