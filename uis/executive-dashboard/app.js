@@ -68,10 +68,17 @@ function renderInactivity(alertRows) {
     .map((item) => {
       const severityClass = item.severity === "critical" ? "critical" : "warning";
       const severityLabel = item.severity === "critical" ? "Critica" : "Advertencia";
+      const lastSaleLocal = item.last_sale_local
+        ? new Date(item.last_sale_local).toLocaleString("es-CO", {
+            dateStyle: "short",
+            timeStyle: "short",
+          })
+        : "Sin registro";
       return `
         <article class="alert-row ${severityClass}">
           <p class="alert-store">${item.store_name}</p>
-          <p class="alert-meta">${item.market} · ${item.minutes_without_sales} min sin ventas</p>
+          <p class="alert-meta">${item.market} · ${item.minutes_without_sales} min sin ventas · TZ ${item.store_timezone}</p>
+          <p class="alert-meta">Ultima venta local: ${lastSaleLocal}</p>
           <p class="alert-action">${item.recommended_action || "Validar operacion del local"}</p>
           <p class="alert-severity">${severityLabel}</p>
         </article>
@@ -160,18 +167,22 @@ function getFallbackData() {
           store_id: "med-001",
           store_name: "Brasaland Laureles",
           market: "Colombia",
+          store_timezone: "America/Bogota",
           minutes_without_sales: 158,
           severity: "critical",
           last_sale_at: "2026-05-08T12:00:00Z",
+          last_sale_local: "2026-05-08T07:00:00-05:00",
           recommended_action: "Contact store manager and validate POS/connectivity immediately",
         },
         {
           store_id: "mia-002",
           store_name: "Brasaland Kendall",
           market: "Florida",
+          store_timezone: "America/New_York",
           minutes_without_sales: 85,
           severity: "warning",
           last_sale_at: "2026-05-08T13:30:00Z",
+          last_sale_local: "2026-05-08T09:30:00-04:00",
           recommended_action: "Monitor next 30 minutes and verify staffing and ticket flow",
         },
       ],

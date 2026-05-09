@@ -5,6 +5,7 @@ import os
 from pathlib import Path
 from sqlite3 import Connection, Row, connect
 from typing import Literal
+from zoneinfo import ZoneInfo
 
 from fastapi import Depends, FastAPI, Header, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
@@ -104,9 +105,11 @@ class InactivityAlert(BaseModel):
     store_id: str
     store_name: str
     market: str
+    store_timezone: str
     minutes_without_sales: int
     severity: Literal["warning", "critical"]
     last_sale_at: datetime | None
+    last_sale_local: datetime | None
     recommended_action: str
 
 
@@ -601,7 +604,7 @@ def get_inactivity_alerts(
     with get_db() as db:
         stores = db.execute(
             """
-            SELECT id, name, country
+            SELECT id, name, country, timezone
             FROM stores
             WHERE (? IS NULL OR country = ?)
             ORDER BY id
@@ -624,6 +627,13 @@ def get_inactivity_alerts(
                     parsed_last_sale_at = parsed_last_sale_at.replace(tzinfo=timezone.utc)
                 minutes_without_sales = int((now - parsed_last_sale_at).total_seconds() // 60)
 
+            parsed_last_sale_local: datetime | None = None
+            if parsed_last_sale_at is not None:
+                try:
+                    parsed_last_sale_local = parsed_last_sale_at.astimezone(ZoneInfo(store["timezone"]))
+                except Exception:
+                    parsed_last_sale_local = parsed_last_sale_at
+
             if minutes_without_sales > window_minutes:
                 severity: Literal["warning", "critical"] = "critical" if minutes_without_sales > (window_minutes * 2) else "warning"
                 alerts.append(
@@ -631,9 +641,11 @@ def get_inactivity_alerts(
                         store_id=store["id"],
                         store_name=store["name"],
                         market="Colombia" if store["country"] == "CO" else "Florida",
+                        store_timezone=store["timezone"],
                         minutes_without_sales=minutes_without_sales,
                         severity=severity,
                         last_sale_at=parsed_last_sale_at,
+                        last_sale_local=parsed_last_sale_local,
                         recommended_action=(
                             "Contact store manager and validate POS/connectivity immediately"
                             if severity == "critical"
