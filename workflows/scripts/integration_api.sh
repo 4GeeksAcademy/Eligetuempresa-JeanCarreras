@@ -210,6 +210,33 @@ alerts_sla_no_role_status="$(curl -sS -o /dev/null -w "%{http_code}" \
   "$API_BASE/api/v1/alerts/inactivity/sla?days=7")"
 assert_status "alerts sla sin role" "403" "$alerts_sla_no_role_status"
 
+# 16) training resources with operations role (allowed)
+training_list_status="$(curl -sS -o /dev/null -w "%{http_code}" \
+  -H "X-API-Role: operations" \
+  -H "X-API-Token: $OPS_TOKEN" \
+  "$API_BASE/api/v1/training/resources?locale=es&limit=10")"
+assert_status "training resources operations" "200" "$training_list_status"
+
+training_list_body="$(curl -fsS \
+  -H "X-API-Role: operations" \
+  -H "X-API-Token: $OPS_TOKEN" \
+  "$API_BASE/api/v1/training/resources?locale=es&q=apertura")"
+assert_contains "training resources payload" '"category"' "$training_list_body"
+
+# 17) training resource detail with operations role (allowed)
+training_detail_status="$(curl -sS -o /dev/null -w "%{http_code}" \
+  -H "X-API-Role: operations" \
+  -H "X-API-Token: $OPS_TOKEN" \
+  "$API_BASE/api/v1/training/resources/sop-apertura-cocina-v1")"
+assert_status "training detail operations" "200" "$training_detail_status"
+
+# 18) training resources with finance role (forbidden)
+training_finance_status="$(curl -sS -o /dev/null -w "%{http_code}" \
+  -H "X-API-Role: finance" \
+  -H "X-API-Token: $FIN_TOKEN" \
+  "$API_BASE/api/v1/training/resources")"
+assert_status "training resources finance prohibido" "403" "$training_finance_status"
+
 echo ""
 echo "Resultado integration: PASS=$PASS_COUNT FAIL=$FAIL_COUNT"
 

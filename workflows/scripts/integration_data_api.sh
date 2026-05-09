@@ -160,6 +160,20 @@ alerts_sla_invalid_days_status="$(curl -sS -o /dev/null -w "%{http_code}" \
   "$API_BASE/api/v1/alerts/inactivity/sla?days=0")"
 assert_status "alerts sla days invalido" "422" "$alerts_sla_invalid_days_status"
 
+# 10) Training resources with invalid limit should return 422
+training_invalid_limit_status="$(curl -sS -o /dev/null -w "%{http_code}" \
+  -H "X-API-Role: operations" \
+  -H "X-API-Token: $OPS_TOKEN" \
+  "$API_BASE/api/v1/training/resources?limit=0")"
+assert_status "training resources limit invalido" "422" "$training_invalid_limit_status"
+
+# 11) Training resource detail for unknown id should return 404
+training_not_found_status="$(curl -sS -o /dev/null -w "%{http_code}" \
+  -H "X-API-Role: operations" \
+  -H "X-API-Token: $OPS_TOKEN" \
+  "$API_BASE/api/v1/training/resources/no-existe")"
+assert_status "training detail inexistente" "404" "$training_not_found_status"
+
 echo ""
 echo "Resultado integration-data: PASS=$PASS_COUNT FAIL=$FAIL_COUNT"
 

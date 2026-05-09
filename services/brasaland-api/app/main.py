@@ -142,6 +142,20 @@ class InactivityAlertSlaSummary(BaseModel):
     generated_at: datetime
 
 
+class TrainingResourceSummary(BaseModel):
+    id: str
+    title: str
+    category: Literal["recipe", "sop", "onboarding"]
+    locale: Literal["es", "en"]
+    tags: list[str]
+    version: str
+    updated_at: datetime
+
+
+class TrainingResourceDetail(TrainingResourceSummary):
+    content: str
+
+
 class AlertActionCreate(BaseModel):
     store_id: str
     status: Literal["acknowledged", "resolved"]
@@ -335,6 +349,20 @@ def init_db() -> None:
             )
             """
         )
+        db.execute(
+            """
+            CREATE TABLE IF NOT EXISTS training_resources (
+                id TEXT PRIMARY KEY,
+                title TEXT NOT NULL,
+                category TEXT NOT NULL,
+                locale TEXT NOT NULL,
+                tags TEXT NOT NULL,
+                version TEXT NOT NULL,
+                content TEXT NOT NULL,
+                updated_at TEXT NOT NULL
+            )
+            """
+        )
 
         db.executemany(
             """
@@ -373,6 +401,59 @@ def init_db() -> None:
                 VALUES (?, ?, ?, ?)
                 """,
                 seed_events,
+            )
+
+        existing_training = db.execute("SELECT COUNT(*) AS c FROM training_resources").fetchone()["c"]
+        if existing_training == 0:
+            now_iso = datetime.now(timezone.utc).isoformat()
+            training_seed = [
+                (
+                    "rec-brasa-pollo-v1",
+                    "Receta base: Pollo a la brasa",
+                    "recipe",
+                    "es",
+                    "pollo,brasa,coccion,calidad",
+                    "v1.0",
+                    "1) Marinar 12h. 2) Precalentar horno/parrilla. 3) Coccion objetivo: 74C interna. 4) Reposo 5 min.",
+                    now_iso,
+                ),
+                (
+                    "sop-apertura-cocina-v1",
+                    "SOP: Apertura de cocina",
+                    "sop",
+                    "es",
+                    "apertura,checklist,inocuidad",
+                    "v1.0",
+                    "Checklist apertura: higiene, mise en place, temperaturas, equipos, stock critico.",
+                    now_iso,
+                ),
+                (
+                    "onb-caja-dia1-v1",
+                    "Onboarding caja - Dia 1",
+                    "onboarding",
+                    "es",
+                    "onboarding,caja,pos,servicio",
+                    "v1.0",
+                    "Objetivo dia 1: login POS, flujo de cobro, manejo de anulaciones y cierre de turno asistido.",
+                    now_iso,
+                ),
+                (
+                    "sop-kitchen-opening-v1",
+                    "SOP: Kitchen opening",
+                    "sop",
+                    "en",
+                    "opening,checklist,food-safety",
+                    "v1.0",
+                    "Opening checklist: sanitation, mise en place, temperature checks, equipment and critical stock.",
+                    now_iso,
+                ),
+            ]
+            db.executemany(
+                """
+                INSERT INTO training_resources (id, title, category, locale, tags, version, content, updated_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                training_seed,
             )
 
 
@@ -1043,3 +1124,89 @@ def get_audit_logs(
             )
         )
     return output
+
+
+@app.get("/api/v1/training/resources", response_model=list[TrainingResourceSummary])
+def get_training_resources(
+    q: str | None = Query(default=None),
+    category: Literal["recipe", "sop", "onboarding"] | None = Query(default=None),
+    locale: Literal["es", "en"] | None = Query(default=None),
+    limit: int = Query(default=20, ge=1, le=100),
+    role: str = Depends(require_roles({"operations", "admin", "executive"})),
+) -> list[TrainingResourceSummary]:
+    search = (q or "").strip().lower()
+    with get_db() as db:
+        rows = db.execute(
+            """
+            SELECT id, title, category, locale, tags, version, updated_at
+            FROM training_resources
+            WHERE (? IS NULL OR category = ?)
+              AND (? IS NULL OR locale = ?)
+            ORDER BY updated_at DESC, id ASC
+            """,
+            (category, category, locale, locale),
+        ).fetchall()
+
+    output: list[TrainingResourceSummary] = []
+    for row in rows:
+        tags = [tag.strip() for tag in row["tags"].split(",") if tag.strip()]
+        haystack = f"{row['title']} {' '.join(tags)}".lower()
+        if search and search not in haystack:
+            continue
+        updated_at = parse_datetime_or_none(row["updated_at"]) or datetime.now(timezone.utc)
+        output.append(
+            TrainingResourceSummary(
+                id=row["id"],
+                title=row["title"],
+                category=row["category"],
+                locale=row["locale"],
+                tags=tags,
+                version=row["version"],
+                updated_at=updated_at,
+            )
+        )
+
+    write_audit_log(
+        role,
+        "read_training_resources",
+        "success",
+        f"category={category or 'ALL'}",
+        f"locale={locale or 'ALL'}, q={search or '-'}, results={min(len(output), limit)}",
+    )
+    return output[:limit]
+
+
+@app.get("/api/v1/training/resources/{resource_id}", response_model=TrainingResourceDetail)
+def get_training_resource_detail(
+    resource_id: str,
+    role: str = Depends(require_roles({"operations", "admin", "executive"})),
+) -> TrainingResourceDetail:
+    with get_db() as db:
+        row = db.execute(
+            """
+            SELECT id, title, category, locale, tags, version, content, updated_at
+            FROM training_resources
+            WHERE id = ?
+            """,
+            (resource_id,),
+        ).fetchone()
+
+    if row is None:
+        write_audit_log(role, "read_training_resource_detail", "rejected", resource_id, "not found")
+        raise HTTPException(status_code=404, detail="training resource not found")
+
+    updated_at = parse_datetime_or_none(row["updated_at"]) or datetime.now(timezone.utc)
+    tags = [tag.strip() for tag in row["tags"].split(",") if tag.strip()]
+
+    write_audit_log(role, "read_training_resource_detail", "success", resource_id, f"version={row['version']}")
+
+    return TrainingResourceDetail(
+        id=row["id"],
+        title=row["title"],
+        category=row["category"],
+        locale=row["locale"],
+        tags=tags,
+        version=row["version"],
+        updated_at=updated_at,
+        content=row["content"],
+    )

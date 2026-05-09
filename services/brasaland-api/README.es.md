@@ -35,9 +35,13 @@ uvicorn app.main:app --reload --port 8000
 - GET /api/v1/sales/daily-trend?currency=USD&country=US&start_date=2026-05-01&end_date=2026-05-08
 - GET /api/v1/markets/summary?currency=USD&country=CO&start_date=2026-05-01&end_date=2026-05-08
 - GET /api/v1/alerts/inactivity?window_minutes=60&country=CO
+- POST /api/v1/alerts/inactivity/actions (requiere `X-API-Role` + `X-API-Token`, roles: `operations`, `admin`)
+- GET /api/v1/alerts/inactivity/sla?days=7&sla_target_minutes=30 (requiere `X-API-Role` + `X-API-Token`, roles: `operations`, `executive`, `admin`)
 - GET /api/v1/reports/sales.csv?currency=USD&start_date=2026-05-01&end_date=2026-05-08 (requiere `X-API-Role` + `X-API-Token`, roles: `executive`, `finance`, `admin`)
 - GET /api/v1/finance/kpis?currency=USD&start_date=2026-05-01&end_date=2026-05-08 (requiere `X-API-Role` + `X-API-Token`, roles: `finance`, `executive`, `admin`)
 - GET /api/v1/audit/logs?limit=100 (requiere `X-API-Role` + `X-API-Token`, rol: `admin`)
+- GET /api/v1/training/resources?locale=es&q=apertura (requiere `X-API-Role` + `X-API-Token`, roles: `operations`, `executive`, `admin`)
+- GET /api/v1/training/resources/{resource_id} (requiere `X-API-Role` + `X-API-Token`, roles: `operations`, `executive`, `admin`)
 
 Ejemplo de creacion de venta:
 
@@ -77,6 +81,14 @@ Ejemplo de auditoria:
 curl "http://localhost:8000/api/v1/audit/logs?limit=50" \
 	-H "X-API-Role: admin" \
 	-H "X-API-Token: brasaland-admin-token"
+```
+
+Ejemplo de catalogo de formacion:
+
+```bash
+curl "http://localhost:8000/api/v1/training/resources?locale=es&q=apertura" \
+	-H "X-API-Role: operations" \
+	-H "X-API-Token: brasaland-operations-token"
 ```
 
 ## Siguiente iteracion
