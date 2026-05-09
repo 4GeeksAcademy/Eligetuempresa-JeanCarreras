@@ -96,6 +96,12 @@ To restart the local API:
 bash scripts/restart_api_local.sh
 ```
 
+To run full local QA in one command:
+
+```bash
+bash scripts/run_qa_local.sh
+```
+
 Optional (manual bootstrap if needed):
 
 ```bash

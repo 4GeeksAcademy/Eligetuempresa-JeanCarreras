@@ -56,3 +56,17 @@ Variables opcionales:
 
 - `HOST` (default: `0.0.0.0`)
 - `PORT` (default: `8000`)
+
+### `run_qa_local.sh`
+
+Ejecuta en secuencia toda la bateria QA local:
+
+- `workflows/scripts/smoke_api.sh`
+- `workflows/scripts/integration_api.sh`
+- `workflows/scripts/integration_data_api.sh`
+
+Ejemplo:
+
+```bash
+bash scripts/run_qa_local.sh
+```

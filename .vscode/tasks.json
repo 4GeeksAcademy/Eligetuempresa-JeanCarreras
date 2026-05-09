@@ -91,6 +91,19 @@
       ],
       "group": "test",
       "problemMatcher": []
+    },
+    {
+      "label": "brasaland: qa local script",
+      "type": "shell",
+      "command": "bash",
+      "args": [
+        "scripts/run_qa_local.sh"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "group": "test",
+      "problemMatcher": []
     }
   ]
 }
