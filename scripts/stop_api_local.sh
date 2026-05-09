@@ -9,7 +9,7 @@ if ! command -v lsof >/dev/null 2>&1; then
   exit 1
 fi
 
-PIDS="$(lsof -t -i TCP:"$PORT" -sTCP:LISTEN | tr '\n' ' ')"
+PIDS="$(lsof -t -i TCP:"$PORT" -sTCP:LISTEN 2>/dev/null | tr '\n' ' ' || true)"
 
 if [[ -z "${PIDS// }" ]]; then
   echo "No hay procesos escuchando en el puerto $PORT"

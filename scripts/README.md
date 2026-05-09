@@ -42,4 +42,19 @@ Optional variables:
 
 - `PORT` (default: `8000`)
 
+### `restart_api_local.sh`
+
+Restarts the local API in one command (`stop` + `run`).
+
+Example:
+
+```bash
+bash scripts/restart_api_local.sh
+```
+
+Optional variables:
+
+- `HOST` (default: `0.0.0.0`)
+- `PORT` (default: `8000`)
+
 > _Spanish version: [README.es.md](./README.es.md)._

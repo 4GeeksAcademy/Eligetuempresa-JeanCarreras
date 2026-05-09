@@ -90,6 +90,12 @@ Para detener la API local:
 bash scripts/stop_api_local.sh
 ```
 
+Para reiniciar la API local:
+
+```bash
+bash scripts/restart_api_local.sh
+```
+
 Opcional (si necesitas bootstrap manual):
 
 ```bash

@@ -41,3 +41,18 @@ bash scripts/stop_api_local.sh
 Variables opcionales:
 
 - `PORT` (default: `8000`)
+
+### `restart_api_local.sh`
+
+Reinicia la API local en un solo comando (`stop` + `run`).
+
+Ejemplo:
+
+```bash
+bash scripts/restart_api_local.sh
+```
+
+Variables opcionales:
+
+- `HOST` (default: `0.0.0.0`)
+- `PORT` (default: `8000`)

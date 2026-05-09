@@ -29,6 +29,20 @@
       "problemMatcher": []
     },
     {
+      "label": "brasaland: restart api",
+      "type": "shell",
+      "command": "bash",
+      "args": [
+        "scripts/restart_api_local.sh"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "isBackground": true,
+      "group": "build",
+      "problemMatcher": []
+    },
+    {
       "label": "brasaland: smoke api",
       "type": "shell",
       "command": "bash",
