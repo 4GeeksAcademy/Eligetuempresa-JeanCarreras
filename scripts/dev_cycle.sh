@@ -18,6 +18,9 @@ trap cleanup EXIT
 
 echo "== Brasaland dev cycle =="
 
+echo "Validando prerequisitos de entorno"
+bash "$ROOT_DIR/scripts/check_env.sh"
+
 echo "Asegurando puerto limpio en :$PORT"
 PORT="$PORT" bash "$ROOT_DIR/scripts/stop_api_local.sh" >/dev/null 2>&1 || true
 
