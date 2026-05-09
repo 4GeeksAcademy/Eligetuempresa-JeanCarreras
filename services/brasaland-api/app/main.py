@@ -170,6 +170,30 @@ class HrResourceDetail(HrResourceSummary):
     content: str
 
 
+class SupplierPriceRow(BaseModel):
+    supplier_id: str
+    supplier_name: str
+    sku: str
+    item_name: str
+    country: Literal["CO", "US"]
+    currency: Literal["COP", "USD"]
+    price: float
+    valid_from: datetime
+
+
+class SupplierPriceAlert(BaseModel):
+    supplier_id: str
+    supplier_name: str
+    sku: str
+    item_name: str
+    country: Literal["CO", "US"]
+    currency: Literal["COP", "USD"]
+    previous_price: float
+    current_price: float
+    change_pct: float
+    valid_from: datetime
+
+
 class ExecutiveAskResponse(BaseModel):
     question: str
     answer: str
@@ -409,6 +433,21 @@ def init_db() -> None:
             )
             """
         )
+        db.execute(
+            """
+            CREATE TABLE IF NOT EXISTS supplier_prices (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                supplier_id TEXT NOT NULL,
+                supplier_name TEXT NOT NULL,
+                sku TEXT NOT NULL,
+                item_name TEXT NOT NULL,
+                country TEXT NOT NULL,
+                currency TEXT NOT NULL,
+                price REAL NOT NULL,
+                valid_from TEXT NOT NULL
+            )
+            """
+        )
 
         db.executemany(
             """
@@ -543,6 +582,28 @@ def init_db() -> None:
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 hr_seed,
+            )
+
+        existing_supplier_prices = db.execute("SELECT COUNT(*) AS c FROM supplier_prices").fetchone()["c"]
+        if existing_supplier_prices == 0:
+            now = datetime.now(timezone.utc)
+            supplier_seed = [
+                ("sup-co-001", "Avicola Andina", "SKU-POLLO", "Pollo entero", "CO", "COP", 12100.0, (now - timedelta(days=14)).isoformat()),
+                ("sup-co-001", "Avicola Andina", "SKU-POLLO", "Pollo entero", "CO", "COP", 13400.0, (now - timedelta(days=2)).isoformat()),
+                ("sup-co-002", "Hortalizas Antioquia", "SKU-PAPA", "Papa criolla", "CO", "COP", 3100.0, (now - timedelta(days=10)).isoformat()),
+                ("sup-co-002", "Hortalizas Antioquia", "SKU-PAPA", "Papa criolla", "CO", "COP", 3190.0, (now - timedelta(days=1)).isoformat()),
+                ("sup-us-001", "Florida Poultry LLC", "SKU-CHICKEN", "Whole chicken", "US", "USD", 3.15, (now - timedelta(days=12)).isoformat()),
+                ("sup-us-001", "Florida Poultry LLC", "SKU-CHICKEN", "Whole chicken", "US", "USD", 3.55, (now - timedelta(days=1)).isoformat()),
+                ("sup-us-002", "Sun Produce Co", "SKU-POTATO", "Potato", "US", "USD", 1.42, (now - timedelta(days=11)).isoformat()),
+                ("sup-us-002", "Sun Produce Co", "SKU-POTATO", "Potato", "US", "USD", 1.44, (now - timedelta(days=1)).isoformat()),
+            ]
+            db.executemany(
+                """
+                INSERT INTO supplier_prices (
+                    supplier_id, supplier_name, sku, item_name, country, currency, price, valid_from
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                supplier_seed,
             )
 
 
@@ -1596,3 +1657,117 @@ def get_executive_weekly_report(
         inactivity=inactivity,
         alerts_sla=alerts_sla,
     )
+
+
+@app.get("/api/v1/suppliers/prices", response_model=list[SupplierPriceRow])
+def get_supplier_prices(
+    country: Literal["CO", "US"] | None = Query(default=None),
+    supplier_id: str | None = Query(default=None),
+    sku: str | None = Query(default=None),
+    currency: Literal["COP", "USD"] = Query(default="USD"),
+    limit: int = Query(default=100, ge=1, le=500),
+    role: str = Depends(require_roles({"operations", "executive", "admin"})),
+) -> list[SupplierPriceRow]:
+    with get_db() as db:
+        rows = db.execute(
+            """
+            SELECT supplier_id, supplier_name, sku, item_name, country, currency, price, valid_from
+            FROM supplier_prices
+            WHERE (? IS NULL OR country = ?)
+              AND (? IS NULL OR supplier_id = ?)
+              AND (? IS NULL OR sku = ?)
+            ORDER BY valid_from DESC
+            LIMIT ?
+            """,
+            (country, country, supplier_id, supplier_id, sku, sku, limit),
+        ).fetchall()
+
+    output: list[SupplierPriceRow] = []
+    for row in rows:
+        valid_from = parse_datetime_or_none(row["valid_from"]) or datetime.now(timezone.utc)
+        output.append(
+            SupplierPriceRow(
+                supplier_id=row["supplier_id"],
+                supplier_name=row["supplier_name"],
+                sku=row["sku"],
+                item_name=row["item_name"],
+                country=row["country"],
+                currency=currency,
+                price=round(convert_amount(row["price"], row["currency"], currency), 4),
+                valid_from=valid_from,
+            )
+        )
+
+    write_audit_log(
+        role,
+        "read_supplier_prices",
+        "success",
+        f"country={country or 'ALL'}",
+        f"supplier={supplier_id or 'ALL'}, sku={sku or 'ALL'}, rows={len(output)}",
+    )
+    return output
+
+
+@app.get("/api/v1/suppliers/price-alerts", response_model=list[SupplierPriceAlert])
+def get_supplier_price_alerts(
+    threshold_pct: float = Query(default=5.0, ge=0.1, le=100.0),
+    country: Literal["CO", "US"] | None = Query(default=None),
+    currency: Literal["COP", "USD"] = Query(default="USD"),
+    role: str = Depends(require_roles({"operations", "executive", "admin"})),
+) -> list[SupplierPriceAlert]:
+    with get_db() as db:
+        rows = db.execute(
+            """
+            SELECT supplier_id, supplier_name, sku, item_name, country, currency, price, valid_from
+            FROM supplier_prices
+            WHERE (? IS NULL OR country = ?)
+            ORDER BY supplier_id ASC, sku ASC, country ASC, valid_from DESC
+            """,
+            (country, country),
+        ).fetchall()
+
+    top_two_by_key: dict[tuple[str, str, str], list[Row]] = {}
+    for row in rows:
+        key = (row["supplier_id"], row["sku"], row["country"])
+        if key not in top_two_by_key:
+            top_two_by_key[key] = []
+        if len(top_two_by_key[key]) < 2:
+            top_two_by_key[key].append(row)
+
+    alerts: list[SupplierPriceAlert] = []
+    for pair in top_two_by_key.values():
+        if len(pair) < 2:
+            continue
+        current_row, previous_row = pair[0], pair[1]
+        previous_price = convert_amount(previous_row["price"], previous_row["currency"], currency)
+        current_price = convert_amount(current_row["price"], current_row["currency"], currency)
+        if previous_price <= 0:
+            continue
+        change_pct = ((current_price - previous_price) / previous_price) * 100
+        if change_pct < threshold_pct:
+            continue
+
+        valid_from = parse_datetime_or_none(current_row["valid_from"]) or datetime.now(timezone.utc)
+        alerts.append(
+            SupplierPriceAlert(
+                supplier_id=current_row["supplier_id"],
+                supplier_name=current_row["supplier_name"],
+                sku=current_row["sku"],
+                item_name=current_row["item_name"],
+                country=current_row["country"],
+                currency=currency,
+                previous_price=round(previous_price, 4),
+                current_price=round(current_price, 4),
+                change_pct=round(change_pct, 2),
+                valid_from=valid_from,
+            )
+        )
+
+    write_audit_log(
+        role,
+        "read_supplier_price_alerts",
+        "success",
+        f"country={country or 'ALL'}",
+        f"threshold_pct={threshold_pct}, alerts={len(alerts)}",
+    )
+    return alerts

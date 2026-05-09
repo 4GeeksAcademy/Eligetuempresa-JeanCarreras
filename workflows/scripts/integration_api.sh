@@ -264,6 +264,44 @@ hr_finance_status="$(curl -sS -o /dev/null -w "%{http_code}" \
   "$API_BASE/api/v1/hr/resources")"
 assert_status "hr resources finance prohibido" "403" "$hr_finance_status"
 
+# 22) supplier prices with operations role (allowed)
+supplier_prices_status="$(curl -sS -o /dev/null -w "%{http_code}" \
+  -H "X-API-Role: operations" \
+  -H "X-API-Token: $OPS_TOKEN" \
+  "$API_BASE/api/v1/suppliers/prices?country=CO&currency=USD&limit=10")"
+assert_status "supplier prices operations" "200" "$supplier_prices_status"
+
+supplier_prices_body="$(curl -fsS \
+  -H "X-API-Role: operations" \
+  -H "X-API-Token: $OPS_TOKEN" \
+  "$API_BASE/api/v1/suppliers/prices?country=US&currency=USD&limit=10")"
+assert_contains "supplier prices payload" '"supplier_id"' "$supplier_prices_body"
+
+# 23) supplier price alerts with executive role (allowed)
+supplier_alerts_status="$(curl -sS -o /dev/null -w "%{http_code}" \
+  -H "X-API-Role: executive" \
+  -H "X-API-Token: $EXEC_TOKEN" \
+  "$API_BASE/api/v1/suppliers/price-alerts?country=CO&threshold_pct=5&currency=COP")"
+assert_status "supplier alerts executive" "200" "$supplier_alerts_status"
+
+supplier_alerts_body="$(curl -fsS \
+  -H "X-API-Role: executive" \
+  -H "X-API-Token: $EXEC_TOKEN" \
+  "$API_BASE/api/v1/suppliers/price-alerts?country=US&threshold_pct=5&currency=USD")"
+assert_contains "supplier alerts payload" '"change_pct"' "$supplier_alerts_body"
+
+# 24) supplier endpoints with finance role (forbidden)
+supplier_prices_finance_status="$(curl -sS -o /dev/null -w "%{http_code}" \
+  -H "X-API-Role: finance" \
+  -H "X-API-Token: $FIN_TOKEN" \
+  "$API_BASE/api/v1/suppliers/prices")"
+assert_status "supplier prices finance prohibido" "403" "$supplier_prices_finance_status"
+
+# 25) supplier alerts without role (forbidden)
+supplier_alerts_no_role_status="$(curl -sS -o /dev/null -w "%{http_code}" \
+  "$API_BASE/api/v1/suppliers/price-alerts")"
+assert_status "supplier alerts sin role" "403" "$supplier_alerts_no_role_status"
+
 # 22) executive ask with executive role (allowed)
 exec_ask_status="$(curl -sS -o /dev/null -w "%{http_code}" \
   -H "X-API-Role: executive" \

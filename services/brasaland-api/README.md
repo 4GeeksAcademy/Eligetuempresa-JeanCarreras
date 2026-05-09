@@ -46,6 +46,8 @@ uvicorn app.main:app --reload --port 8000
 - GET /api/v1/hr/resources/{resource_id} (requires `X-API-Role` + `X-API-Token`, roles: `operations`, `executive`, `admin`)
 - GET /api/v1/executive/ask?question=...&currency=USD (requires `X-API-Role` + `X-API-Token`, roles: `executive`, `admin`)
 - GET /api/v1/executive/weekly-report?currency=USD (requires `X-API-Role` + `X-API-Token`, roles: `executive`, `admin`)
+- GET /api/v1/suppliers/prices?country=CO&currency=USD&limit=100 (requires `X-API-Role` + `X-API-Token`, roles: `operations`, `executive`, `admin`)
+- GET /api/v1/suppliers/price-alerts?country=CO&threshold_pct=5&currency=COP (requires `X-API-Role` + `X-API-Token`, roles: `operations`, `executive`, `admin`)
 
 Example: create sale event
 
@@ -109,6 +111,14 @@ Example: executive natural-language query
 curl "http://localhost:8000/api/v1/executive/ask?question=How%20much%20did%20we%20sell%20this%20week%20in%20Florida%20vs%20Colombia%3F&currency=USD" \
   -H "X-API-Role: executive" \
   -H "X-API-Token: brasaland-executive-token"
+```
+
+Example: supplier price variation alerts
+
+```bash
+curl "http://localhost:8000/api/v1/suppliers/price-alerts?country=CO&threshold_pct=5&currency=COP" \
+  -H "X-API-Role: operations" \
+  -H "X-API-Token: brasaland-operations-token"
 ```
 
 ## Next iteration

@@ -188,6 +188,20 @@ hr_not_found_status="$(curl -sS -o /dev/null -w "%{http_code}" \
   "$API_BASE/api/v1/hr/resources/no-existe")"
 assert_status "hr detail inexistente" "404" "$hr_not_found_status"
 
+# 14) Supplier prices with invalid limit should return 422
+supplier_prices_invalid_limit_status="$(curl -sS -o /dev/null -w "%{http_code}" \
+  -H "X-API-Role: operations" \
+  -H "X-API-Token: $OPS_TOKEN" \
+  "$API_BASE/api/v1/suppliers/prices?limit=0")"
+assert_status "supplier prices limit invalido" "422" "$supplier_prices_invalid_limit_status"
+
+# 15) Supplier alerts with invalid threshold should return 422
+supplier_alerts_invalid_threshold_status="$(curl -sS -o /dev/null -w "%{http_code}" \
+  -H "X-API-Role: executive" \
+  -H "X-API-Token: $EXEC_TOKEN" \
+  "$API_BASE/api/v1/suppliers/price-alerts?threshold_pct=0")"
+assert_status "supplier alerts threshold invalido" "422" "$supplier_alerts_invalid_threshold_status"
+
 # 14) Executive ask unsupported question should return guidance payload
 exec_unknown_body="$(curl -fsS \
   -H "X-API-Role: executive" \
