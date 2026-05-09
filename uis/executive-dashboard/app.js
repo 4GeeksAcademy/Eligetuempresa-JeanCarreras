@@ -72,6 +72,7 @@ function renderInactivity(alertRows) {
         <article class="alert-row ${severityClass}">
           <p class="alert-store">${item.store_name}</p>
           <p class="alert-meta">${item.market} · ${item.minutes_without_sales} min sin ventas</p>
+          <p class="alert-action">${item.recommended_action || "Validar operacion del local"}</p>
           <p class="alert-severity">${severityLabel}</p>
         </article>
       `;
@@ -162,6 +163,7 @@ function getFallbackData() {
           minutes_without_sales: 158,
           severity: "critical",
           last_sale_at: "2026-05-08T12:00:00Z",
+          recommended_action: "Contact store manager and validate POS/connectivity immediately",
         },
         {
           store_id: "mia-002",
@@ -170,6 +172,7 @@ function getFallbackData() {
           minutes_without_sales: 85,
           severity: "warning",
           last_sale_at: "2026-05-08T13:30:00Z",
+          recommended_action: "Monitor next 30 minutes and verify staffing and ticket flow",
         },
       ],
     },

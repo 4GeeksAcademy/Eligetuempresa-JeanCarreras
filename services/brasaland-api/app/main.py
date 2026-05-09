@@ -107,6 +107,7 @@ class InactivityAlert(BaseModel):
     minutes_without_sales: int
     severity: Literal["warning", "critical"]
     last_sale_at: datetime | None
+    recommended_action: str
 
 
 class InactivityAlertResponse(BaseModel):
@@ -633,6 +634,11 @@ def get_inactivity_alerts(
                         minutes_without_sales=minutes_without_sales,
                         severity=severity,
                         last_sale_at=parsed_last_sale_at,
+                        recommended_action=(
+                            "Contact store manager and validate POS/connectivity immediately"
+                            if severity == "critical"
+                            else "Monitor next 30 minutes and verify staffing and ticket flow"
+                        ),
                     )
                 )
 

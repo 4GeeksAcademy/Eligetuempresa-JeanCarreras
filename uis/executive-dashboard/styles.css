@@ -199,6 +199,13 @@ body {
   opacity: 0.88;
 }
 
+.alert-action {
+  margin: 0.28rem 0 0;
+  font-size: 0.82rem;
+  font-weight: 500;
+  opacity: 0.9;
+}
+
 .alert-severity {
   margin: 0.3rem 0 0;
   font-size: 0.8rem;
