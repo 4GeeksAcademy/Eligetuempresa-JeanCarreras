@@ -27,3 +27,17 @@ Variables opcionales:
 
 - `HOST` (default: `0.0.0.0`)
 - `PORT` (default: `8000`)
+
+### `stop_api_local.sh`
+
+Detiene procesos que esten escuchando en el puerto de la API local.
+
+Ejemplo:
+
+```bash
+bash scripts/stop_api_local.sh
+```
+
+Variables opcionales:
+
+- `PORT` (default: `8000`)

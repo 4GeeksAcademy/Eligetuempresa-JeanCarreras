@@ -84,6 +84,12 @@ Quick local tip (Brasaland API):
 bash scripts/run_api_local.sh
 ```
 
+To stop the local API:
+
+```bash
+bash scripts/stop_api_local.sh
+```
+
 Optional (manual bootstrap if needed):
 
 ```bash

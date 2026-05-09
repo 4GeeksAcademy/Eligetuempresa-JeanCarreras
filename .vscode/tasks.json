@@ -16,6 +16,19 @@
       "problemMatcher": []
     },
     {
+      "label": "brasaland: stop api",
+      "type": "shell",
+      "command": "bash",
+      "args": [
+        "scripts/stop_api_local.sh"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "group": "build",
+      "problemMatcher": []
+    },
+    {
       "label": "brasaland: smoke api",
       "type": "shell",
       "command": "bash",

@@ -84,6 +84,12 @@ Tip rapido para entorno local (API Brasaland):
 bash scripts/run_api_local.sh
 ```
 
+Para detener la API local:
+
+```bash
+bash scripts/stop_api_local.sh
+```
+
 Opcional (si necesitas bootstrap manual):
 
 ```bash
