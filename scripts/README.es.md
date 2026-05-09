@@ -7,6 +7,20 @@ Esta carpeta contiene **scripts auxiliares** del monorepo: automatizaciones de d
 
 ## Scripts disponibles
 
+### `bootstrap_local_env.sh`
+
+Prepara el entorno local del repositorio en un comando.
+
+- Ejecuta `bootstrap_api_env.sh` para preparar la API.
+- Ejecuta `check_env.sh` para validar prerequisitos operativos.
+- Verifica que los scripts clave esten listos para uso.
+
+Ejemplo:
+
+```bash
+bash scripts/bootstrap_local_env.sh
+```
+
 ### `bootstrap_api_env.sh`
 
 Prepara entorno local de la API de Brasaland en un comando.

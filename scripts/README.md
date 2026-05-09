@@ -7,6 +7,20 @@ This folder contains **helper scripts** for the monorepo: development automation
 
 ## Available scripts
 
+### `bootstrap_local_env.sh`
+
+Prepares the repository local environment in one command.
+
+- Runs `bootstrap_api_env.sh` to prepare the API environment.
+- Runs `check_env.sh` to validate operational prerequisites.
+- Verifies key scripts are ready for use.
+
+Example:
+
+```bash
+bash scripts/bootstrap_local_env.sh
+```
+
 ### `bootstrap_api_env.sh`
 
 Prepares the Brasaland API local environment in one command.

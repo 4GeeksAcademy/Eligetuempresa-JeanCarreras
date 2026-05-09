@@ -81,7 +81,7 @@ ai-engineering-company-project-monorepo/
 Quick local tip (Brasaland API):
 
 ```bash
-bash scripts/bootstrap_api_env.sh
+bash scripts/bootstrap_local_env.sh
 ```
 
 Then start the API:

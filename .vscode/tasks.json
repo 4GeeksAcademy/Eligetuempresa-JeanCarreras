@@ -143,6 +143,19 @@
       },
       "group": "build",
       "problemMatcher": []
+    },
+    {
+      "label": "brasaland: bootstrap local env",
+      "type": "shell",
+      "command": "bash",
+      "args": [
+        "scripts/bootstrap_local_env.sh"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "group": "build",
+      "problemMatcher": []
     }
   ]
 }
