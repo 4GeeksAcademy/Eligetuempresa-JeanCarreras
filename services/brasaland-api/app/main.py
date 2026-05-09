@@ -194,6 +194,36 @@ class SupplierPriceAlert(BaseModel):
     valid_from: datetime
 
 
+class CustomerSummary(BaseModel):
+    country: Literal["CO", "US"]
+    total_customers: int
+    active_customers_30d: int
+    average_points: float
+
+
+class CustomerProfile(BaseModel):
+    id: str
+    full_name: str
+    country: Literal["CO", "US"]
+    segment: Literal["new", "recurring", "vip"]
+    points_balance: int
+    last_order_at: datetime | None
+
+
+class CustomerPointsAdjustmentCreate(BaseModel):
+    delta_points: int
+    reason: str
+
+
+class CustomerPointsAdjustmentResult(BaseModel):
+    customer_id: str
+    previous_points: int
+    current_points: int
+    delta_points: int
+    reason: str
+    updated_at: datetime
+
+
 class ExecutiveAskResponse(BaseModel):
     question: str
     answer: str
@@ -448,6 +478,30 @@ def init_db() -> None:
             )
             """
         )
+        db.execute(
+            """
+            CREATE TABLE IF NOT EXISTS customers (
+                id TEXT PRIMARY KEY,
+                full_name TEXT NOT NULL,
+                country TEXT NOT NULL,
+                segment TEXT NOT NULL,
+                points_balance INTEGER NOT NULL,
+                last_order_at TEXT
+            )
+            """
+        )
+        db.execute(
+            """
+            CREATE TABLE IF NOT EXISTS loyalty_events (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                customer_id TEXT NOT NULL,
+                delta_points INTEGER NOT NULL,
+                reason TEXT NOT NULL,
+                happened_at TEXT NOT NULL,
+                FOREIGN KEY(customer_id) REFERENCES customers(id)
+            )
+            """
+        )
 
         db.executemany(
             """
@@ -604,6 +658,40 @@ def init_db() -> None:
                 ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 supplier_seed,
+            )
+
+        existing_customers = db.execute("SELECT COUNT(*) AS c FROM customers").fetchone()["c"]
+        if existing_customers == 0:
+            now = datetime.now(timezone.utc)
+            customer_seed = [
+                ("cus-co-001", "Ana Rios", "CO", "vip", 420, (now - timedelta(days=2)).isoformat()),
+                ("cus-co-002", "Carlos Mejia", "CO", "recurring", 160, (now - timedelta(days=15)).isoformat()),
+                ("cus-us-001", "Emily Carter", "US", "vip", 530, (now - timedelta(days=1)).isoformat()),
+                ("cus-us-002", "James Miller", "US", "new", 40, (now - timedelta(days=35)).isoformat()),
+            ]
+            db.executemany(
+                """
+                INSERT INTO customers (id, full_name, country, segment, points_balance, last_order_at)
+                VALUES (?, ?, ?, ?, ?, ?)
+                """,
+                customer_seed,
+            )
+
+        existing_loyalty = db.execute("SELECT COUNT(*) AS c FROM loyalty_events").fetchone()["c"]
+        if existing_loyalty == 0:
+            now = datetime.now(timezone.utc)
+            loyalty_seed = [
+                ("cus-co-001", 120, "welcome_bonus", (now - timedelta(days=50)).isoformat()),
+                ("cus-co-001", 300, "purchase_accumulation", (now - timedelta(days=2)).isoformat()),
+                ("cus-us-001", 200, "welcome_bonus", (now - timedelta(days=40)).isoformat()),
+                ("cus-us-001", 330, "purchase_accumulation", (now - timedelta(days=1)).isoformat()),
+            ]
+            db.executemany(
+                """
+                INSERT INTO loyalty_events (customer_id, delta_points, reason, happened_at)
+                VALUES (?, ?, ?, ?)
+                """,
+                loyalty_seed,
             )
 
 
@@ -1771,3 +1859,136 @@ def get_supplier_price_alerts(
         f"threshold_pct={threshold_pct}, alerts={len(alerts)}",
     )
     return alerts
+
+
+@app.get("/api/v1/customers/summary", response_model=list[CustomerSummary])
+def get_customers_summary(
+    country: Literal["CO", "US"] | None = Query(default=None),
+    role: str = Depends(require_roles({"executive", "operations", "admin"})),
+) -> list[CustomerSummary]:
+    threshold = datetime.now(timezone.utc) - timedelta(days=30)
+    with get_db() as db:
+        rows = db.execute(
+            """
+            SELECT country, points_balance, last_order_at
+            FROM customers
+            WHERE (? IS NULL OR country = ?)
+            """,
+            (country, country),
+        ).fetchall()
+
+    grouped: dict[str, dict[str, float | int]] = {}
+    for row in rows:
+        key = row["country"]
+        if key not in grouped:
+            grouped[key] = {"count": 0, "active_30d": 0, "points_sum": 0.0}
+        grouped[key]["count"] += 1
+        grouped[key]["points_sum"] += float(row["points_balance"])
+        last_order_at = parse_datetime_or_none(row["last_order_at"])
+        if last_order_at is not None and last_order_at >= threshold:
+            grouped[key]["active_30d"] += 1
+
+    output: list[CustomerSummary] = []
+    for key in sorted(grouped.keys()):
+        count = int(grouped[key]["count"])
+        avg_points = float(grouped[key]["points_sum"]) / count if count > 0 else 0.0
+        output.append(
+            CustomerSummary(
+                country=key,
+                total_customers=count,
+                active_customers_30d=int(grouped[key]["active_30d"]),
+                average_points=round(avg_points, 2),
+            )
+        )
+
+    write_audit_log(
+        role,
+        "read_customers_summary",
+        "success",
+        f"country={country or 'ALL'}",
+        f"rows={len(output)}",
+    )
+    return output
+
+
+@app.get("/api/v1/customers/{customer_id}", response_model=CustomerProfile)
+def get_customer_profile(
+    customer_id: str,
+    role: str = Depends(require_roles({"executive", "operations", "admin"})),
+) -> CustomerProfile:
+    with get_db() as db:
+        row = db.execute(
+            """
+            SELECT id, full_name, country, segment, points_balance, last_order_at
+            FROM customers
+            WHERE id = ?
+            """,
+            (customer_id,),
+        ).fetchone()
+
+    if row is None:
+        write_audit_log(role, "read_customer_profile", "rejected", customer_id, "not found")
+        raise HTTPException(status_code=404, detail="customer not found")
+
+    write_audit_log(role, "read_customer_profile", "success", customer_id, "")
+    return CustomerProfile(
+        id=row["id"],
+        full_name=row["full_name"],
+        country=row["country"],
+        segment=row["segment"],
+        points_balance=int(row["points_balance"]),
+        last_order_at=parse_datetime_or_none(row["last_order_at"]),
+    )
+
+
+@app.post("/api/v1/customers/{customer_id}/points/adjust", response_model=CustomerPointsAdjustmentResult)
+def adjust_customer_points(
+    customer_id: str,
+    payload: CustomerPointsAdjustmentCreate,
+    role: str = Depends(require_roles({"operations", "admin"})),
+) -> CustomerPointsAdjustmentResult:
+    happened_at = datetime.now(timezone.utc)
+
+    with get_db() as db:
+        row = db.execute(
+            "SELECT points_balance FROM customers WHERE id = ?",
+            (customer_id,),
+        ).fetchone()
+        if row is None:
+            write_audit_log(role, "adjust_customer_points", "rejected", customer_id, "not found")
+            raise HTTPException(status_code=404, detail="customer not found")
+
+        previous_points = int(row["points_balance"])
+        current_points = previous_points + payload.delta_points
+        if current_points < 0:
+            write_audit_log(role, "adjust_customer_points", "rejected", customer_id, "negative points balance")
+            raise HTTPException(status_code=400, detail="points balance cannot be negative")
+
+        db.execute(
+            "UPDATE customers SET points_balance = ? WHERE id = ?",
+            (current_points, customer_id),
+        )
+        db.execute(
+            """
+            INSERT INTO loyalty_events (customer_id, delta_points, reason, happened_at)
+            VALUES (?, ?, ?, ?)
+            """,
+            (customer_id, payload.delta_points, payload.reason[:300], happened_at.isoformat()),
+        )
+
+    write_audit_log(
+        role,
+        "adjust_customer_points",
+        "success",
+        customer_id,
+        f"delta={payload.delta_points}, reason={payload.reason[:120]}",
+    )
+
+    return CustomerPointsAdjustmentResult(
+        customer_id=customer_id,
+        previous_points=previous_points,
+        current_points=current_points,
+        delta_points=payload.delta_points,
+        reason=payload.reason,
+        updated_at=happened_at,
+    )

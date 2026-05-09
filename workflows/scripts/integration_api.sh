@@ -302,6 +302,45 @@ supplier_alerts_no_role_status="$(curl -sS -o /dev/null -w "%{http_code}" \
   "$API_BASE/api/v1/suppliers/price-alerts")"
 assert_status "supplier alerts sin role" "403" "$supplier_alerts_no_role_status"
 
+# 26) customers summary with executive role (allowed)
+customers_summary_status="$(curl -sS -o /dev/null -w "%{http_code}" \
+  -H "X-API-Role: executive" \
+  -H "X-API-Token: $EXEC_TOKEN" \
+  "$API_BASE/api/v1/customers/summary")"
+assert_status "customers summary executive" "200" "$customers_summary_status"
+
+customers_summary_body="$(curl -fsS \
+  -H "X-API-Role: executive" \
+  -H "X-API-Token: $EXEC_TOKEN" \
+  "$API_BASE/api/v1/customers/summary?country=CO")"
+assert_contains "customers summary payload" '"total_customers"' "$customers_summary_body"
+
+# 27) customer profile with operations role (allowed)
+customer_profile_status="$(curl -sS -o /dev/null -w "%{http_code}" \
+  -H "X-API-Role: operations" \
+  -H "X-API-Token: $OPS_TOKEN" \
+  "$API_BASE/api/v1/customers/cus-co-001")"
+assert_status "customer profile operations" "200" "$customer_profile_status"
+
+# 28) adjust points with operations role (allowed)
+adjust_points_payload='{"delta_points":15,"reason":"manual_adjustment_test"}'
+adjust_points_status="$(curl -sS -o /dev/null -w "%{http_code}" \
+  -X POST "$API_BASE/api/v1/customers/cus-co-001/points/adjust" \
+  -H "Content-Type: application/json" \
+  -H "X-API-Role: operations" \
+  -H "X-API-Token: $OPS_TOKEN" \
+  -d "$adjust_points_payload")"
+assert_status "adjust points operations" "200" "$adjust_points_status"
+
+# 29) adjust points with executive role (forbidden)
+adjust_points_exec_status="$(curl -sS -o /dev/null -w "%{http_code}" \
+  -X POST "$API_BASE/api/v1/customers/cus-co-001/points/adjust" \
+  -H "Content-Type: application/json" \
+  -H "X-API-Role: executive" \
+  -H "X-API-Token: $EXEC_TOKEN" \
+  -d "$adjust_points_payload")"
+assert_status "adjust points executive prohibido" "403" "$adjust_points_exec_status"
+
 # 22) executive ask with executive role (allowed)
 exec_ask_status="$(curl -sS -o /dev/null -w "%{http_code}" \
   -H "X-API-Role: executive" \

@@ -202,6 +202,23 @@ supplier_alerts_invalid_threshold_status="$(curl -sS -o /dev/null -w "%{http_cod
   "$API_BASE/api/v1/suppliers/price-alerts?threshold_pct=0")"
 assert_status "supplier alerts threshold invalido" "422" "$supplier_alerts_invalid_threshold_status"
 
+# 16) Customer profile for unknown id should return 404
+customer_not_found_status="$(curl -sS -o /dev/null -w "%{http_code}" \
+  -H "X-API-Role: operations" \
+  -H "X-API-Token: $OPS_TOKEN" \
+  "$API_BASE/api/v1/customers/no-existe")"
+assert_status "customer profile inexistente" "404" "$customer_not_found_status"
+
+# 17) Customer points adjustment cannot make balance negative
+adjust_negative_payload='{"delta_points":-10000,"reason":"invalid_negative_test"}'
+adjust_negative_status="$(curl -sS -o /dev/null -w "%{http_code}" \
+  -X POST "$API_BASE/api/v1/customers/cus-co-002/points/adjust" \
+  -H "Content-Type: application/json" \
+  -H "X-API-Role: operations" \
+  -H "X-API-Token: $OPS_TOKEN" \
+  -d "$adjust_negative_payload")"
+assert_status "adjust points negativo invalido" "400" "$adjust_negative_status"
+
 # 14) Executive ask unsupported question should return guidance payload
 exec_unknown_body="$(curl -fsS \
   -H "X-API-Role: executive" \

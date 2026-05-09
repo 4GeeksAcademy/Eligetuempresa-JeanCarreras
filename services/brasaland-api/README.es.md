@@ -48,6 +48,9 @@ uvicorn app.main:app --reload --port 8000
 - GET /api/v1/executive/weekly-report?currency=USD (requiere `X-API-Role` + `X-API-Token`, roles: `executive`, `admin`)
 - GET /api/v1/suppliers/prices?country=CO&currency=USD&limit=100 (requiere `X-API-Role` + `X-API-Token`, roles: `operations`, `executive`, `admin`)
 - GET /api/v1/suppliers/price-alerts?country=CO&threshold_pct=5&currency=COP (requiere `X-API-Role` + `X-API-Token`, roles: `operations`, `executive`, `admin`)
+- GET /api/v1/customers/summary?country=CO (requiere `X-API-Role` + `X-API-Token`, roles: `operations`, `executive`, `admin`)
+- GET /api/v1/customers/{customer_id} (requiere `X-API-Role` + `X-API-Token`, roles: `operations`, `executive`, `admin`)
+- POST /api/v1/customers/{customer_id}/points/adjust (requiere `X-API-Role` + `X-API-Token`, roles: `operations`, `admin`)
 
 Ejemplo de creacion de venta:
 
@@ -119,6 +122,16 @@ Ejemplo de alertas de variacion de precio de proveedores:
 curl "http://localhost:8000/api/v1/suppliers/price-alerts?country=CO&threshold_pct=5&currency=COP" \
 	-H "X-API-Role: operations" \
 	-H "X-API-Token: brasaland-operations-token"
+```
+
+Ejemplo de ajuste de puntos de fidelizacion:
+
+```bash
+curl -X POST "http://localhost:8000/api/v1/customers/cus-co-001/points/adjust" \
+	-H "Content-Type: application/json" \
+	-H "X-API-Role: operations" \
+	-H "X-API-Token: brasaland-operations-token" \
+	-d '{"delta_points": 15, "reason": "manual_adjustment"}'
 ```
 
 ## Siguiente iteracion
