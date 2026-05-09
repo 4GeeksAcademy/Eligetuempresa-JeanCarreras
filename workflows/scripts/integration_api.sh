@@ -160,8 +160,34 @@ assert_contains "alerts inactivity timezone" '"store_timezone"' "$alerts_exec_bo
 assert_contains "alerts inactivity resumen" '"critical_alerts"' "$alerts_exec_body"
 assert_contains "alerts inactivity ratio" '"critical_ratio_pct"' "$alerts_exec_body"
 assert_contains "alerts inactivity nivel" '"risk_level"' "$alerts_exec_body"
+assert_contains "alerts inactivity estado" '"alert_status"' "$alerts_exec_body"
 
-# 11) inactivity alerts without role (forbidden)
+# 11) create alert action with operations role (allowed)
+alert_action_payload='{"store_id":"med-001","status":"acknowledged","owner":"ops-on-duty","note":"Investigando causa local"}'
+alert_action_status="$(curl -sS -o /dev/null -w "%{http_code}" \
+  -X POST "$API_BASE/api/v1/alerts/inactivity/actions" \
+  -H "Content-Type: application/json" \
+  -H "X-API-Role: operations" \
+  -H "X-API-Token: $OPS_TOKEN" \
+  -d "$alert_action_payload")"
+assert_status "create alert action operations" "201" "$alert_action_status"
+
+alerts_ops_body="$(curl -fsS \
+  -H "X-API-Role: operations" \
+  -H "X-API-Token: $OPS_TOKEN" \
+  "$API_BASE/api/v1/alerts/inactivity?window_minutes=15")"
+assert_contains "alerts inactivity refleja estado" '"alert_status":"acknowledged"' "$alerts_ops_body"
+
+# 12) create alert action with executive role (forbidden)
+alert_action_exec_status="$(curl -sS -o /dev/null -w "%{http_code}" \
+  -X POST "$API_BASE/api/v1/alerts/inactivity/actions" \
+  -H "Content-Type: application/json" \
+  -H "X-API-Role: executive" \
+  -H "X-API-Token: $EXEC_TOKEN" \
+  -d "$alert_action_payload")"
+assert_status "create alert action executive prohibido" "403" "$alert_action_exec_status"
+
+# 13) inactivity alerts without role (forbidden)
 alerts_no_role_status="$(curl -sS -o /dev/null -w "%{http_code}" \
   "$API_BASE/api/v1/alerts/inactivity?window_minutes=60")"
 assert_status "alerts inactivity sin role" "403" "$alerts_no_role_status"

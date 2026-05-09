@@ -68,6 +68,12 @@ function renderInactivity(alertRows) {
     .map((item) => {
       const severityClass = item.severity === "critical" ? "critical" : "warning";
       const severityLabel = item.severity === "critical" ? "Critica" : "Advertencia";
+      const lifecycleLabel =
+        item.alert_status === "acknowledged"
+          ? "ACKNOWLEDGED"
+          : item.alert_status === "resolved"
+            ? "RESOLVED"
+            : "NEW";
       const lastSaleLocal = item.last_sale_local
         ? new Date(item.last_sale_local).toLocaleString("es-CO", {
             dateStyle: "short",
@@ -80,6 +86,7 @@ function renderInactivity(alertRows) {
           <p class="alert-meta">${item.market} · ${item.minutes_without_sales} min sin ventas · TZ ${item.store_timezone}</p>
           <p class="alert-meta">Ultima venta local: ${lastSaleLocal}</p>
           <p class="alert-action">${item.recommended_action || "Validar operacion del local"}</p>
+          <p class="alert-meta">Estado: ${lifecycleLabel}</p>
           <p class="alert-severity">${severityLabel}</p>
         </article>
       `;
@@ -177,6 +184,10 @@ function getFallbackData() {
           severity: "critical",
           last_sale_at: "2026-05-08T12:00:00Z",
           last_sale_local: "2026-05-08T07:00:00-05:00",
+          alert_status: "new",
+          alert_owner: null,
+          alert_note: null,
+          alert_updated_at: null,
           recommended_action: "Contact store manager and validate POS/connectivity immediately",
         },
         {
@@ -188,6 +199,10 @@ function getFallbackData() {
           severity: "warning",
           last_sale_at: "2026-05-08T13:30:00Z",
           last_sale_local: "2026-05-08T09:30:00-04:00",
+          alert_status: "acknowledged",
+          alert_owner: "ops-on-duty",
+          alert_note: "Investigando demora en caja",
+          alert_updated_at: "2026-05-08T10:05:00-04:00",
           recommended_action: "Monitor next 30 minutes and verify staffing and ticket flow",
         },
       ],

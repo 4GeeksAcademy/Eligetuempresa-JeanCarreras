@@ -110,6 +110,10 @@ class InactivityAlert(BaseModel):
     severity: Literal["warning", "critical"]
     last_sale_at: datetime | None
     last_sale_local: datetime | None
+    alert_status: Literal["new", "acknowledged", "resolved"]
+    alert_owner: str | None
+    alert_note: str | None
+    alert_updated_at: datetime | None
     recommended_action: str
 
 
@@ -124,6 +128,23 @@ class InactivityAlertResponse(BaseModel):
     risk_level: Literal["low", "medium", "high"]
     generated_at: datetime
     alerts: list[InactivityAlert]
+
+
+class AlertActionCreate(BaseModel):
+    store_id: str
+    status: Literal["acknowledged", "resolved"]
+    owner: str | None = None
+    note: str | None = None
+
+
+class AlertActionCreated(BaseModel):
+    id: int
+    store_id: str
+    status: Literal["acknowledged", "resolved"]
+    owner: str | None
+    note: str | None
+    updated_at: datetime
+    updated_by_role: str
 
 
 DB_PATH = Path(__file__).resolve().parent.parent / "brasaland.db"
@@ -285,6 +306,20 @@ def init_db() -> None:
                 outcome TEXT NOT NULL,
                 target TEXT NOT NULL,
                 details TEXT NOT NULL
+            )
+            """
+        )
+        db.execute(
+            """
+            CREATE TABLE IF NOT EXISTS alert_actions (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                store_id TEXT NOT NULL,
+                status TEXT NOT NULL,
+                owner TEXT,
+                note TEXT,
+                updated_at TEXT NOT NULL,
+                updated_by_role TEXT NOT NULL,
+                FOREIGN KEY(store_id) REFERENCES stores(id)
             )
             """
         )
@@ -620,6 +655,19 @@ def get_inactivity_alerts(
             (country, country),
         ).fetchall()
 
+        alert_action_rows = db.execute(
+            """
+            SELECT aa.store_id, aa.status, aa.owner, aa.note, aa.updated_at
+            FROM alert_actions aa
+            JOIN (
+                SELECT store_id, MAX(id) AS max_id
+                FROM alert_actions
+                GROUP BY store_id
+            ) latest ON latest.max_id = aa.id
+            """
+        ).fetchall()
+        latest_actions_by_store = {row["store_id"]: row for row in alert_action_rows}
+
         for store in stores:
             row = db.execute(
                 "SELECT MAX(sold_at) AS last_sale_at FROM sales_events WHERE store_id = ?",
@@ -644,6 +692,24 @@ def get_inactivity_alerts(
 
             if minutes_without_sales > window_minutes:
                 severity: Literal["warning", "critical"] = "critical" if minutes_without_sales > (window_minutes * 2) else "warning"
+                action_row = latest_actions_by_store.get(store["id"])
+                alert_status: Literal["new", "acknowledged", "resolved"] = "new"
+                alert_owner: str | None = None
+                alert_note: str | None = None
+                alert_updated_at: datetime | None = None
+
+                if action_row is not None:
+                    candidate_updated_at = datetime.fromisoformat(action_row["updated_at"])
+                    if candidate_updated_at.tzinfo is None:
+                        candidate_updated_at = candidate_updated_at.replace(tzinfo=timezone.utc)
+                    # If there were newer sales after action, action is stale and alert returns to "new".
+                    is_stale_action = parsed_last_sale_at is not None and parsed_last_sale_at > candidate_updated_at
+                    if not is_stale_action:
+                        alert_status = action_row["status"]
+                        alert_owner = action_row["owner"]
+                        alert_note = action_row["note"]
+                        alert_updated_at = candidate_updated_at
+
                 alerts.append(
                     InactivityAlert(
                         store_id=store["id"],
@@ -654,6 +720,10 @@ def get_inactivity_alerts(
                         severity=severity,
                         last_sale_at=parsed_last_sale_at,
                         last_sale_local=parsed_last_sale_local,
+                        alert_status=alert_status,
+                        alert_owner=alert_owner,
+                        alert_note=alert_note,
+                        alert_updated_at=alert_updated_at,
                         recommended_action=(
                             "Contact store manager and validate POS/connectivity immediately"
                             if severity == "critical"
@@ -700,6 +770,54 @@ def get_inactivity_alerts(
         risk_level=risk_level,
         generated_at=now,
         alerts=alerts,
+    )
+
+
+@app.post("/api/v1/alerts/inactivity/actions", response_model=AlertActionCreated, status_code=201)
+def create_inactivity_alert_action(
+    payload: AlertActionCreate,
+    role: str = Depends(require_roles({"operations", "admin"})),
+) -> AlertActionCreated:
+    updated_at = datetime.now(timezone.utc)
+
+    with get_db() as db:
+        exists = db.execute("SELECT 1 FROM stores WHERE id = ?", (payload.store_id,)).fetchone()
+        if exists is None:
+            write_audit_log(role, "create_alert_action", "rejected", payload.store_id, "store_id not found")
+            raise HTTPException(status_code=404, detail="store_id not found")
+
+        cursor = db.execute(
+            """
+            INSERT INTO alert_actions (store_id, status, owner, note, updated_at, updated_by_role)
+            VALUES (?, ?, ?, ?, ?, ?)
+            """,
+            (
+                payload.store_id,
+                payload.status,
+                payload.owner,
+                (payload.note or "")[:1000],
+                updated_at.isoformat(),
+                role,
+            ),
+        )
+        created_id = int(cursor.lastrowid)
+
+    write_audit_log(
+        role,
+        "create_alert_action",
+        "success",
+        payload.store_id,
+        f"status={payload.status}, owner={payload.owner or ''}",
+    )
+
+    return AlertActionCreated(
+        id=created_id,
+        store_id=payload.store_id,
+        status=payload.status,
+        owner=payload.owner,
+        note=(payload.note or "")[:1000],
+        updated_at=updated_at,
+        updated_by_role=role,
     )
 
 

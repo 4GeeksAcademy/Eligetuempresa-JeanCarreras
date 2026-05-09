@@ -143,6 +143,16 @@ alerts_invalid_limit_status="$(curl -sS -o /dev/null -w "%{http_code}" \
   "$API_BASE/api/v1/alerts/inactivity?window_minutes=60&limit=0")"
 assert_status "alerts inactivity limit invalido" "422" "$alerts_invalid_limit_status"
 
+# 8) Alert action for unknown store should return 404
+alert_action_unknown_payload='{"store_id":"zzz-404","status":"acknowledged","owner":"ops","note":"test"}'
+alert_action_unknown_status="$(curl -sS -o /dev/null -w "%{http_code}" \
+  -X POST "$API_BASE/api/v1/alerts/inactivity/actions" \
+  -H "Content-Type: application/json" \
+  -H "X-API-Role: operations" \
+  -H "X-API-Token: $OPS_TOKEN" \
+  -d "$alert_action_unknown_payload")"
+assert_status "alert action store inexistente" "404" "$alert_action_unknown_status"
+
 echo ""
 echo "Resultado integration-data: PASS=$PASS_COUNT FAIL=$FAIL_COUNT"
 
