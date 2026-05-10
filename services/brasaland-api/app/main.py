@@ -1,4 +1,5 @@
 from datetime import datetime, timedelta, timezone
+import asyncio
 import csv
 import io
 import os
@@ -8,6 +9,7 @@ from typing import Literal
 from zoneinfo import ZoneInfo
 
 from fastapi import Depends, FastAPI, Header, HTTPException, Query
+from fastapi import WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import Response
 from pydantic import BaseModel
@@ -920,6 +922,33 @@ def require_roles(allowed_roles: set[str]):
         return x_api_role
 
     return validator
+
+
+def validate_role_token_for_ws(role: str | None, token: str | None, allowed_roles: set[str]) -> str:
+    if role is None or role not in allowed_roles:
+        raise HTTPException(status_code=403, detail="Role not allowed")
+
+    role_tokens = resolve_role_tokens()
+    expected_token = role_tokens.get(role)
+    if expected_token is None or token != expected_token:
+        raise HTTPException(status_code=401, detail="Invalid role token")
+
+    return role
+
+
+def build_realtime_digest() -> dict[str, int]:
+    with get_db() as db:
+        sales_max = db.execute("SELECT COALESCE(MAX(id), 0) AS v FROM sales_events").fetchone()["v"]
+        telemetry_max = db.execute("SELECT COALESCE(MAX(id), 0) AS v FROM store_telemetry_events").fetchone()["v"]
+        alerts_actions_max = db.execute("SELECT COALESCE(MAX(id), 0) AS v FROM inactivity_alert_actions").fetchone()["v"]
+        receipts_max = db.execute("SELECT COALESCE(MAX(id), 0) AS v FROM inventory_receipts").fetchone()["v"]
+
+    return {
+        "sales_events_max_id": int(sales_max),
+        "telemetry_events_max_id": int(telemetry_max),
+        "alert_actions_max_id": int(alerts_actions_max),
+        "inventory_receipts_max_id": int(receipts_max),
+    }
 
 
 def write_audit_log(role: str, action: str, outcome: str, target: str, details: str = "") -> None:
@@ -2166,6 +2195,50 @@ def on_startup() -> None:
 @app.get("/health")
 def health() -> dict[str, str]:
     return {"status": "ok"}
+
+
+@app.websocket("/ws/realtime")
+async def realtime_updates_socket(websocket: WebSocket) -> None:
+    role = websocket.query_params.get("role")
+    token = websocket.query_params.get("token")
+
+    try:
+        validated_role = validate_role_token_for_ws(role, token, {"executive", "operations", "admin"})
+    except HTTPException:
+        await websocket.close(code=4403)
+        return
+
+    await websocket.accept()
+
+    try:
+        digest = build_realtime_digest()
+        await websocket.send_json(
+            {
+                "type": "snapshot",
+                "source": "brasaland-realtime",
+                "generated_at": datetime.now(timezone.utc).isoformat(),
+                "digest": digest,
+                "role": validated_role,
+            }
+        )
+
+        while True:
+            await asyncio.sleep(2)
+            latest_digest = build_realtime_digest()
+            if latest_digest != digest:
+                digest = latest_digest
+                await websocket.send_json(
+                    {
+                        "type": "update",
+                        "source": "brasaland-realtime",
+                        "generated_at": datetime.now(timezone.utc).isoformat(),
+                        "digest": digest,
+                    }
+                )
+    except WebSocketDisconnect:
+        return
+    except Exception:
+        await websocket.close(code=1011)
 
 
 @app.get("/api/v1/stores", response_model=list[Store])

@@ -125,8 +125,14 @@ const trainingUpdateSummaryEl = document.getElementById("trainingUpdateSummary")
 const trainingUpdateSubmitEl = document.getElementById("trainingUpdateSubmit");
 const trainingUpdateStatusEl = document.getElementById("trainingUpdateStatus");
 let refreshTimerId = null;
+let realtimeSocket = null;
+let realtimeReconnectTimerId = null;
+let realtimeRefreshTimerId = null;
+let realtimeReconnectAttempt = 0;
 const RECEIPTS_PAGE_SIZE = 8;
 let receiptsOffset = 0;
+const REALTIME_REFRESH_DEBOUNCE_MS = 500;
+const REALTIME_RECONNECT_BASE_MS = 1500;
 
 function monthStartIsoDate() {
   const now = new Date();
@@ -1580,6 +1586,100 @@ function buildQuery() {
   return params.toString();
 }
 
+function resolveRealtimeSocketUrl() {
+  if (!API_BASE) {
+    return null;
+  }
+
+  let baseUrl;
+  try {
+    baseUrl = new URL(API_BASE);
+  } catch (_error) {
+    return null;
+  }
+
+  const wsProtocol = baseUrl.protocol === "https:" ? "wss:" : "ws:";
+  baseUrl.protocol = wsProtocol;
+  baseUrl.pathname = "/ws/realtime";
+  baseUrl.search = new URLSearchParams({
+    role: ALERTS_ROLE,
+    token: ALERTS_TOKEN,
+  }).toString();
+  return baseUrl.toString();
+}
+
+function scheduleRealtimeDashboardRefresh() {
+  if (realtimeRefreshTimerId !== null) {
+    clearTimeout(realtimeRefreshTimerId);
+  }
+  realtimeRefreshTimerId = setTimeout(() => {
+    realtimeRefreshTimerId = null;
+    loadDashboard();
+  }, REALTIME_REFRESH_DEBOUNCE_MS);
+}
+
+function scheduleRealtimeReconnect() {
+  if (realtimeReconnectTimerId !== null) {
+    return;
+  }
+
+  const backoffMs = Math.min(10000, REALTIME_RECONNECT_BASE_MS * (2 ** realtimeReconnectAttempt));
+  realtimeReconnectTimerId = setTimeout(() => {
+    realtimeReconnectTimerId = null;
+    realtimeReconnectAttempt += 1;
+    connectRealtimeSocket();
+  }, backoffMs);
+}
+
+function connectRealtimeSocket() {
+  if (!API_BASE || typeof window.WebSocket !== "function") {
+    return;
+  }
+
+  const socketUrl = resolveRealtimeSocketUrl();
+  if (!socketUrl) {
+    return;
+  }
+
+  if (realtimeSocket && (realtimeSocket.readyState === WebSocket.OPEN || realtimeSocket.readyState === WebSocket.CONNECTING)) {
+    return;
+  }
+
+  const socket = new WebSocket(socketUrl);
+  realtimeSocket = socket;
+
+  socket.addEventListener("open", () => {
+    realtimeReconnectAttempt = 0;
+    if (statusText) {
+      statusText.textContent = "Canal en tiempo real conectado.";
+    }
+  });
+
+  socket.addEventListener("message", (event) => {
+    let payload;
+    try {
+      payload = JSON.parse(event.data);
+    } catch (_error) {
+      return;
+    }
+
+    if (payload && (payload.type === "update" || payload.type === "snapshot")) {
+      scheduleRealtimeDashboardRefresh();
+    }
+  });
+
+  socket.addEventListener("close", () => {
+    if (realtimeSocket === socket) {
+      realtimeSocket = null;
+    }
+    scheduleRealtimeReconnect();
+  });
+
+  socket.addEventListener("error", () => {
+    socket.close();
+  });
+}
+
 function setupAutoRefresh() {
   if (!refreshIntervalEl) {
     return;
@@ -1973,6 +2073,7 @@ function bootstrapDashboard() {
   setDefaultDates();
   setDefaultHrDates();
   setupAutoRefresh();
+  connectRealtimeSocket();
   loadDashboard();
 }
 
