@@ -214,6 +214,30 @@ body {
   letter-spacing: 0.04em;
 }
 
+.alert-controls {
+  margin-top: 0.45rem;
+  display: flex;
+  gap: 0.45rem;
+}
+
+.alert-btn {
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: #fff;
+  color: var(--ink);
+  font: inherit;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  padding: 0.24rem 0.58rem;
+  cursor: pointer;
+}
+
+.alert-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
 .alerts-empty {
   margin: 0;
   font-size: 0.9rem;
@@ -251,6 +275,263 @@ body {
 
 .order-row.critical {
   border-left-color: #b42318;
+}
+
+.suppliers-panel {
+  margin-top: 1rem;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  padding: 1rem;
+}
+
+.suppliers-panel h2 {
+  margin: 0 0 0.8rem;
+}
+
+.suppliers-grid {
+  display: grid;
+  gap: 0.8rem;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+}
+
+.suppliers-card {
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 0.7rem;
+  background: #fff;
+}
+
+.suppliers-card h3 {
+  margin: 0 0 0.55rem;
+  font-size: 0.9rem;
+}
+
+.suppliers-list {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.supplier-row {
+  border: 1px solid var(--line);
+  border-left: 5px solid #1d7a7a;
+  border-radius: 12px;
+  padding: 0.55rem 0.65rem;
+  background: #fff;
+}
+
+.supplier-row.positive {
+  border-left-color: #c88a12;
+}
+
+.supplier-row.negative {
+  border-left-color: #0f766e;
+}
+
+.marketing-panel {
+  margin-top: 1rem;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  padding: 1rem;
+}
+
+.marketing-panel h2 {
+  margin: 0 0 0.8rem;
+}
+
+.marketing-grid {
+  display: grid;
+  gap: 0.8rem;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+}
+
+.marketing-card {
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 0.7rem;
+  background: #fff;
+}
+
+.marketing-card h3 {
+  margin: 0 0 0.55rem;
+  font-size: 0.9rem;
+}
+
+.hr-panel {
+  margin-top: 1rem;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  padding: 1rem;
+}
+
+.hr-panel h2 {
+  margin: 0 0 0.8rem;
+}
+
+.hr-grid {
+  display: grid;
+  gap: 0.8rem;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+}
+
+.hr-card {
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 0.7rem;
+  background: #fff;
+}
+
+.hr-card h3 {
+  margin: 0 0 0.55rem;
+  font-size: 0.9rem;
+}
+
+.hr-form {
+  margin: 0 0 0.7rem;
+  border-bottom: 1px solid var(--line);
+  padding-bottom: 0.65rem;
+}
+
+.hr-form-grid {
+  display: grid;
+  gap: 0.6rem;
+  grid-template-columns: repeat(auto-fit, minmax(145px, 1fr));
+}
+
+.hr-form-grid label {
+  display: flex;
+  flex-direction: column;
+  font-size: 0.8rem;
+  gap: 0.24rem;
+}
+
+.hr-form-grid select,
+.hr-form-grid input {
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 0.45rem 0.55rem;
+  font: inherit;
+}
+
+.hr-form-actions {
+  margin-top: 0.55rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.hr-form-actions button {
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 0.46rem 0.68rem;
+  font: inherit;
+  cursor: pointer;
+  background: #1f2933;
+  color: #fff;
+  font-weight: 600;
+}
+
+.hr-action-row {
+  margin-top: 0.45rem;
+  display: flex;
+  gap: 0.45rem;
+}
+
+.hr-action-btn {
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: #fff;
+  color: var(--ink);
+  font: inherit;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  padding: 0.24rem 0.58rem;
+  cursor: pointer;
+}
+
+.hr-action-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.training-panel {
+  margin-top: 1rem;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  padding: 1rem;
+}
+
+.training-panel h2 {
+  margin: 0 0 0.8rem;
+}
+
+.training-grid {
+  display: grid;
+  gap: 0.8rem;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+}
+
+.training-card {
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 0.7rem;
+  background: #fff;
+}
+
+.training-card h3 {
+  margin: 0 0 0.55rem;
+  font-size: 0.9rem;
+}
+
+.training-form {
+  margin: 0 0 0.7rem;
+  border-bottom: 1px solid var(--line);
+  padding-bottom: 0.65rem;
+}
+
+.training-form-grid {
+  display: grid;
+  gap: 0.6rem;
+  grid-template-columns: repeat(auto-fit, minmax(145px, 1fr));
+}
+
+.training-form-grid label {
+  display: flex;
+  flex-direction: column;
+  font-size: 0.8rem;
+  gap: 0.24rem;
+}
+
+.training-form-grid select,
+.training-form-grid input {
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 0.45rem 0.55rem;
+  font: inherit;
+}
+
+.training-form-actions {
+  margin-top: 0.55rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.training-form-actions button {
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 0.46rem 0.68rem;
+  font: inherit;
+  cursor: pointer;
+  background: #1f2933;
+  color: #fff;
+  font-weight: 600;
 }
 
 .receipt-form {

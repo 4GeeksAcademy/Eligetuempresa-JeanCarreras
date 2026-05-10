@@ -1,0 +1,15 @@
+store_id,store_name,country,last_sale_at,sku_at_risk,generated_at
+bog-001,Brasaland Zona T,CO,2026-05-10T20:00:00+00:00,0,2026-05-10 22:12:07
+bog-002,Brasaland Usaquen,CO,2026-05-10T20:00:00+00:00,0,2026-05-10 22:12:07
+cal-001,Brasaland Granada,CO,2026-05-10T20:00:00+00:00,0,2026-05-10 22:12:07
+med-001,Brasaland Laureles,CO,2026-05-08T20:00:00+00:00,0,2026-05-10 22:12:07
+med-002,Brasaland El Poblado,CO,2026-05-08T20:00:00+00:00,0,2026-05-10 22:12:07
+med-003,Brasaland Envigado,CO,2026-05-10T20:00:00+00:00,0,2026-05-10 22:12:07
+med-004,Brasaland Belen,CO,2026-05-10T20:00:00+00:00,0,2026-05-10 22:12:07
+med-005,Brasaland Centro,CO,2026-05-10T20:00:00+00:00,0,2026-05-10 22:12:07
+mia-001,Brasaland Doral,US,2026-05-10T21:57:08+00:00,0,2026-05-10 22:12:07
+mia-002,Brasaland Kendall,US,2026-05-08T20:00:00+00:00,0,2026-05-10 22:12:07
+mia-003,Brasaland Brickell,US,2026-05-10T20:00:00+00:00,0,2026-05-10 22:12:07
+mia-004,Brasaland Hialeah,US,2026-05-10T20:00:00+00:00,0,2026-05-10 22:12:07
+orl-001,Brasaland Lake Nona,US,2026-05-10T20:00:00+00:00,0,2026-05-10 22:12:07
+orl-002,Brasaland Winter Park,US,2026-05-10T20:00:00+00:00,0,2026-05-10 22:12:07

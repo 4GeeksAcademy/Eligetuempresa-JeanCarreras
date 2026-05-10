@@ -12,6 +12,10 @@ Brasaland executive dashboard MVP for quick chain KPI visibility.
 - Daily sales trend chart.
 - Market comparison with WoW variation.
 - Estimated finance KPI panel (revenue, COGS, gross profit, margin).
+- Procurement and suppliers panel (history, alerts, and chain consolidated purchases).
+- Marketing panel (CRM, customer intelligence, and personalization).
+- People and culture panel (vacation/absence requests, onboarding flow, and HR KPIs by country).
+- Training and quality standards panel (recipe search, structured onboarding itineraries, and chain-wide recipe update publishing).
 
 ## Run locally
 

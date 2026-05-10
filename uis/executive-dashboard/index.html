@@ -151,6 +151,176 @@
         </div>
       </section>
 
+      <section class="suppliers-panel">
+        <h2>Compras y proveedores</h2>
+        <div class="suppliers-grid">
+          <article class="suppliers-card">
+            <h3>Compras consolidadas cadena</h3>
+            <div class="suppliers-list" id="supplierConsolidatedRows"></div>
+          </article>
+          <article class="suppliers-card">
+            <h3>Historial de precios (ultimos registros)</h3>
+            <div class="suppliers-list" id="supplierPricesRows"></div>
+          </article>
+          <article class="suppliers-card">
+            <h3>Alertas por variacion de precio</h3>
+            <div class="suppliers-list" id="supplierAlertsRows"></div>
+          </article>
+        </div>
+      </section>
+
+      <section class="marketing-panel">
+        <h2>Marketing y experiencia digital</h2>
+        <div class="marketing-grid">
+          <article class="marketing-card">
+            <h3>CRM clientes (ultimos 30 dias)</h3>
+            <div class="suppliers-list" id="crmOverviewRows"></div>
+          </article>
+          <article class="marketing-card">
+            <h3>Top clientes con historial</h3>
+            <div class="suppliers-list" id="crmCustomersRows"></div>
+          </article>
+          <article class="marketing-card">
+            <h3>Motor de personalizacion</h3>
+            <div class="suppliers-list" id="personalizationRows"></div>
+          </article>
+        </div>
+      </section>
+
+      <section class="hr-panel">
+        <h2>Personas y cultura</h2>
+        <div class="hr-grid">
+          <article class="hr-card">
+            <h3>KPIs RRHH por pais</h3>
+            <div class="suppliers-list" id="hrKpisRows"></div>
+          </article>
+          <article class="hr-card">
+            <h3>Solicitudes y ausencias (portal interno)</h3>
+            <form class="hr-form" id="hrRequestForm" aria-label="Crear solicitud de vacaciones o ausencia">
+              <div class="hr-form-grid">
+                <label>
+                  Colaborador
+                  <select id="hrRequestEmployeeId"></select>
+                </label>
+                <label>
+                  Tipo
+                  <select id="hrRequestType">
+                    <option value="vacation">Vacaciones</option>
+                    <option value="sick_leave">Incapacidad</option>
+                    <option value="personal_leave">Permiso personal</option>
+                  </select>
+                </label>
+                <label>
+                  Inicio
+                  <input id="hrRequestStartDate" type="date" required />
+                </label>
+                <label>
+                  Fin
+                  <input id="hrRequestEndDate" type="date" required />
+                </label>
+                <label>
+                  Motivo
+                  <input id="hrRequestReason" type="text" maxlength="120" required />
+                </label>
+              </div>
+              <div class="hr-form-actions">
+                <button id="hrRequestSubmit" type="submit">Crear solicitud</button>
+                <p id="hrRequestStatus" class="receipt-status">Listo para registrar solicitud.</p>
+              </div>
+            </form>
+            <div class="suppliers-list" id="hrRequestsRows"></div>
+          </article>
+          <article class="hr-card">
+            <h3>Onboarding automatizado</h3>
+            <form class="hr-form" id="hrOnboardingForm" aria-label="Iniciar onboarding">
+              <div class="hr-form-grid">
+                <label>
+                  Colaborador
+                  <select id="hrOnboardingEmployeeId"></select>
+                </label>
+                <label>
+                  Cargo
+                  <input id="hrOnboardingPosition" type="text" maxlength="120" value="Kitchen Operator" required />
+                </label>
+                <label>
+                  Mentor
+                  <input id="hrOnboardingMentor" type="text" maxlength="120" value="Ashley Turner" required />
+                </label>
+              </div>
+              <div class="hr-form-actions">
+                <button id="hrOnboardingSubmit" type="submit">Iniciar onboarding</button>
+                <p id="hrOnboardingStatus" class="receipt-status">Listo para iniciar onboarding.</p>
+              </div>
+            </form>
+            <div class="suppliers-list" id="hrOnboardingRows"></div>
+          </article>
+        </div>
+      </section>
+
+      <section class="training-panel">
+        <h2>Formacion y estandares de calidad</h2>
+        <div class="training-grid">
+          <article class="training-card">
+            <h3>Catalogo de recetas</h3>
+            <form class="training-form" id="trainingSearchForm" aria-label="Buscar recetas en catalogo">
+              <div class="training-form-grid">
+                <label>
+                  Buscar
+                  <input id="trainingSearchQuery" type="text" maxlength="120" placeholder="pollo, apertura, emplatado" />
+                </label>
+                <label>
+                  Idioma
+                  <select id="trainingLocaleFilter">
+                    <option value="">Todos</option>
+                    <option value="es">es</option>
+                    <option value="en">en</option>
+                  </select>
+                </label>
+              </div>
+              <div class="training-form-actions">
+                <button id="trainingSearchSubmit" type="submit">Buscar</button>
+                <p id="trainingSearchStatus" class="receipt-status">Listo para buscar recetas.</p>
+              </div>
+            </form>
+            <div class="suppliers-list" id="trainingCatalogRows"></div>
+          </article>
+
+          <article class="training-card">
+            <h3>Itinerarios de onboarding</h3>
+            <div class="suppliers-list" id="trainingItinerariesRows"></div>
+          </article>
+
+          <article class="training-card">
+            <h3>Distribucion simultanea de actualizaciones</h3>
+            <form class="training-form" id="trainingUpdateForm" aria-label="Publicar actualizacion de receta">
+              <div class="training-form-grid">
+                <label>
+                  Receta
+                  <select id="trainingUpdateResourceId"></select>
+                </label>
+                <label>
+                  Idioma
+                  <select id="trainingUpdateLocale">
+                    <option value="">auto</option>
+                    <option value="es">es</option>
+                    <option value="en">en</option>
+                  </select>
+                </label>
+                <label>
+                  Cambio
+                  <input id="trainingUpdateSummary" type="text" maxlength="200" placeholder="Nuevo gramaje y control visual" required />
+                </label>
+              </div>
+              <div class="training-form-actions">
+                <button id="trainingUpdateSubmit" type="submit">Publicar a 14 locales</button>
+                <p id="trainingUpdateStatus" class="receipt-status">Listo para publicar una actualizacion.</p>
+              </div>
+            </form>
+            <div class="suppliers-list" id="trainingUpdatesRows"></div>
+          </article>
+        </div>
+      </section>
+
       <section class="market-panel">
         <h2>Comparativo por mercado (WoW)</h2>
         <div class="market-grid" id="marketGrid"></div>

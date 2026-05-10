@@ -8,3 +8,4 @@ Esta carpeta contiene la **documentación transversal** del monorepo: guías de 
 ## Documentos operativos clave
 
 - [Runbook de alertas de inactividad](./alerts-runbook.es.md)
+- [Guion de demo ejecutiva (10 minutos)](./demo-runbook-executive.es.md)

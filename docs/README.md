@@ -8,5 +8,6 @@ This folder holds **cross-cutting documentation** for the monorepo: architecture
 ## Key operational docs
 
 - [Inactivity alerts runbook](./alerts-runbook.md)
+- [Executive demo script (10 minutes)](./demo-runbook-executive.md)
 
 > _Spanish version: [README.es.md](./README.es.md)._

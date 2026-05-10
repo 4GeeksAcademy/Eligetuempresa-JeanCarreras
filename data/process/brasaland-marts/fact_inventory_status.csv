@@ -1,0 +1,29 @@
+store_id,country,sku,item_name,category,unit,current_stock,min_stock,stock_gap,risk_level,updated_at
+bog-001,CO,CHICKEN,Pollo entero,protein,kg,54.0,26.0,28.0,ok,2026-05-10T21:04:01.101723+00:00
+bog-001,CO,POTATO,Papa criolla,produce,kg,22.0,20.0,2.0,ok,2026-05-10T21:04:01.101723+00:00
+bog-002,CO,CHICKEN,Pollo entero,protein,kg,34.0,28.0,6.0,ok,2026-05-10T21:04:01.101723+00:00
+bog-002,CO,POTATO,Papa criolla,produce,kg,25.0,16.0,9.0,ok,2026-05-10T21:04:01.101723+00:00
+cal-001,CO,CHICKEN,Pollo entero,protein,kg,38.0,30.0,8.0,ok,2026-05-10T21:04:01.101723+00:00
+cal-001,CO,POTATO,Papa criolla,produce,kg,28.0,18.0,10.0,ok,2026-05-10T21:04:01.101723+00:00
+med-001,CO,CHICKEN,Pollo entero,protein,kg,114.0,26.0,88.0,ok,2026-05-09T02:17:49.539866+00:00
+med-001,CO,POTATO,Papa criolla,produce,kg,33.0,18.0,15.0,ok,2026-05-09T01:34:06.832253+00:00
+med-002,CO,CHICKEN,Pollo entero,protein,kg,41.0,24.0,17.0,ok,2026-05-09T01:34:06.832253+00:00
+med-002,CO,POTATO,Papa criolla,produce,kg,30.0,16.0,14.0,ok,2026-05-09T01:34:06.832253+00:00
+med-003,CO,CHICKEN,Pollo entero,protein,kg,42.0,28.0,14.0,ok,2026-05-10T21:04:01.101723+00:00
+med-003,CO,POTATO,Papa criolla,produce,kg,28.0,20.0,8.0,ok,2026-05-10T21:04:01.101723+00:00
+med-004,CO,CHICKEN,Pollo entero,protein,kg,46.0,30.0,16.0,ok,2026-05-10T21:04:01.101723+00:00
+med-004,CO,POTATO,Papa criolla,produce,kg,31.0,16.0,15.0,ok,2026-05-10T21:04:01.101723+00:00
+med-005,CO,CHICKEN,Pollo entero,protein,kg,50.0,24.0,26.0,ok,2026-05-10T21:04:01.101723+00:00
+med-005,CO,POTATO,Papa criolla,produce,kg,34.0,18.0,16.0,ok,2026-05-10T21:04:01.101723+00:00
+mia-001,US,CHICKEN,Whole chicken,protein,kg,54.0,30.0,24.0,ok,2026-05-09T01:34:06.832253+00:00
+mia-001,US,POTATO,Potato,produce,kg,38.0,22.0,16.0,ok,2026-05-09T01:34:06.832253+00:00
+mia-002,US,CHICKEN,Whole chicken,protein,kg,35.0,28.0,7.0,ok,2026-05-09T01:34:06.832253+00:00
+mia-002,US,POTATO,Potato,produce,kg,23.0,19.0,4.0,ok,2026-05-09T01:34:06.832253+00:00
+mia-003,US,CHICKEN,Whole chicken,protein,kg,50.0,28.0,22.0,ok,2026-05-10T21:04:01.101723+00:00
+mia-003,US,POTATO,Potato,produce,kg,22.0,18.0,4.0,ok,2026-05-10T21:04:01.101723+00:00
+mia-004,US,CHICKEN,Whole chicken,protein,kg,54.0,30.0,24.0,ok,2026-05-10T21:04:01.101723+00:00
+mia-004,US,POTATO,Potato,produce,kg,25.0,20.0,5.0,ok,2026-05-10T21:04:01.101723+00:00
+orl-001,US,CHICKEN,Whole chicken,protein,kg,34.0,24.0,10.0,ok,2026-05-10T21:04:01.101723+00:00
+orl-001,US,POTATO,Potato,produce,kg,28.0,16.0,12.0,ok,2026-05-10T21:04:01.101723+00:00
+orl-002,US,CHICKEN,Whole chicken,protein,kg,38.0,26.0,12.0,ok,2026-05-10T21:04:01.101723+00:00
+orl-002,US,POTATO,Potato,produce,kg,31.0,18.0,13.0,ok,2026-05-10T21:04:01.101723+00:00

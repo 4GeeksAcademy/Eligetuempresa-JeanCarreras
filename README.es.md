@@ -42,6 +42,240 @@ Actualmente el repositorio ofrece una **estructura base de carpetas y documentac
 - CI encadenada en GitHub Actions:
 	- `Smoke API` -> `Integration API` -> `Integration Data API`
 - Documentación ES/EN alineada en README raíz, `services/`, `uis/`, `workflows/` y submódulos principales.
+- Nueva interfaz web mobile-first de fidelización y pedidos en `uis/marketing-loyalty-app/` (integrada con endpoints de Marketing).
+- Nuevo bloque RRHH con portal interno, onboarding automatizado y KPIs por pais en API + dashboard ejecutivo.
+
+## Tablero de cumplimiento - Operaciones (Brasaland)
+
+Estado objetivo para Felipe Guerrero (14 locales):
+
+| Capacidad requerida | Estado | Evidencia tecnica |
+| ---- | ---- | ---- |
+| Dashboard de ventas en tiempo real por local (COP y USD) | Listo | `uis/executive-dashboard/app.js` (consumo de `/sales/summary`, `/sales/by-store`, `/sales/daily-trend`, filtros y auto-refresh) |
+| Sistema inteligente de pedidos (historico + stock actual) | Listo | `services/brasaland-api/app/main.py` (`/api/v1/orders/recommendations`) + `uis/executive-dashboard/app.js` |
+| Alertas automaticas por local sin ventas en horario de apertura | Listo | `services/brasaland-api/app/main.py` (`/api/v1/alerts/inactivity`, `STORE_OPENING_HOURS`) + acciones ACK/RESOLVER en `uis/executive-dashboard/app.js` |
+| Cobertura de cadena (14 locales) | Listo | `services/brasaland-api/app/main.py` (seed de 14 locales + backfill de ventas y stock por local) |
+
+Validacion rapida local:
+
+```bash
+# 1) Levantar API
+bash scripts/run_api_local.sh
+
+# 2) Smoke base
+bash workflows/scripts/smoke_api.sh
+
+# 3) Confirmar 14 locales
+curl -s http://localhost:8000/api/v1/stores | grep -o '"id"' | wc -l
+
+# 4) Confirmar alertas en horario de apertura
+curl -s 'http://localhost:8000/api/v1/alerts/inactivity?window_minutes=60&opening_hours_only=true&limit=50' \
+	-H 'X-API-Role: executive' \
+	-H 'X-API-Token: brasaland-executive-token'
+
+# 5) Confirmar recomendaciones de pedidos
+curl -s 'http://localhost:8000/api/v1/orders/recommendations?days_history=14&target_days=7&only_at_risk=false&limit=200&country=CO&currency=COP' \
+	-H 'X-API-Role: executive' \
+	-H 'X-API-Token: brasaland-executive-token'
+```
+
+## Tablero de cumplimiento - Compras y Proveedores (Brasaland)
+
+Estado objetivo para Lucia Fernandez:
+
+| Capacidad requerida | Estado | Evidencia tecnica |
+| ---- | ---- | ---- |
+| Historial de precios por proveedor y SKU (CO + US) | Listo | `services/brasaland-api/app/main.py` (`/api/v1/suppliers/prices`) |
+| Alertas por variacion de precio configurable por umbral | Listo | `services/brasaland-api/app/main.py` (`/api/v1/suppliers/price-alerts?threshold_pct=...`) |
+| Cobertura multipais y multimoneda (COP/USD) | Listo | Filtros `country` + `currency` en endpoints de proveedores |
+| Consola visual centralizada para Compras | Listo | Panel dedicado en `uis/executive-dashboard` conectado a `/api/v1/suppliers/prices`, `/api/v1/suppliers/price-alerts` y `/api/v1/suppliers/purchases/consolidated` |
+
+Validacion rapida local:
+
+```bash
+# 1) Historial de precios Colombia (COP)
+curl -s 'http://localhost:8000/api/v1/suppliers/prices?country=CO&currency=COP&limit=20' \
+	-H 'X-API-Role: operations' \
+	-H 'X-API-Token: brasaland-operations-token'
+
+# 2) Alertas de variacion de precio Colombia
+curl -s 'http://localhost:8000/api/v1/suppliers/price-alerts?country=CO&threshold_pct=5&currency=COP' \
+	-H 'X-API-Role: operations' \
+	-H 'X-API-Token: brasaland-operations-token'
+
+# 3) Historial de precios Florida (USD)
+curl -s 'http://localhost:8000/api/v1/suppliers/prices?country=US&currency=USD&limit=20' \
+	-H 'X-API-Role: executive' \
+	-H 'X-API-Token: brasaland-executive-token'
+
+# 4) Consolidado de compras cadena (30 dias)
+curl -s 'http://localhost:8000/api/v1/suppliers/purchases/consolidated?days=30&currency=USD' \
+	-H 'X-API-Role: executive' \
+	-H 'X-API-Token: brasaland-executive-token'
+```
+
+## Tablero de cumplimiento - Marketing y experiencia digital (Brasaland)
+
+Estado objetivo para Camila Ospina:
+
+| Capacidad requerida | Estado | Evidencia tecnica |
+| ---- | ---- | ---- |
+| App digital de fidelizacion y pedidos | Listo | `POST /api/v1/marketing/orders` con acumulacion automatica de Brasa Points + interfaz dedicada en `uis/marketing-loyalty-app/` |
+| CRM de clientes con historial de pedidos y preferencias | Listo | `GET /api/v1/marketing/crm/overview`, `GET /api/v1/marketing/crm/customers`, `GET /api/v1/marketing/customers/{customer_id}/history` |
+| Motor de personalizacion por comportamiento | Listo | `GET /api/v1/marketing/personalization/recommendations` + panel de Marketing en `uis/executive-dashboard` |
+
+Validacion rapida local:
+
+```bash
+# 1) App de pedidos/fidelizacion
+curl -X POST 'http://localhost:8000/api/v1/marketing/orders' \
+	-H 'Content-Type: application/json' \
+	-H 'X-API-Role: operations' \
+	-H 'X-API-Token: brasaland-operations-token' \
+	-d '{"customer_id":"cus-co-001","store_id":"med-001","order_items":["combo_familiar","cola_350"],"total_amount":98000,"currency":"COP","channel":"app"}'
+
+# 2) CRM consolidado de clientes
+curl -s 'http://localhost:8000/api/v1/marketing/crm/overview?days=30&currency=USD' \
+	-H 'X-API-Role: executive' \
+	-H 'X-API-Token: brasaland-executive-token'
+
+# 3) Personalizacion por comportamiento
+curl -s 'http://localhost:8000/api/v1/marketing/personalization/recommendations?customer_id=cus-us-001&currency=USD&limit=5' \
+	-H 'X-API-Role: executive' \
+	-H 'X-API-Token: brasaland-executive-token'
+```
+
+## Tablero de cumplimiento - Personas y cultura (Brasaland)
+
+Estado objetivo para Ashley Turner:
+
+| Capacidad requerida | Estado | Evidencia tecnica |
+| ---- | ---- | ---- |
+| Portal interno RRHH para vacaciones y gestion de ausencias | Listo | `POST /api/v1/hr/time-off/requests`, `GET /api/v1/hr/time-off/requests`, `POST /api/v1/hr/time-off/requests/{request_id}/action` |
+| Flujo automatizado de onboarding para personal de cocina | Listo | `POST /api/v1/hr/onboarding/cases/start`, `POST /api/v1/hr/onboarding/cases/{case_id}/advance`, `GET /api/v1/hr/onboarding/cases` |
+| Dashboard de KPIs RRHH segmentado por pais (rotacion, absentismo, cobertura vacantes) | Listo | `GET /api/v1/hr/kpis/overview` + panel `Personas y cultura` en `uis/executive-dashboard` |
+| Cobertura operativa para 115 personas activas en 14 locales | Listo | Seed `hr_employees` en `services/brasaland-api/app/main.py` (115 activos + historial de bajas por pais) |
+
+Validacion rapida local:
+
+```bash
+# 1) Verificar base de colaboradores activos
+curl -s 'http://localhost:8000/api/v1/hr/employees?employment_status=active&limit=300' \
+	-H 'X-API-Role: executive' \
+	-H 'X-API-Token: brasaland-executive-token' | grep -o '"id"' | wc -l
+
+# 2) Crear solicitud RRHH (vacaciones/ausencia)
+curl -X POST 'http://localhost:8000/api/v1/hr/time-off/requests' \
+	-H 'Content-Type: application/json' \
+	-H 'X-API-Role: operations' \
+	-H 'X-API-Token: brasaland-operations-token' \
+	-d '{"employee_id":"emp-us-070","request_type":"vacation","start_date":"2026-06-10","end_date":"2026-06-14","reason":"Vacaciones familiares"}'
+
+# 3) Onboarding automatizado
+curl -X POST 'http://localhost:8000/api/v1/hr/onboarding/cases/start' \
+	-H 'Content-Type: application/json' \
+	-H 'X-API-Role: operations' \
+	-H 'X-API-Token: brasaland-operations-token' \
+	-d '{"employee_id":"emp-us-082","position_title":"Prep Cook","mentor_name":"Ashley Turner"}'
+
+# 4) KPI RRHH por pais
+curl -s 'http://localhost:8000/api/v1/hr/kpis/overview?days=90' \
+	-H 'X-API-Role: executive' \
+	-H 'X-API-Token: brasaland-executive-token'
+
+# 5) Export CSV RRHH (solicitudes + onboarding + KPIs)
+curl -s 'http://localhost:8000/api/v1/reports/hr.csv?days=90&section=all' \
+	-H 'X-API-Role: executive' \
+	-H 'X-API-Token: brasaland-executive-token' > /tmp/hr-report.csv && wc -l /tmp/hr-report.csv
+```
+
+## Tablero de cumplimiento - Formacion y estandares de calidad (Brasaland)
+
+Estado objetivo para Jake Morrison:
+
+| Capacidad requerida | Estado | Evidencia tecnica |
+| ---- | ---- | ---- |
+| Plataforma de formacion con catalogo de recetas y busqueda | Listo | `GET /api/v1/training/recipes/search` + panel `Formacion y estandares de calidad` en `uis/executive-dashboard` |
+| Itinerario de incorporacion estructurado por rol e idioma | Listo | `GET /api/v1/training/onboarding/itineraries`, `GET /api/v1/training/onboarding/itineraries/{itinerary_id}`, `POST /api/v1/training/onboarding/assign` |
+| Distribucion simultanea de actualizaciones de receta a toda la cadena | Listo | `POST /api/v1/training/recipes/updates/publish` + `GET /api/v1/training/recipes/updates/{update_id}/deliveries` (fanout 14 locales) |
+| Confirmacion por local (ACK) para trazabilidad operativa | Listo | `POST /api/v1/training/recipes/updates/{update_id}/acknowledge` + resumen de entregados/ACK/pendientes |
+| Soporte bilingue ES/EN en contenido y panel | Listo | Seeds y filtros `locale` en endpoints + selector de idioma en dashboard |
+
+Validacion rapida local:
+
+```bash
+# 1) Buscar recetas estandarizadas por termino e idioma
+curl -s 'http://localhost:8000/api/v1/training/recipes/search?q=pollo&locale=es&limit=10' \
+	-H 'X-API-Role: executive' \
+	-H 'X-API-Token: brasaland-executive-token'
+
+# 2) Consultar itinerarios de onboarding
+curl -s 'http://localhost:8000/api/v1/training/onboarding/itineraries?locale=es&limit=10' \
+	-H 'X-API-Role: executive' \
+	-H 'X-API-Token: brasaland-executive-token'
+
+# 3) Publicar update de receta (distribucion simultanea)
+curl -s -X POST 'http://localhost:8000/api/v1/training/recipes/updates/publish' \
+	-H 'Content-Type: application/json' \
+	-H 'X-API-Role: operations' \
+	-H 'X-API-Token: brasaland-operations-token' \
+	-d '{"resource_id":"rec-brasa-pollo-v1","change_summary":"Ajuste estandar QA","locale":"es","mandatory":true}'
+
+# Capturar el update_id mas reciente
+UPDATE_ID=$(curl -s 'http://localhost:8000/api/v1/training/recipes/updates?locale=es&limit=1' \
+	-H 'X-API-Role: executive' \
+	-H 'X-API-Token: brasaland-executive-token' | grep -o '"update_id":[0-9]*' | head -n1 | cut -d: -f2)
+
+# 4) Verificar entrega por local (esperado: 14 registros)
+curl -s "http://localhost:8000/api/v1/training/recipes/updates/${UPDATE_ID}/deliveries?limit=30" \
+	-H 'X-API-Role: executive' \
+	-H 'X-API-Token: brasaland-executive-token' | grep -o '"store_id"' | wc -l
+
+# 5) Registrar ACK desde un local
+curl -s -X POST "http://localhost:8000/api/v1/training/recipes/updates/${UPDATE_ID}/acknowledge" \
+	-H 'Content-Type: application/json' \
+	-H 'X-API-Role: operations' \
+	-H 'X-API-Token: brasaland-operations-token' \
+	-d '{"store_id":"med-001","acknowledged_by":"kitchen-lead","ack_note":"Aplicado en turno AM"}'
+```
+
+## Tablero de cumplimiento - Tecnologia (Brasaland)
+
+Estado objetivo para Nicolas Park:
+
+| Capacidad requerida | Estado | Evidencia tecnica |
+| ---- | ---- | ---- |
+| API central de Brasaland para locales, menus, ventas, clientes y proveedores | Listo | `GET /api/v1/stores`, `GET/POST /api/v1/menus/items`, `/api/v1/sales/*`, `/api/v1/customers/*`, `/api/v1/suppliers/*` en `services/brasaland-api/app/main.py` |
+| Telemetria en tiempo real desde cada local | Listo | `POST /api/v1/telemetry/events` + `GET /api/v1/telemetry/stores/status` |
+| Pipeline de datos para dashboards de operaciones, marketing y finanzas | Listo | `data/pipelines/brasaland-core/pipeline.py` genera `mart_ops_dashboard.csv`, `mart_marketing_dashboard.csv`, `mart_finance_dashboard.csv` |
+
+Validacion rapida local:
+
+```bash
+# 1) Health de API central
+curl -s 'http://localhost:8000/health'
+
+# 2) Catalogo de menu (lectura)
+curl -s 'http://localhost:8000/api/v1/menus/items?country=CO&locale=es&currency=COP' \
+	-H 'X-API-Role: executive' \
+	-H 'X-API-Token: brasaland-executive-token'
+
+# 3) Ingestar evento de telemetria
+curl -s -X POST 'http://localhost:8000/api/v1/telemetry/events' \
+	-H 'Content-Type: application/json' \
+	-H 'X-API-Role: operations' \
+	-H 'X-API-Token: brasaland-operations-token' \
+	-d '{"store_id":"med-001","source_system":"pos","event_ts":"2026-05-10T22:00:00Z","pos_online":true,"sales_last_5m":4,"open_tickets":2,"avg_prep_seconds":410,"network_rtt_ms":31,"terminal_version":"pos-v2.1"}'
+
+# 4) Estado de telemetria por local
+curl -s 'http://localhost:8000/api/v1/telemetry/stores/status?window_minutes=10' \
+	-H 'X-API-Role: executive' \
+	-H 'X-API-Token: brasaland-executive-token'
+
+# 5) Ejecutar pipeline de datos para dashboards
+python data/pipelines/brasaland-core/pipeline.py
+ls -1 data/process/brasaland-marts
+```
 
 ---
 

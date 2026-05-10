@@ -6,3 +6,7 @@ Cada subcarpeta o archivo dentro de `data/pipelines/` debe representar **un pipe
 
 - **Propósito principal**: unificar en un único lugar la lógica de movimiento y transformación de datos que soporta las aplicaciones y analíticas de la compañía.
 - **Recomendación**: documenta aquí los pipelines que vayas añadiendo, describiendo su objetivo, orígenes/destinos de datos, dependencias y cómo ejecutarlos en desarrollo, pruebas y producción.
+
+## Pipelines actuales
+
+- `brasaland-core/`: pipeline base de Tecnologia que materializa dimensiones/fact tables y marts para dashboards de Operaciones, Marketing y Finanzas.
