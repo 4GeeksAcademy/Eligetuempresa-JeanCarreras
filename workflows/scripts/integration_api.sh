@@ -453,6 +453,18 @@ exec_ask_body="$(curl -fsS \
   "$API_BASE/api/v1/executive/ask?question=Cual%20es%20el%20riesgo%20actual%20de%20inactividad%3F")"
 assert_contains "executive ask payload" '"sources"' "$exec_ask_body"
 
+exec_ask_florida_body="$(curl -fsS \
+  -H "X-API-Role: executive" \
+  -H "X-API-Token: $EXEC_TOKEN" \
+  "$API_BASE/api/v1/executive/ask?question=Cuanto%20vendimos%20esta%20semana%20en%20Florida%3F&currency=USD")"
+assert_contains "executive ask florida regla" '"rule:sales_week_country_single"' "$exec_ask_florida_body"
+
+exec_ask_chain_body="$(curl -fsS \
+  -H "X-API-Role: executive" \
+  -H "X-API-Token: $EXEC_TOKEN" \
+  "$API_BASE/api/v1/executive/ask?question=Cuanto%20vendimos%20esta%20semana%3F&currency=USD")"
+assert_contains "executive ask cadena regla" '"rule:sales_week_chain_total"' "$exec_ask_chain_body"
+
 # 23) executive ask with operations role (forbidden)
 exec_ask_ops_status="$(curl -sS -o /dev/null -w "%{http_code}" \
   -H "X-API-Role: operations" \
