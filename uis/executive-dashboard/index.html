@@ -78,6 +78,60 @@
         </article>
       </section>
 
+      <section class="ceo-panel" aria-label="Direccion ejecutiva">
+        <h2>Direccion ejecutiva (CEO)</h2>
+        <div class="ceo-grid">
+          <article class="ceo-card">
+            <h3>Ventas semanales de cadena (USD + COP)</h3>
+            <p class="ceo-metric" id="chainSalesUsd">-</p>
+            <p class="ceo-detail">Total cadena en USD</p>
+            <p class="ceo-metric" id="chainSalesCop">-</p>
+            <p class="ceo-detail">Total cadena en COP</p>
+            <p class="ceo-detail" id="ceoMonthlyTopTicket">Local top ticket mensual: -</p>
+          </article>
+
+          <article class="ceo-card">
+            <h3>Asistente IA (lenguaje natural)</h3>
+            <form id="executiveAskForm" class="ceo-form" aria-label="Consulta ejecutiva">
+              <label>
+                Pregunta
+                <input
+                  id="executiveAskInput"
+                  type="text"
+                  maxlength="220"
+                  value="Cuanto vendimos esta semana en Florida?"
+                  required
+                />
+              </label>
+              <div class="ceo-form-actions">
+                <button id="executiveAskSubmit" type="submit">Consultar</button>
+                <p id="executiveAskStatus" class="receipt-status">Listo para responder con trazabilidad.</p>
+              </div>
+            </form>
+            <div class="suppliers-list">
+              <article class="supplier-row">
+                <p class="alert-store">Respuesta</p>
+                <p class="alert-action" id="executiveAskAnswer">-</p>
+                <p class="alert-meta" id="executiveAskSources">Fuentes: -</p>
+              </article>
+            </div>
+          </article>
+
+          <article class="ceo-card">
+            <h3>Reporte semanal automatizado (lunes 07:00)</h3>
+            <div class="suppliers-list">
+              <article class="supplier-row">
+                <p class="alert-store" id="weeklyReportGeneratedAt">Generado: -</p>
+                <p class="alert-action" id="weeklyReportSummary">Resumen semanal: -</p>
+                <p class="alert-meta" id="weeklyReportMarkets">Mercados: -</p>
+                <p class="alert-meta">Programacion recomendada: Lunes 07:00 (America/Bogota) con envio automatico.</p>
+                <button id="weeklyReportRefresh" type="button">Actualizar vista de reporte</button>
+              </article>
+            </div>
+          </article>
+        </div>
+      </section>
+
       <section class="alerts-panel">
         <h2>Locales con inactividad prioritaria</h2>
         <div class="alerts-list" id="inactivityRows"></div>

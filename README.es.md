@@ -277,6 +277,43 @@ python data/pipelines/brasaland-core/pipeline.py
 ls -1 data/process/brasaland-marts
 ```
 
+## Tablero de cumplimiento - Direccion ejecutiva (Brasaland)
+
+Estado objetivo para Mariana Restrepo:
+
+| Capacidad requerida | Estado | Evidencia tecnica |
+| ---- | ---- | ---- |
+| Dashboard ejecutivo unificado para 14 locales en 2 mercados | Listo | `uis/executive-dashboard/` integra ventas, riesgo operativo y comparativos de cadena |
+| Ventas totales de cadena en USD y COP en la misma vista | Listo | Tarjetas duales en dashboard (USD + COP) consumiendo `/api/v1/sales/summary` |
+| Asistente IA en lenguaje natural para consultas ejecutivas | Listo | `GET /api/v1/executive/ask` responde preguntas semanales por mercado y top ticket mensual |
+| Informe semanal automatizado enviado cada lunes 07:00 | Listo | `workflows/scripts/run_weekly_report.sh` + `send_weekly_report.py` + `weekly_report.cron.example` con `CRON_TZ=America/Bogota` |
+
+Validacion rapida local:
+
+```bash
+# 1) Ventas semanales en USD y COP
+curl -s 'http://localhost:8000/api/v1/sales/summary?period=week&currency=USD'
+curl -s 'http://localhost:8000/api/v1/sales/summary?period=week&currency=COP'
+
+# 2) Asistente IA - pregunta por Florida
+curl -s 'http://localhost:8000/api/v1/executive/ask?question=Cuanto%20vendimos%20esta%20semana%20en%20Florida%3F&currency=USD' \
+	-H 'X-API-Role: executive' \
+	-H 'X-API-Token: brasaland-executive-token'
+
+# 3) Asistente IA - top ticket mensual
+curl -s 'http://localhost:8000/api/v1/executive/ask?question=Que%20local%20tiene%20el%20ticket%20medio%20mas%20alto%20este%20mes%3F&currency=USD' \
+	-H 'X-API-Role: executive' \
+	-H 'X-API-Token: brasaland-executive-token'
+
+# 4) Preview del reporte semanal
+curl -s 'http://localhost:8000/api/v1/executive/weekly-report?currency=USD' \
+	-H 'X-API-Role: executive' \
+	-H 'X-API-Token: brasaland-executive-token'
+
+# 5) Generar y enviar reporte (si ENABLE_REPORT_DISPATCH=1)
+API_BASE='http://localhost:8000' ENABLE_REPORT_DISPATCH=1 bash workflows/scripts/run_weekly_report.sh
+```
+
 ---
 
 ## Estructura del repositorio

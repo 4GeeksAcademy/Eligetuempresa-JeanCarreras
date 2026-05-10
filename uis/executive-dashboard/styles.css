@@ -244,6 +244,87 @@ body {
   opacity: 0.8;
 }
 
+.ceo-panel {
+  margin-top: 1rem;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  padding: 1rem;
+}
+
+.ceo-panel h2 {
+  margin: 0 0 0.8rem;
+}
+
+.ceo-grid {
+  display: grid;
+  gap: 0.8rem;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+}
+
+.ceo-card {
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 0.75rem;
+  background: #fff;
+}
+
+.ceo-card h3 {
+  margin: 0 0 0.55rem;
+  font-size: 0.92rem;
+}
+
+.ceo-metric {
+  margin: 0.15rem 0;
+  font-size: 1.35rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+.ceo-detail {
+  margin: 0.1rem 0 0.35rem;
+  color: var(--muted);
+  font-size: 0.82rem;
+}
+
+.ceo-form {
+  margin: 0;
+  display: grid;
+  gap: 0.55rem;
+}
+
+.ceo-form label {
+  display: grid;
+  gap: 0.25rem;
+  font-size: 0.8rem;
+}
+
+.ceo-form input {
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 0.48rem 0.55rem;
+  font: inherit;
+}
+
+.ceo-form-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.ceo-form-actions button,
+#weeklyReportRefresh {
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 0.46rem 0.68rem;
+  font: inherit;
+  cursor: pointer;
+  background: #1f2933;
+  color: #fff;
+  font-weight: 600;
+}
+
 .orders-panel {
   margin-top: 1rem;
   background: var(--card);

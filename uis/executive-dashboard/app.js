@@ -74,6 +74,19 @@ const financeCogsEl = document.getElementById("financeCogs");
 const financeProfitEl = document.getElementById("financeProfit");
 const financeMarginEl = document.getElementById("financeMargin");
 const alertsSlaEl = document.getElementById("alertsSla");
+const chainSalesUsdEl = document.getElementById("chainSalesUsd");
+const chainSalesCopEl = document.getElementById("chainSalesCop");
+const ceoMonthlyTopTicketEl = document.getElementById("ceoMonthlyTopTicket");
+const executiveAskFormEl = document.getElementById("executiveAskForm");
+const executiveAskInputEl = document.getElementById("executiveAskInput");
+const executiveAskSubmitEl = document.getElementById("executiveAskSubmit");
+const executiveAskStatusEl = document.getElementById("executiveAskStatus");
+const executiveAskAnswerEl = document.getElementById("executiveAskAnswer");
+const executiveAskSourcesEl = document.getElementById("executiveAskSources");
+const weeklyReportGeneratedAtEl = document.getElementById("weeklyReportGeneratedAt");
+const weeklyReportSummaryEl = document.getElementById("weeklyReportSummary");
+const weeklyReportMarketsEl = document.getElementById("weeklyReportMarkets");
+const weeklyReportRefreshEl = document.getElementById("weeklyReportRefresh");
 const supplierConsolidatedRowsEl = document.getElementById("supplierConsolidatedRows");
 const supplierPricesRowsEl = document.getElementById("supplierPricesRows");
 const supplierAlertsRowsEl = document.getElementById("supplierAlertsRows");
@@ -114,6 +127,132 @@ const trainingUpdateStatusEl = document.getElementById("trainingUpdateStatus");
 let refreshTimerId = null;
 const RECEIPTS_PAGE_SIZE = 8;
 let receiptsOffset = 0;
+
+function monthStartIsoDate() {
+  const now = new Date();
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-01`;
+}
+
+function todayIsoDate() {
+  return new Date().toISOString().slice(0, 10);
+}
+
+function renderExecutiveSalesDual(summaryUsd, summaryCop) {
+  if (!chainSalesUsdEl || !chainSalesCopEl) {
+    return;
+  }
+
+  if (!summaryUsd || !summaryCop) {
+    chainSalesUsdEl.textContent = "-";
+    chainSalesCopEl.textContent = "-";
+    return;
+  }
+
+  chainSalesUsdEl.textContent = getFormatter("USD").format(Number(summaryUsd.total_sales || 0));
+  chainSalesCopEl.textContent = getFormatter("COP").format(Number(summaryCop.total_sales || 0));
+}
+
+function renderMonthlyTopTicket(stores, currency) {
+  if (!ceoMonthlyTopTicketEl) {
+    return;
+  }
+
+  if (!Array.isArray(stores) || stores.length === 0) {
+    ceoMonthlyTopTicketEl.textContent = "Local top ticket mensual: informacion insuficiente";
+    return;
+  }
+
+  const best = [...stores].sort((a, b) => Number(b.average_ticket || 0) - Number(a.average_ticket || 0))[0];
+  const avgTicket = getFormatter(currency).format(Number(best.average_ticket || 0));
+  ceoMonthlyTopTicketEl.textContent = `Local top ticket mensual: ${best.store_name} (${best.market}) con ${avgTicket}`;
+}
+
+function renderWeeklyReportPreview(weeklyReport) {
+  if (!weeklyReportGeneratedAtEl || !weeklyReportSummaryEl || !weeklyReportMarketsEl) {
+    return;
+  }
+
+  if (!weeklyReport || !weeklyReport.summary) {
+    weeklyReportGeneratedAtEl.textContent = "Generado: informacion insuficiente";
+    weeklyReportSummaryEl.textContent = "Resumen semanal: -";
+    weeklyReportMarketsEl.textContent = "Mercados: -";
+    return;
+  }
+
+  const generatedAt = weeklyReport.generated_at
+    ? new Date(weeklyReport.generated_at).toLocaleString("es-CO", { dateStyle: "short", timeStyle: "short" })
+    : "N/A";
+  const format = getFormatter(weeklyReport.currency || DEFAULT_CURRENCY);
+  const summary = weeklyReport.summary;
+  const markets = Array.isArray(weeklyReport.markets) ? weeklyReport.markets : [];
+  const marketLine = markets
+    .map((item) => `${item.market}: ${format.format(Number(item.sales || 0))}`)
+    .join(" | ");
+
+  weeklyReportGeneratedAtEl.textContent = `Generado: ${generatedAt} (${weeklyReport.currency})`;
+  weeklyReportSummaryEl.textContent = `Resumen semanal: ventas ${format.format(Number(summary.total_sales || 0))}, ticket promedio ${format.format(Number(summary.average_ticket || 0))}`;
+  weeklyReportMarketsEl.textContent = marketLine ? `Mercados: ${marketLine}` : "Mercados: sin datos";
+}
+
+async function submitExecutiveAsk(event) {
+  event.preventDefault();
+  if (!executiveAskInputEl || !executiveAskSubmitEl || !executiveAskStatusEl || !executiveAskAnswerEl || !executiveAskSourcesEl) {
+    return;
+  }
+
+  const question = (executiveAskInputEl.value || "").trim();
+  if (!question) {
+    executiveAskStatusEl.textContent = "Debes escribir una pregunta.";
+    return;
+  }
+
+  executiveAskSubmitEl.disabled = true;
+  executiveAskStatusEl.textContent = "Consultando asistente IA...";
+
+  try {
+    const selectedCurrency = currencyFilterEl?.value || DEFAULT_CURRENCY;
+    const payload = await fetchJsonWithHeaders(
+      `/api/v1/executive/ask?question=${encodeURIComponent(question)}&currency=${selectedCurrency}`,
+      {
+        "X-API-Role": ALERTS_ROLE,
+        "X-API-Token": ALERTS_TOKEN,
+      },
+    );
+
+    executiveAskAnswerEl.textContent = payload.answer || "Sin respuesta";
+    executiveAskSourcesEl.textContent = `Fuentes: ${(payload.sources || []).join(", ") || "N/A"}`;
+    executiveAskStatusEl.textContent = payload.requires_follow_up
+      ? "Respuesta parcial: se recomiendan preguntas de seguimiento."
+      : "Respuesta generada con trazabilidad.";
+  } catch (error) {
+    executiveAskStatusEl.textContent = `No fue posible consultar: ${error.message}`;
+  } finally {
+    executiveAskSubmitEl.disabled = false;
+  }
+}
+
+async function refreshWeeklyReportPreview() {
+  if (!weeklyReportRefreshEl) {
+    return;
+  }
+  weeklyReportRefreshEl.disabled = true;
+  statusText.textContent = "Actualizando vista de reporte semanal...";
+  try {
+    const selectedCurrency = currencyFilterEl?.value || DEFAULT_CURRENCY;
+    const weeklyReport = await fetchJsonWithHeaders(
+      `/api/v1/executive/weekly-report?currency=${selectedCurrency}`,
+      {
+        "X-API-Role": ALERTS_ROLE,
+        "X-API-Token": ALERTS_TOKEN,
+      },
+    );
+    renderWeeklyReportPreview(weeklyReport);
+  } catch (error) {
+    statusText.textContent = `No fue posible actualizar reporte semanal: ${error.message}`;
+  } finally {
+    weeklyReportRefreshEl.disabled = false;
+  }
+}
 
 function getIsoDateOffset(days) {
   const base = new Date();
@@ -1523,6 +1662,26 @@ async function loadDashboard() {
     renderFinance(fallback.finance, fallback.summary.currency);
     renderAlertsSla(fallback.alertsSla);
     renderSmartOrders(fallback.smartOrders, fallback.summary.currency);
+    renderExecutiveSalesDual(
+      { total_sales: fallback.summary.total_sales },
+      { total_sales: fallback.summary.total_sales * 3950 },
+    );
+    renderMonthlyTopTicket(fallback.stores || [], fallback.summary.currency);
+    renderWeeklyReportPreview({
+      currency: fallback.summary.currency,
+      generated_at: new Date().toISOString(),
+      summary: fallback.summary,
+      markets: fallback.markets,
+    });
+    if (executiveAskAnswerEl) {
+      executiveAskAnswerEl.textContent = "Semana actual en Florida: 42,120.80 USD (demo).";
+    }
+    if (executiveAskSourcesEl) {
+      executiveAskSourcesEl.textContent = "Fuentes: sales_events, stores, rule:sales_week_country_single (demo)";
+    }
+    if (executiveAskStatusEl) {
+      executiveAskStatusEl.textContent = "Asistente IA en modo demo.";
+    }
     renderSupplierConsolidated(fallback.supplierConsolidated, fallback.summary.currency);
     renderSupplierPrices(fallback.supplierPrices, fallback.summary.currency);
     renderSupplierAlerts(fallback.supplierAlerts, fallback.summary.currency);
@@ -1558,7 +1717,7 @@ async function loadDashboard() {
     const trainingSearchQuery = encodeURIComponent((trainingSearchQueryEl?.value || "").trim());
     const trainingLocale = trainingLocaleFilterEl?.value || "";
     const trainingLocaleParam = trainingLocale ? `&locale=${trainingLocale}` : "";
-    const [summary, alerts, stores, trend, markets, finance, alertsSla, smartOrders, receipts, supplierPrices, supplierAlerts, supplierConsolidated, crmOverview, crmCustomers, personalization, hrKpis, hrRequests, hrOnboarding, hrEmployees, trainingCatalog, trainingItineraries, trainingUpdates] = await Promise.all([
+    const [summary, alerts, stores, trend, markets, finance, alertsSla, smartOrders, receipts, supplierPrices, supplierAlerts, supplierConsolidated, crmOverview, crmCustomers, personalization, hrKpis, hrRequests, hrOnboarding, hrEmployees, trainingCatalog, trainingItineraries, trainingUpdates, executiveSummaryUsd, executiveSummaryCop, monthlyTopStores, weeklyReport] = await Promise.all([
       fetchJson(`/api/v1/sales/summary?period=week&${query}`),
       fetchJsonWithHeaders(`/api/v1/alerts/inactivity?window_minutes=60&limit=6&${query}`, {
         "X-API-Role": ALERTS_ROLE,
@@ -1632,6 +1791,13 @@ async function loadDashboard() {
         "X-API-Role": ALERTS_ROLE,
         "X-API-Token": ALERTS_TOKEN,
       }),
+      fetchJson(`/api/v1/sales/summary?period=week&currency=USD`),
+      fetchJson(`/api/v1/sales/summary?period=week&currency=COP`),
+      fetchJson(`/api/v1/sales/by-store?currency=USD&start_date=${monthStartIsoDate()}&end_date=${todayIsoDate()}`),
+      fetchJsonWithHeaders(`/api/v1/executive/weekly-report?currency=${currencyFilterEl?.value || DEFAULT_CURRENCY}`, {
+        "X-API-Role": ALERTS_ROLE,
+        "X-API-Token": ALERTS_TOKEN,
+      }),
     ]);
 
     renderDashboard(summary, alerts, stores);
@@ -1640,6 +1806,12 @@ async function loadDashboard() {
     renderFinance(finance, summary.currency);
     renderAlertsSla(alertsSla);
     renderSmartOrders(smartOrders.recommendations || [], summary.currency);
+    renderExecutiveSalesDual(executiveSummaryUsd, executiveSummaryCop);
+    renderMonthlyTopTicket(monthlyTopStores || [], "USD");
+    renderWeeklyReportPreview(weeklyReport);
+    if (executiveAskStatusEl && !executiveAskStatusEl.textContent.includes("consult")) {
+      executiveAskStatusEl.textContent = "Asistente IA listo para preguntas ejecutivas.";
+    }
     renderSupplierConsolidated(supplierConsolidated, summary.currency);
     renderSupplierPrices(supplierPrices || [], summary.currency);
     renderSupplierAlerts(supplierAlerts || [], summary.currency);
@@ -1676,6 +1848,26 @@ async function loadDashboard() {
     renderFinance(fallback.finance, fallback.summary.currency);
     renderAlertsSla(fallback.alertsSla);
     renderSmartOrders(fallback.smartOrders, fallback.summary.currency);
+    renderExecutiveSalesDual(
+      { total_sales: fallback.summary.total_sales },
+      { total_sales: fallback.summary.total_sales * 3950 },
+    );
+    renderMonthlyTopTicket(fallback.stores || [], fallback.summary.currency);
+    renderWeeklyReportPreview({
+      currency: fallback.summary.currency,
+      generated_at: new Date().toISOString(),
+      summary: fallback.summary,
+      markets: fallback.markets,
+    });
+    if (executiveAskAnswerEl) {
+      executiveAskAnswerEl.textContent = "Modo demo: pregunta sugerida -> Que local tiene el ticket medio mas alto este mes?";
+    }
+    if (executiveAskSourcesEl) {
+      executiveAskSourcesEl.textContent = "Fuentes: datos demo en navegador";
+    }
+    if (executiveAskStatusEl) {
+      executiveAskStatusEl.textContent = "API no disponible, asistente en modo demo.";
+    }
     renderSupplierConsolidated(fallback.supplierConsolidated, fallback.summary.currency);
     renderSupplierPrices(fallback.supplierPrices, fallback.summary.currency);
     renderSupplierAlerts(fallback.supplierAlerts, fallback.summary.currency);
@@ -1761,6 +1953,14 @@ function bootstrapDashboard() {
 
   if (trainingUpdateFormEl) {
     trainingUpdateFormEl.addEventListener("submit", submitTrainingUpdate);
+  }
+
+  if (executiveAskFormEl) {
+    executiveAskFormEl.addEventListener("submit", submitExecutiveAsk);
+  }
+
+  if (weeklyReportRefreshEl) {
+    weeklyReportRefreshEl.addEventListener("click", refreshWeeklyReportPreview);
   }
 
   if (currencyFilterEl && receiptCurrencyEl) {

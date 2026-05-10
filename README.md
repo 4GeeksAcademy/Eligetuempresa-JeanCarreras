@@ -277,6 +277,43 @@ python data/pipelines/brasaland-core/pipeline.py
 ls -1 data/process/brasaland-marts
 ```
 
+## Executive direction compliance board (Brasaland)
+
+Target status for Mariana Restrepo:
+
+| Required capability | Status | Technical evidence |
+| ---- | ---- | ---- |
+| Unified executive dashboard across 14 stores and 2 markets | Done | `uis/executive-dashboard/` consolidates chain sales, operational risk, and market comparisons |
+| Chain total sales in USD and COP in the same view | Done | Dual sales cards in dashboard calling `/api/v1/sales/summary` |
+| Natural-language AI assistant for executive questions | Done | `GET /api/v1/executive/ask` answers weekly market sales and monthly top ticket questions |
+| Automated weekly report sent every Monday at 07:00 | Done | `workflows/scripts/run_weekly_report.sh` + `send_weekly_report.py` + `weekly_report.cron.example` with `CRON_TZ=America/Bogota` |
+
+Quick local validation:
+
+```bash
+# 1) Weekly sales in USD and COP
+curl -s 'http://localhost:8000/api/v1/sales/summary?period=week&currency=USD'
+curl -s 'http://localhost:8000/api/v1/sales/summary?period=week&currency=COP'
+
+# 2) AI assistant - Florida weekly sales
+curl -s 'http://localhost:8000/api/v1/executive/ask?question=How%20much%20did%20we%20sell%20this%20week%20in%20Florida%3F&currency=USD' \
+	-H 'X-API-Role: executive' \
+	-H 'X-API-Token: brasaland-executive-token'
+
+# 3) AI assistant - monthly highest average ticket
+curl -s 'http://localhost:8000/api/v1/executive/ask?question=Which%20store%20has%20the%20highest%20average%20ticket%20this%20month%3F&currency=USD' \
+	-H 'X-API-Role: executive' \
+	-H 'X-API-Token: brasaland-executive-token'
+
+# 4) Weekly report preview
+curl -s 'http://localhost:8000/api/v1/executive/weekly-report?currency=USD' \
+	-H 'X-API-Role: executive' \
+	-H 'X-API-Token: brasaland-executive-token'
+
+# 5) Generate and dispatch report (if ENABLE_REPORT_DISPATCH=1)
+API_BASE='http://localhost:8000' ENABLE_REPORT_DISPATCH=1 bash workflows/scripts/run_weekly_report.sh
+```
+
 ---
 
 ## Repository structure

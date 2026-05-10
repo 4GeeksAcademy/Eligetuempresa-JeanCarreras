@@ -25,11 +25,22 @@ def build_report(api_base: str, currency: str) -> str:
         "X-API-Role": "executive",
         "X-API-Token": exec_token,
     }
-    report = fetch_json(f"{api_base}/api/v1/executive/weekly-report?currency={currency}", headers=headers)
-    summary = report["summary"]
-    markets = report["markets"]
-    alerts = report["inactivity"]
-    alerts_sla = report["alerts_sla"]
+    report_primary = fetch_json(f"{api_base}/api/v1/executive/weekly-report?currency={currency}", headers=headers)
+    report_usd = fetch_json(f"{api_base}/api/v1/executive/weekly-report?currency=USD", headers=headers)
+    report_cop = fetch_json(f"{api_base}/api/v1/executive/weekly-report?currency=COP", headers=headers)
+    ask_florida = fetch_json(
+        f"{api_base}/api/v1/executive/ask?question=Cuanto%20vendimos%20esta%20semana%20en%20Florida%3F&currency={currency}",
+        headers=headers,
+    )
+    ask_top_ticket = fetch_json(
+        f"{api_base}/api/v1/executive/ask?question=Que%20local%20tiene%20el%20ticket%20medio%20mas%20alto%20este%20mes%3F&currency={currency}",
+        headers=headers,
+    )
+
+    summary = report_primary["summary"]
+    markets = report_primary["markets"]
+    alerts = report_primary["inactivity"]
+    alerts_sla = report_primary["alerts_sla"]
 
     lines: list[str] = []
     lines.append("# Reporte Ejecutivo Semanal - Brasaland")
@@ -39,6 +50,8 @@ def build_report(api_base: str, currency: str) -> str:
     lines.append("")
     lines.append("## KPI de cadena")
     lines.append("")
+    lines.append(f"- Ventas semanales de cadena (USD): {report_usd['summary']['total_sales']:.2f} USD")
+    lines.append(f"- Ventas semanales de cadena (COP): {report_cop['summary']['total_sales']:.2f} COP")
     lines.append(f"- Ventas semanales: {summary['total_sales']:.2f} {currency}")
     lines.append(f"- Ticket promedio: {summary['average_ticket']:.2f} {currency}")
     lines.append(f"- Locales activos: {alerts['active_stores']}/{alerts['total_stores']}")
@@ -56,6 +69,14 @@ def build_report(api_base: str, currency: str) -> str:
             f"ticket {market['average_ticket']:.2f} {currency}, "
             f"WoW {sign}{variation:.1f}%"
         )
+
+    lines.append("")
+    lines.append("## Highlights asistente ejecutivo")
+    lines.append("")
+    lines.append(f"- Pregunta: {ask_florida['question']}")
+    lines.append(f"  Respuesta: {ask_florida['answer']}")
+    lines.append(f"- Pregunta: {ask_top_ticket['question']}")
+    lines.append(f"  Respuesta: {ask_top_ticket['answer']}")
 
     if alerts["alerts"]:
         lines.append("")

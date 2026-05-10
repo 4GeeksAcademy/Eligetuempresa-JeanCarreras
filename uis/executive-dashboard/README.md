@@ -16,6 +16,7 @@ Brasaland executive dashboard MVP for quick chain KPI visibility.
 - Marketing panel (CRM, customer intelligence, and personalization).
 - People and culture panel (vacation/absence requests, onboarding flow, and HR KPIs by country).
 - Training and quality standards panel (recipe search, structured onboarding itineraries, and chain-wide recipe update publishing).
+- Executive direction panel (weekly chain sales in USD and COP, natural-language AI assistant, and Monday 07:00 automated weekly report preview).
 
 ## Run locally
 

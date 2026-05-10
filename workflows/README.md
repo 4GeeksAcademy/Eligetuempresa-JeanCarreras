@@ -16,6 +16,20 @@ This folder holds **workflows and automations** for the monorepo (for example wi
 - `scripts/integration_api.sh`: base integration suite for endpoints, filters, and role-based permissions.
 - `scripts/integration_data_api.sh`: data edge-case suite (invalid dates, invalid ranges, invalid payloads).
 
+## Recommended scheduling
+
+1. Copy the line from `scripts/weekly_report.cron.example` to your crontab.
+	- It includes `CRON_TZ=America/Bogota` to run at 07:00 Colombia local time every Monday.
+2. Configure `API_BASE` and `CURRENCY` for your environment.
+3. If role-protected endpoints are enabled, export role tokens in the job environment:
+	- `BRASALAND_ADMIN_TOKEN`
+	- `BRASALAND_EXECUTIVE_TOKEN`
+	- `BRASALAND_OPERATIONS_TOKEN`
+	- `BRASALAND_FINANCE_TOKEN`
+4. For automatic dispatch, enable `ENABLE_REPORT_DISPATCH=1` and configure channels:
+	- Slack: `SLACK_WEBHOOK_URL`
+	- Email: `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASSWORD`, `SMTP_SENDER`, `REPORT_RECIPIENTS`
+
 ## Quick API validation
 
 Run smoke tests (self-contained: it starts the local API if it is not running):

@@ -5204,8 +5204,28 @@ def ask_executive_metrics(
     now = datetime.now(timezone.utc)
     normalized = question.strip().lower()
 
+    def detect_country_from_question(text: str) -> Literal["CO", "US"] | None:
+        if "florida" in text or "usa" in text or "us" in text or "eeuu" in text:
+            return "US"
+        if "colombia" in text or "co" in text:
+            return "CO"
+        return None
+
+    def sales_answer_scope_label(country_code: Literal["CO", "US"] | None) -> str:
+        if country_code == "CO":
+            return "Colombia"
+        if country_code == "US":
+            return "Florida"
+        return "Cadena"
+
     with get_db() as db:
-        if "vendimos" in normalized and ("florida" in normalized or "colombia" in normalized or "vs" in normalized):
+        asks_week_sales = (
+            any(term in normalized for term in ("vendimos", "ventas", "sell", "sold"))
+            and any(term in normalized for term in ("semana", "week"))
+        )
+        if asks_week_sales:
+            requested_country = detect_country_from_question(normalized)
+            asks_compare = "vs" in normalized or ("florida" in normalized and "colombia" in normalized)
             start_at = period_start("week")
             end_at = now
             rows = db.execute(
@@ -5221,27 +5241,73 @@ def ask_executive_metrics(
             for row in rows:
                 totals_by_country[row["country"]] += convert_amount(row["total_amount"], row["currency"], currency)
 
-            answer = (
-                f"Semana actual: Colombia={totals_by_country['CO']:.2f} {currency}, "
-                f"Florida={totals_by_country['US']:.2f} {currency}."
-            )
+            total_chain = totals_by_country["CO"] + totals_by_country["US"]
+
+            if asks_compare:
+                answer = (
+                    f"Semana actual: Colombia={totals_by_country['CO']:.2f} {currency}, "
+                    f"Florida={totals_by_country['US']:.2f} {currency}, "
+                    f"Cadena={total_chain:.2f} {currency}."
+                )
+                write_audit_log(
+                    role,
+                    "executive_ask",
+                    "success",
+                    "sales_week_country_compare",
+                    f"currency={currency}",
+                )
+                return ExecutiveAskResponse(
+                    question=question,
+                    answer=answer,
+                    sources=["sales_events", "stores", "rule:sales_week_country_compare"],
+                    requires_follow_up=False,
+                    follow_up_questions=[],
+                    generated_at=now,
+                )
+
+            if requested_country is not None:
+                scope_label = sales_answer_scope_label(requested_country)
+                answer = f"Semana actual en {scope_label}: {totals_by_country[requested_country]:.2f} {currency}."
+                write_audit_log(
+                    role,
+                    "executive_ask",
+                    "success",
+                    "sales_week_country_single",
+                    f"country={requested_country}, currency={currency}",
+                )
+                return ExecutiveAskResponse(
+                    question=question,
+                    answer=answer,
+                    sources=["sales_events", "stores", "rule:sales_week_country_single"],
+                    requires_follow_up=False,
+                    follow_up_questions=[],
+                    generated_at=now,
+                )
+
+            answer = f"Semana actual de cadena: {total_chain:.2f} {currency}."
             write_audit_log(
                 role,
                 "executive_ask",
                 "success",
-                "sales_week_country_compare",
+                "sales_week_chain_total",
                 f"currency={currency}",
             )
             return ExecutiveAskResponse(
                 question=question,
                 answer=answer,
-                sources=["sales_events", "stores", "rule:sales_week_country_compare"],
+                sources=["sales_events", "stores", "rule:sales_week_chain_total"],
                 requires_follow_up=False,
                 follow_up_questions=[],
                 generated_at=now,
             )
 
-        if "ticket" in normalized and "alto" in normalized and ("mes" in normalized or "month" in normalized):
+        asks_top_ticket = (
+            "ticket" in normalized
+            and ("alto" in normalized or "highest" in normalized or "mayor" in normalized)
+            and ("mes" in normalized or "month" in normalized)
+        )
+        if asks_top_ticket:
+            requested_country = detect_country_from_question(normalized)
             start_at = period_start("month")
             end_at = now
             rows = db.execute(
@@ -5250,9 +5316,10 @@ def ask_executive_metrics(
                 FROM sales_events se
                 JOIN stores st ON st.id = se.store_id
                 WHERE se.sold_at >= ? AND se.sold_at < ?
+                  AND (? IS NULL OR st.country = ?)
                 ORDER BY st.id
                 """,
-                (start_at.isoformat(), end_at.isoformat()),
+                (start_at.isoformat(), end_at.isoformat(), requested_country, requested_country),
             ).fetchall()
             grouped: dict[str, dict[str, float | int | str]] = {}
             for row in rows:
@@ -5280,6 +5347,20 @@ def ask_executive_metrics(
                     best_store_name = str(item["store_name"])
                     best_market = str(item["market"])
 
+            if best_store_name == "N/A":
+                scope_label = sales_answer_scope_label(requested_country)
+                return ExecutiveAskResponse(
+                    question=question,
+                    answer=f"informacion insuficiente: no hay ventas del mes para {scope_label}.",
+                    sources=["sales_events", "stores", "rule:top_monthly_average_ticket_store"],
+                    requires_follow_up=True,
+                    follow_up_questions=[
+                        "Cuanto vendimos esta semana en Florida?",
+                        "Que local tiene el ticket promedio mas alto este mes en toda la cadena?",
+                    ],
+                    generated_at=now,
+                )
+
             answer = (
                 f"Local con mayor ticket promedio mensual: {best_store_name} "
                 f"({best_market}) con {best_avg:.2f} {currency}."
@@ -5289,7 +5370,7 @@ def ask_executive_metrics(
                 "executive_ask",
                 "success",
                 "top_monthly_average_ticket_store",
-                f"currency={currency}",
+                f"country={requested_country or 'ALL'}, currency={currency}",
             )
             return ExecutiveAskResponse(
                 question=question,
