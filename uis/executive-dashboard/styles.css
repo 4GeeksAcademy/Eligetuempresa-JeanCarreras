@@ -681,6 +681,8 @@ body {
   margin-top: 0.85rem;
   border-top: 1px solid var(--line);
   padding-top: 0.8rem;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
 .receipts-table-wrap h3 {
@@ -691,6 +693,7 @@ body {
 .receipts-table {
   width: 100%;
   border-collapse: collapse;
+  min-width: 620px;
 }
 
 .receipts-table th,
@@ -699,6 +702,7 @@ body {
   border-bottom: 1px solid var(--line);
   text-align: left;
   font-size: 0.82rem;
+  white-space: nowrap;
 }
 
 .receipts-table th {
@@ -869,6 +873,21 @@ body {
   margin: 0 0 0.8rem;
 }
 
+.table-scroll {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.table-scroll table {
+  min-width: 560px;
+}
+
+.table-scroll th,
+.table-scroll td {
+  white-space: nowrap;
+}
+
 table {
   width: 100%;
   border-collapse: collapse;
@@ -903,5 +922,9 @@ th {
   th,
   td {
     font-size: 0.83rem;
+  }
+
+  .table-scroll table {
+    min-width: 520px;
   }
 }
