@@ -1,0 +1,5 @@
+supplier_id,supplier_name,country,sku,item_name,latest_currency,latest_price,latest_valid_from
+sup-co-001,Avicola Andina,CO,SKU-POLLO,Pollo entero,COP,13400.0,2026-05-07T00:54:24.642047+00:00
+sup-co-002,Hortalizas Antioquia,CO,SKU-PAPA,Papa criolla,COP,3190.0,2026-05-08T00:54:24.642047+00:00
+sup-us-001,Florida Poultry LLC,US,SKU-CHICKEN,Whole chicken,USD,3.55,2026-05-08T00:54:24.642047+00:00
+sup-us-002,Sun Produce Co,US,SKU-POTATO,Potato,USD,1.44,2026-05-08T00:54:24.642047+00:00

@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Brasa Points App</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@400;500;700;800&family=Space+Mono:wght@400;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <main class="app-shell">
+      <header class="hero">
+        <p class="eyebrow">Brasaland Digital</p>
+        <h1>Brasa Points App</h1>
+        <p class="subtitle">Fidelizacion, pedidos y recomendaciones personalizadas en una sola experiencia movil.</p>
+        <p class="status" id="statusText">Conectando...</p>
+      </header>
+
+      <section class="control-panel" aria-label="Controles principales">
+        <label>
+          Cliente
+          <select id="customerSelect"></select>
+        </label>
+        <label>
+          Moneda
+          <select id="currencySelect">
+            <option value="USD">USD</option>
+            <option value="COP">COP</option>
+          </select>
+        </label>
+      </section>
+
+      <section class="cards" aria-label="Resumen del cliente">
+        <article class="card pulse-red">
+          <h2>Puntos disponibles</h2>
+          <p class="metric" id="pointsMetric">-</p>
+          <p class="detail" id="segmentDetail">Segmento -</p>
+        </article>
+        <article class="card pulse-mint">
+          <h2>Pedidos recientes</h2>
+          <p class="metric" id="ordersMetric">-</p>
+          <p class="detail" id="lastOrderDetail">Ultimo pedido -</p>
+        </article>
+      </section>
+
+      <section class="panel">
+        <h2>Haz un pedido ahora</h2>
+        <form id="orderForm" class="order-form" aria-label="Formulario de pedido digital">
+          <label>
+            Local
+            <select id="storeSelect"></select>
+          </label>
+          <label>
+            Items (separados por coma)
+            <input id="itemsInput" type="text" value="combo_familiar,cola_350" />
+          </label>
+          <label>
+            Total
+            <input id="amountInput" type="number" min="0.1" step="0.1" value="20" required />
+          </label>
+          <label>
+            Canal
+            <select id="channelSelect">
+              <option value="app">app</option>
+              <option value="web">web</option>
+            </select>
+          </label>
+          <button id="orderSubmit" type="submit">Crear pedido y sumar puntos</button>
+        </form>
+        <p class="form-status" id="orderStatus">Listo para tu proximo pedido.</p>
+      </section>
+
+      <section class="panel">
+        <h2>Recomendaciones para ti</h2>
+        <div class="stack" id="recommendationsRows"></div>
+      </section>
+
+      <section class="panel">
+        <h2>Historial de pedidos</h2>
+        <div class="stack" id="historyRows"></div>
+      </section>
+    </main>
+
+    <script src="app.js"></script>
+  </body>
+</html>

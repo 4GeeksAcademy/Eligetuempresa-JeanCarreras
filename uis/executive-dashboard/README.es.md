@@ -12,6 +12,11 @@ MVP de dashboard ejecutivo de Brasaland para visualizacion rapida de KPIs de cad
 - Grafico de tendencia diaria de ventas.
 - Comparativo por mercado con variacion WoW.
 - Panel de KPIs financieros estimados (ingresos, COGS, utilidad bruta, margen).
+- Panel de compras y proveedores (historial, alertas y consolidado de cadena).
+- Panel de marketing (CRM, clientes y personalizacion).
+- Panel de personas y cultura (solicitudes de vacaciones/ausencias, onboarding y KPIs RRHH por pais).
+- Panel de formacion y estandares de calidad (busqueda de recetas, itinerarios estructurados y publicacion simultanea de updates de receta).
+- Panel de direccion ejecutiva (ventas semanales de cadena en USD y COP, asistente IA en lenguaje natural, y vista del reporte semanal automatizado de los lunes 07:00).
 
 ## Ejecutar local
 

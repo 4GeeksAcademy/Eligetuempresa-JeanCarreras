@@ -7,4 +7,8 @@ Each subfolder or file under `data/pipelines/` should represent **one pipeline o
 - **Main purpose**: consolidate in one place the data movement and transformation logic that powers the company’s applications and analytics.
 - **Recommendation**: document pipelines as you add them—their goal, data sources and sinks, dependencies, and how to run them in development, testing, and production.
 
+## Current pipelines
+
+- `brasaland-core/`: Technology baseline pipeline that materializes dimensions/fact tables and marts for Operations, Marketing, and Finance dashboards.
+
 > _Spanish version: [README.es.md](./README.es.md)._

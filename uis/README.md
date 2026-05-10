@@ -18,4 +18,13 @@ MVP executive dashboard for Brasaland.
 - Documentation (EN): `uis/executive-dashboard/README.md`.
 - Documentation (ES): `uis/executive-dashboard/README.es.md`.
 
+### `marketing-loyalty-app`
+
+Mobile web app for digital loyalty and customer ordering.
+
+- Objective: enable digital Brasa Points, app/web ordering, and personalized customer recommendations.
+- Stack: HTML + CSS + JavaScript.
+- Documentation (EN): `uis/marketing-loyalty-app/README.md`.
+- Documentation (ES): `uis/marketing-loyalty-app/README.es.md`.
+
 > _Spanish version: [README.es.md](./README.es.md)._

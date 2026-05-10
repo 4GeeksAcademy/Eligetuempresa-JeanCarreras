@@ -19,6 +19,7 @@ Esta carpeta contiene **workflows y automatizaciones** del monorepo (por ejemplo
 ## Programacion recomendada
 
 1. Copiar la linea de `scripts/weekly_report.cron.example` en tu crontab.
+	- Incluye `CRON_TZ=America/Bogota` para ejecutar a las 07:00 hora local de Colombia.
 2. Configurar `API_BASE` y `CURRENCY` segun entorno.
 3. Si proteges endpoints con roles, exportar tokens por rol en el entorno del job:
 	- `BRASALAND_ADMIN_TOKEN`
