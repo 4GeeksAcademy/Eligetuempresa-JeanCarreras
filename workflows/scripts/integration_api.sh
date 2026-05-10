@@ -98,6 +98,7 @@ ensure_api_running
 # 1) stores endpoint returns records
 stores_body="$(curl -fsS "$API_BASE/api/v1/stores")"
 assert_contains "stores payload" '"id"' "$stores_body"
+total_stores_count="$(grep -o '"id"' <<<"$stores_body" | wc -l | tr -d ' ')"
 
 # 2) country-filtered summary for CO
 summary_co="$(curl -fsS "$API_BASE/api/v1/sales/summary?period=week&currency=USD&country=CO")"
@@ -203,7 +204,7 @@ alerts_opening_hours_disabled_body="$(curl -fsS \
   -H "X-API-Role: executive" \
   -H "X-API-Token: $EXEC_TOKEN" \
   "$API_BASE/api/v1/alerts/inactivity?window_minutes=60&opening_hours_only=false&reference_at=2026-05-09T08:30:00Z")"
-assert_contains "alerts inactivity sin filtro horario" '"total_stores":4' "$alerts_opening_hours_disabled_body"
+assert_contains "alerts inactivity sin filtro horario" "\"total_stores\":$total_stores_count" "$alerts_opening_hours_disabled_body"
 
 # 14) alerts SLA with executive role (allowed)
 alerts_sla_status="$(curl -sS -o /dev/null -w "%{http_code}" \
