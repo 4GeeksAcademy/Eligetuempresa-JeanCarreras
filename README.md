@@ -437,3 +437,37 @@ This template was built as part of the 4Geeks Academy AI Engineering Career Prog
 You can find other templates and resources like this at the [4Geeks Academy GitHub page](https://github.com/4geeksacademy).
 
 _This template is maintained by 4Geeks Academy for the AI Engineering track. For exclusive use in the programme._
+
+# Brasaland — Sitio web público
+
+Este proyecto contiene la landing page y el formulario de aplicación para Brasaland, cumpliendo los requisitos de accesibilidad, responsive, validación y uso de Tailwind CSS.
+
+## Estructura
+
+- `index.html`: Landing page principal.
+- `application.html`: Formulario de aplicación/registro.
+- `validation.js`: Lógica de validación del formulario.
+- `styles.css`: (opcional, solo si necesitas personalizar más allá de Tailwind CDN).
+
+## Cómo levantar el proyecto localmente
+
+Puedes usar un servidor estático compatible con Codespaces. Por ejemplo:
+
+```bash
+npx http-server . -p 3000 -a 0.0.0.0
+```
+
+Luego abre la URL que te indique Codespaces (por ejemplo, https://3000-xxxx.preview.app.github.dev/).
+
+## Requisitos cumplidos
+
+- HTML5 semántico, etiquetas ARIA, imágenes con alt.
+- Formulario estructurado con fieldset, legend, label, required.
+- Validación completa y mensajes claros.
+- Responsive y mobile-first con Tailwind.
+- SEO básico y Schema.org en la landing.
+- Sin CSS personalizado salvo que sea estrictamente necesario.
+
+---
+
+Para cambios, edita los archivos en la raíz del repositorio.

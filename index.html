@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Brasaland - Cocina a la Brasa</title>
+  <meta name="description" content="Brasaland: cadena de restaurantes de cocina a la brasa en Colombia y Florida. Sabor consistente, servicio cálido y operación rápida. ¡Descubre por qué elegirnos!">
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+  <!-- Schema.org markup for SEO -->
+  <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "Restaurant",
+      "name": "Brasaland",
+      "image": "https://brasaland.com/logo.png",
+      "address": {
+        "@type": "PostalAddress",
+        "addressCountry": "CO, US"
+      },
+      "telephone": "+57 1 2345678",
+      "url": "https://brasaland.com"
+    }
+  </script>
+</head>
+<body class="bg-white text-gray-900">
+  <!-- Header -->
+  <header class="bg-yellow-900 text-white" role="banner">
+    <nav class="container mx-auto flex justify-between items-center py-4" aria-label="Navegación principal">
+      <div class="flex items-center">
+        <img src="https://brasaland.com/logo.png" alt="Logo Brasaland" class="h-10 mr-3" />
+        <span class="font-bold text-xl">Brasaland</span>
+      </div>
+      <ul class="flex space-x-6" role="menubar">
+        <li><a href="#que-hacemos" class="hover:underline" role="menuitem">¿Qué hacemos?</a></li>
+        <li><a href="#caracteristicas" class="hover:underline" role="menuitem">Beneficios</a></li>
+        <li><a href="#contacto" class="hover:underline" role="menuitem">Contacto</a></li>
+        <li><a href="application.html" class="bg-yellow-500 text-yellow-900 px-4 py-2 rounded hover:bg-yellow-400 font-semibold" role="menuitem">Aplicar</a></li>
+      </ul>
+    </nav>
+  </header>
+
+  <!-- Hero Section -->
+  <section id="que-hacemos" class="container mx-auto py-12 flex flex-col md:flex-row items-center">
+    <div class="md:w-1/2 mb-8 md:mb-0">
+      <h1 class="text-4xl font-extrabold mb-4">Cocina a la brasa con sabor y servicio inigualables</h1>
+      <p class="mb-6 text-lg">En Brasaland llevamos más de 15 años sirviendo experiencias únicas en Colombia y Florida. Nuestra promesa: sabor consistente, servicio cálido y operación rápida en cada local.</p>
+      <a href="application.html" class="inline-block bg-yellow-500 text-yellow-900 px-6 py-3 rounded font-bold hover:bg-yellow-400 transition" aria-label="Ir al formulario de aplicación">Únete a nuestro equipo</a>
+    </div>
+    <div class="md:w-1/2 flex justify-center">
+      <img src="https://brasaland.com/hero.jpg" alt="Parrilla de Brasaland" class="rounded-lg shadow-lg w-full max-w-md" />
+    </div>
+  </section>
+
+  <!-- Características / Beneficios -->
+  <section id="caracteristicas" class="bg-yellow-50 py-12">
+    <div class="container mx-auto grid md:grid-cols-3 gap-8">
+      <article class="p-6 bg-white rounded shadow" aria-label="Sabor consistente">
+        <h2 class="text-2xl font-bold mb-2">Sabor consistente</h2>
+        <p>Recetas estandarizadas y calidad en cada plato, sin importar el local.</p>
+      </article>
+      <article class="p-6 bg-white rounded shadow" aria-label="Servicio cálido">
+        <h2 class="text-2xl font-bold mb-2">Servicio cálido</h2>
+        <p>Atención cercana y amable, creando experiencias memorables para cada cliente.</p>
+      </article>
+      <article class="p-6 bg-white rounded shadow" aria-label="Operación rápida">
+        <h2 class="text-2xl font-bold mb-2">Operación rápida</h2>
+        <p>Procesos optimizados para servirte sin demoras, siempre frescos.</p>
+      </article>
+    </div>
+  </section>
+
+  <!-- Contacto / Llamado a la acción -->
+  <section id="contacto" class="container mx-auto py-12">
+    <div class="bg-yellow-100 rounded-lg p-8 flex flex-col md:flex-row items-center justify-between">
+      <div>
+        <h3 class="text-2xl font-bold mb-2">¿Listo para vivir la experiencia Brasaland?</h3>
+        <p class="mb-4">Contáctanos o aplica para ser parte de nuestro equipo.</p>
+        <a href="mailto:contacto@brasaland.com" class="text-yellow-900 underline font-semibold" aria-label="Enviar correo a contacto@brasaland.com">contacto@brasaland.com</a>
+      </div>
+      <a href="application.html" class="mt-6 md:mt-0 bg-yellow-500 text-yellow-900 px-6 py-3 rounded font-bold hover:bg-yellow-400 transition" aria-label="Ir al formulario de aplicación">Aplicar ahora</a>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer class="bg-yellow-900 text-white py-6 mt-12" role="contentinfo">
+    <div class="container mx-auto flex flex-col md:flex-row justify-between items-center">
+      <div class="mb-4 md:mb-0">© 2026 Brasaland. Todos los derechos reservados.</div>
+      <nav aria-label="Enlaces legales">
+        <ul class="flex space-x-4">
+          <li><a href="#" class="hover:underline" aria-label="Política de privacidad">Política de privacidad</a></li>
+          <li><a href="#" class="hover:underline" aria-label="Términos de uso">Términos de uso</a></li>
+        </ul>
+      </nav>
+    </div>
+  </footer>
+</body>
+</html>

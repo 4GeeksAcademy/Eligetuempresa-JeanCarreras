@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Aplicación — Brasaland</title>
+  <meta name="description" content="Formulario de aplicación para unirse a Brasaland. Completa tus datos y sé parte de nuestro equipo.">
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+</head>
+<body class="bg-white text-gray-900">
+  <header class="bg-yellow-900 text-white" role="banner">
+    <nav class="container mx-auto flex justify-between items-center py-4" aria-label="Navegación principal">
+      <div class="flex items-center">
+        <img src="https://brasaland.com/logo.png" alt="Logo Brasaland" class="h-10 mr-3" />
+        <span class="font-bold text-xl">Brasaland</span>
+      </div>
+      <ul class="flex space-x-6" role="menubar">
+        <li><a href="index.html" class="hover:underline" role="menuitem">Inicio</a></li>
+      </ul>
+    </nav>
+  </header>
+
+  <main class="container mx-auto py-12">
+    <h1 class="text-3xl font-bold mb-6">Formulario de Aplicación</h1>
+    <form id="aplicacionForm" class="bg-yellow-50 p-8 rounded-lg shadow max-w-xl mx-auto" novalidate aria-label="Formulario de aplicación">
+      <div class="mb-4">
+        <label for="nombre" class="block font-semibold mb-1">Nombre completo</label>
+        <input type="text" id="nombre" name="nombre" required class="w-full px-4 py-2 border rounded" aria-required="true" aria-label="Nombre completo">
+        <p class="text-red-600 text-sm mt-1 hidden" id="error-nombre"></p>
+      </div>
+      <div class="mb-4">
+        <label for="email" class="block font-semibold mb-1">Correo electrónico</label>
+        <input type="email" id="email" name="email" required class="w-full px-4 py-2 border rounded" aria-required="true" aria-label="Correo electrónico">
+        <p class="text-red-600 text-sm mt-1 hidden" id="error-email"></p>
+      </div>
+      <div class="mb-4">
+        <label for="telefono" class="block font-semibold mb-1">Teléfono</label>
+        <input type="tel" id="telefono" name="telefono" required pattern="[0-9\-\+\s]+" class="w-full px-4 py-2 border rounded" aria-required="true" aria-label="Teléfono">
+        <p class="text-red-600 text-sm mt-1 hidden" id="error-telefono"></p>
+      </div>
+      <div class="mb-4">
+        <label for="pais" class="block font-semibold mb-1">País de residencia</label>
+        <select id="pais" name="pais" required class="w-full px-4 py-2 border rounded" aria-required="true" aria-label="País de residencia">
+          <option value="">Selecciona un país</option>
+          <option value="Colombia">Colombia</option>
+          <option value="Estados Unidos">Estados Unidos</option>
+        </select>
+        <p class="text-red-600 text-sm mt-1 hidden" id="error-pais"></p>
+      </div>
+      <div class="mb-4">
+        <label for="experiencia" class="block font-semibold mb-1">Experiencia en restaurantes (años)</label>
+        <input type="number" id="experiencia" name="experiencia" min="0" max="40" required class="w-full px-4 py-2 border rounded" aria-required="true" aria-label="Experiencia en restaurantes">
+        <p class="text-red-600 text-sm mt-1 hidden" id="error-experiencia"></p>
+      </div>
+      <div class="mb-4">
+        <label for="puesto" class="block font-semibold mb-1">Puesto de interés</label>
+        <select id="puesto" name="puesto" required class="w-full px-4 py-2 border rounded" aria-required="true" aria-label="Puesto de interés">
+          <option value="">Selecciona un puesto</option>
+          <option value="Cocina">Cocina</option>
+          <option value="Servicio">Servicio</option>
+          <option value="Administración">Administración</option>
+        </select>
+        <p class="text-red-600 text-sm mt-1 hidden" id="error-puesto"></p>
+      </div>
+      <div class="mb-4">
+        <label for="mensaje" class="block font-semibold mb-1">¿Por qué quieres unirte a Brasaland?</label>
+        <textarea id="mensaje" name="mensaje" rows="3" required class="w-full px-4 py-2 border rounded" aria-required="true" aria-label="Motivación"></textarea>
+        <p class="text-red-600 text-sm mt-1 hidden" id="error-mensaje"></p>
+      </div>
+      <button type="submit" class="w-full bg-yellow-500 text-yellow-900 px-6 py-3 rounded font-bold hover:bg-yellow-400 transition" aria-label="Enviar aplicación">Enviar aplicación</button>
+      <p id="form-success" class="text-green-700 text-center mt-4 hidden">¡Aplicación enviada correctamente!</p>
+    </form>
+  </main>
+
+  <footer class="bg-yellow-900 text-white py-6 mt-12" role="contentinfo">
+    <div class="container mx-auto flex flex-col md:flex-row justify-between items-center">
+      <div class="mb-4 md:mb-0">© 2026 Brasaland. Todos los derechos reservados.</div>
+      <nav aria-label="Enlaces legales">
+        <ul class="flex space-x-4">
+          <li><a href="#" class="hover:underline" aria-label="Política de privacidad">Política de privacidad</a></li>
+          <li><a href="#" class="hover:underline" aria-label="Términos de uso">Términos de uso</a></li>
+        </ul>
+      </nav>
+    </div>
+  </footer>
+
+  <script src="formulario.js"></script>
+</body>
+</html>
