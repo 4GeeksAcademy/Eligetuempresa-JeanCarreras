@@ -7,22 +7,22 @@
   <meta name="description" content="Formulario de aplicación para unirse a Brasaland. Completa tus datos y sé parte de nuestro equipo.">
   <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
 </head>
-<body class="bg-white text-gray-900">
+  <body class="bg-white text-gray-900">
   <header class="bg-yellow-900 text-white" role="banner">
-      <nav class="container mx-auto flex justify-between items-center py-4" aria-label="Navegación principal">
+      <nav class="container mx-auto px-4 flex flex-col md:flex-row md:justify-between md:items-center gap-4 py-4" aria-label="Navegación principal">
       <div class="flex items-center">
         <img src="https://brasaland.com/logo.png" alt="Logo Brasaland" class="h-10 mr-3" />
         <span class="font-bold text-xl">Brasaland</span>
       </div>
-        <ul class="flex space-x-6">
+        <ul class="flex flex-wrap w-full md:w-auto justify-center md:justify-end gap-3 md:gap-6">
           <li><a href="index.html" class="hover:underline">Inicio</a></li>
       </ul>
     </nav>
   </header>
 
-  <main class="container mx-auto py-12">
+    <main class="container mx-auto px-4 py-8 sm:py-12">
     <h1 class="text-3xl font-bold mb-6">Formulario de Aplicación</h1>
-    <form id="aplicacionForm" class="bg-yellow-50 p-8 rounded-lg shadow max-w-xl mx-auto" novalidate aria-label="Formulario de aplicación">
+      <form id="aplicacionForm" class="bg-yellow-50 p-5 sm:p-8 rounded-lg shadow max-w-xl mx-auto" novalidate aria-label="Formulario de aplicación">
       <fieldset class="mb-4">
         <legend class="font-semibold mb-2">Datos personales</legend>
         <div class="mb-4">
@@ -89,11 +89,11 @@
     </form>
   </main>
 
-  <footer class="bg-yellow-900 text-white py-6 mt-12" role="contentinfo">
-    <div class="container mx-auto flex flex-col md:flex-row justify-between items-center">
+    <footer class="bg-yellow-900 text-white py-6 mt-12" role="contentinfo">
+      <div class="container mx-auto px-4 flex flex-col md:flex-row justify-between items-center">
       <div class="mb-4 md:mb-0">© 2026 Brasaland. Todos los derechos reservados.</div>
       <nav aria-label="Enlaces legales">
-        <ul class="flex space-x-4">
+          <ul class="flex flex-wrap justify-center gap-4">
           <li><a href="#" class="hover:underline" aria-label="Política de privacidad">Política de privacidad</a></li>
           <li><a href="#" class="hover:underline" aria-label="Términos de uso">Términos de uso</a></li>
         </ul>

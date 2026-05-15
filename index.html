@@ -25,25 +25,25 @@
 <body class="bg-white text-gray-900">
   <!-- Header -->
   <header class="bg-yellow-900 text-white" role="banner">
-    <nav class="container mx-auto flex justify-between items-center py-4" aria-label="Navegación principal">
+    <nav class="container mx-auto px-4 flex flex-col md:flex-row md:justify-between md:items-center gap-4 py-4" aria-label="Navegación principal">
       <div class="flex items-center">
         <img src="https://brasaland.com/logo.png" alt="Logo Brasaland" class="h-10 mr-3" />
         <span class="font-bold text-xl">Brasaland</span>
       </div>
-      <ul class="flex space-x-6">
+      <ul class="flex flex-wrap w-full md:w-auto justify-center md:justify-end gap-3 md:gap-6">
         <li><a href="#que-hacemos" class="hover:underline">¿Qué hacemos?</a></li>
         <li><a href="#caracteristicas" class="hover:underline">Beneficios</a></li>
         <li><a href="#contacto" class="hover:underline">Contacto</a></li>
-        <li><a href="application.html" class="bg-yellow-500 text-gray-900 px-4 py-2 rounded hover:bg-yellow-400 font-semibold">Aplicar</a></li>
+        <li><a href="application.html" class="inline-block bg-yellow-500 text-gray-900 px-4 py-2 rounded hover:bg-yellow-400 font-semibold">Aplicar</a></li>
       </ul>
     </nav>
   </header>
 
   <main>
     <!-- Hero Section -->
-  <section id="que-hacemos" class="container mx-auto py-12 lg:py-20 flex flex-col md:flex-row items-center gap-8 lg:gap-12">
+    <section id="que-hacemos" class="container mx-auto px-4 py-10 sm:py-12 lg:py-20 flex flex-col md:flex-row items-center gap-8 lg:gap-12">
     <div class="w-full md:w-1/2 mb-8 md:mb-0">
-      <h1 class="text-4xl md:text-5xl lg:text-6xl font-extrabold mb-4">Cocina a la brasa con sabor y servicio inigualables</h1>
+      <h1 class="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-extrabold mb-4">Cocina a la brasa con sabor y servicio inigualables</h1>
       <p class="mb-6 text-lg">En Brasaland llevamos más de 15 años sirviendo experiencias únicas en Colombia y Florida. Nuestra promesa: sabor consistente, servicio cálido y operación rápida en cada local.</p>
       <a href="application.html" class="inline-block bg-yellow-500 text-gray-900 px-6 py-3 rounded font-bold hover:bg-yellow-400 transition">Únete a nuestro equipo</a>
     </div>
@@ -53,8 +53,8 @@
   </section>
 
   <!-- Características / Beneficios -->
-  <section id="caracteristicas" class="bg-yellow-50 py-12 lg:py-16">
-    <div class="container mx-auto grid sm:grid-cols-2 lg:grid-cols-3 gap-8">
+  <section id="caracteristicas" class="bg-yellow-50 py-10 sm:py-12 lg:py-16">
+    <div class="container mx-auto px-4 grid sm:grid-cols-2 lg:grid-cols-3 gap-8">
       <article class="p-6 bg-white rounded shadow" aria-label="Sabor consistente">
         <h2 class="text-2xl font-bold mb-2">Sabor consistente</h2>
         <p>Recetas estandarizadas y calidad en cada plato, sin importar el local.</p>
@@ -71,7 +71,7 @@
   </section>
 
   <!-- Contacto / Llamado a la acción -->
-  <section id="contacto" class="container mx-auto py-12 lg:py-16">
+  <section id="contacto" class="container mx-auto px-4 py-10 sm:py-12 lg:py-16">
     <div class="bg-yellow-100 rounded-lg p-8 lg:p-10 flex flex-col md:flex-row items-center justify-between gap-6">
       <div>
         <h3 class="text-2xl font-bold mb-2">¿Listo para vivir la experiencia Brasaland?</h3>
@@ -86,7 +86,7 @@
 
     <!-- Footer -->
   <footer class="bg-yellow-900 text-white py-6 lg:py-8 mt-12" role="contentinfo">
-    <div class="container mx-auto flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6">
+    <div class="container mx-auto px-4 flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6">
       <div>
         <p class="mb-2">© 2026 Brasaland. Todos los derechos reservados.</p>
           <p class="text-white">Contacto: <a href="mailto:contacto@brasaland.com" class="underline hover:text-yellow-200">contacto@brasaland.com</a> | <a href="tel:+5712345678" class="underline hover:text-yellow-200">+57 1 234 5678</a></p>
@@ -99,5 +99,18 @@
       </nav>
       </div>
     </footer>
+
+  <script>
+    // Hace scroll suave hacia secciones internas en lugar de salto instantaneo.
+    document.querySelectorAll('a[href^="#"]:not([href="#"])').forEach((link) => {
+      link.addEventListener('click', (event) => {
+        const target = document.querySelector(link.getAttribute('href'));
+        if (!target) return;
+
+        event.preventDefault();
+        target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      });
+    });
+  </script>
 </body>
 </html>
