@@ -9,13 +9,13 @@
 </head>
 <body class="bg-white text-gray-900">
   <header class="bg-yellow-900 text-white" role="banner">
-    <nav class="container mx-auto flex justify-between items-center py-4" aria-label="Navegación principal">
+      <nav class="container mx-auto flex justify-between items-center py-4" aria-label="Navegación principal">
       <div class="flex items-center">
         <img src="https://brasaland.com/logo.png" alt="Logo Brasaland" class="h-10 mr-3" />
         <span class="font-bold text-xl">Brasaland</span>
       </div>
-      <ul class="flex space-x-6" role="menubar">
-        <li><a href="index.html" class="hover:underline" role="menuitem">Inicio</a></li>
+        <ul class="flex space-x-6">
+          <li><a href="index.html" class="hover:underline">Inicio</a></li>
       </ul>
     </nav>
   </header>
@@ -27,57 +27,65 @@
         <legend class="font-semibold mb-2">Datos personales</legend>
         <div class="mb-4">
           <label for="nombre" class="block font-semibold mb-1">Nombre completo</label>
-          <input type="text" id="nombre" name="nombre" required class="w-full px-4 py-2 border rounded" aria-required="true" aria-label="Nombre completo">
-          <p class="text-red-600 text-sm mt-1 hidden" id="error-nombre"></p>
+              <input type="text" id="nombre" name="nombre" required class="w-full px-4 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-yellow-400 focus:border-yellow-500" aria-required="true" aria-label="Nombre completo" aria-describedby="error-nombre" aria-invalid="false">
+            <p class="text-red-700 text-sm mt-1 hidden" id="error-nombre" role="alert" aria-live="assertive"></p>
         </div>
         <div class="mb-4">
           <label for="email" class="block font-semibold mb-1">Correo electrónico</label>
-          <input type="email" id="email" name="email" required class="w-full px-4 py-2 border rounded" aria-required="true" aria-label="Correo electrónico">
-          <p class="text-red-600 text-sm mt-1 hidden" id="error-email"></p>
+              <input type="email" id="email" name="email" required class="w-full px-4 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-yellow-400 focus:border-yellow-500" aria-required="true" aria-label="Correo electrónico" aria-describedby="error-email" aria-invalid="false">
+            <p class="text-red-700 text-sm mt-1 hidden" id="error-email" role="alert" aria-live="assertive"></p>
         </div>
         <div class="mb-4">
           <label for="telefono" class="block font-semibold mb-1">Teléfono</label>
-          <input type="tel" id="telefono" name="telefono" required pattern="[0-9\-\+\s]+" class="w-full px-4 py-2 border rounded" aria-required="true" aria-label="Teléfono">
-          <p class="text-red-600 text-sm mt-1 hidden" id="error-telefono"></p>
+              <input type="tel" id="telefono" name="telefono" required pattern="[0-9\-\+\s]+" class="w-full px-4 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-yellow-400 focus:border-yellow-500" aria-required="true" aria-label="Teléfono" aria-describedby="error-telefono" aria-invalid="false">
+            <p class="text-red-700 text-sm mt-1 hidden" id="error-telefono" role="alert" aria-live="assertive"></p>
         </div>
         <div class="mb-4">
           <label for="pais" class="block font-semibold mb-1">País de residencia</label>
-          <select id="pais" name="pais" required class="w-full px-4 py-2 border rounded" aria-required="true" aria-label="País de residencia">
+              <select id="pais" name="pais" required class="w-full px-4 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-yellow-400 focus:border-yellow-500" aria-required="true" aria-label="País de residencia" aria-describedby="error-pais" aria-invalid="false">
             <option value="">Selecciona un país</option>
             <option value="Colombia">Colombia</option>
             <option value="Estados Unidos">Estados Unidos</option>
           </select>
-          <p class="text-red-600 text-sm mt-1 hidden" id="error-pais"></p>
+            <p class="text-red-700 text-sm mt-1 hidden" id="error-pais" role="alert" aria-live="assertive"></p>
         </div>
       </fieldset>
+        <fieldset class="mb-4">
+          <legend class="font-semibold mb-2">Disponibilidad</legend>
+          <div class="mb-4">
+            <label for="fecha_disponibilidad" class="block font-semibold mb-1">Fecha de disponibilidad para iniciar</label>
+              <input type="date" id="fecha_disponibilidad" name="fecha_disponibilidad" required class="w-full px-4 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-yellow-400 focus:border-yellow-500" aria-required="true" aria-label="Fecha de disponibilidad para iniciar" aria-describedby="error-fecha_disponibilidad" aria-invalid="false">
+              <p class="text-red-700 text-sm mt-1 hidden" id="error-fecha_disponibilidad" role="alert" aria-live="assertive"></p>
+          </div>
+        </fieldset>
       <fieldset class="mb-4">
         <legend class="font-semibold mb-2">Experiencia y motivación</legend>
         <div class="mb-4">
           <label for="experiencia" class="block font-semibold mb-1">Experiencia en restaurantes (años)</label>
-          <input type="number" id="experiencia" name="experiencia" min="0" max="40" required class="w-full px-4 py-2 border rounded" aria-required="true" aria-label="Experiencia en restaurantes">
-          <p class="text-red-600 text-sm mt-1 hidden" id="error-experiencia"></p>
+              <input type="number" id="experiencia" name="experiencia" min="0" max="40" required class="w-full px-4 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-yellow-400 focus:border-yellow-500" aria-required="true" aria-label="Experiencia en restaurantes" aria-describedby="error-experiencia" aria-invalid="false">
+            <p class="text-red-700 text-sm mt-1 hidden" id="error-experiencia" role="alert" aria-live="assertive"></p>
         </div>
         <div class="mb-4">
           <label for="puesto" class="block font-semibold mb-1">Puesto de interés</label>
-          <select id="puesto" name="puesto" required class="w-full px-4 py-2 border rounded" aria-required="true" aria-label="Puesto de interés">
+              <select id="puesto" name="puesto" required class="w-full px-4 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-yellow-400 focus:border-yellow-500" aria-required="true" aria-label="Puesto de interés" aria-describedby="error-puesto" aria-invalid="false">
             <option value="">Selecciona un puesto</option>
             <option value="Cocina">Cocina</option>
             <option value="Servicio">Servicio</option>
             <option value="Administración">Administración</option>
           </select>
-          <p class="text-red-600 text-sm mt-1 hidden" id="error-puesto"></p>
+            <p class="text-red-700 text-sm mt-1 hidden" id="error-puesto" role="alert" aria-live="assertive"></p>
         </div>
         <div class="mb-4">
           <label for="mensaje" class="block font-semibold mb-1">¿Por qué quieres unirte a Brasaland?</label>
-          <textarea id="mensaje" name="mensaje" rows="3" required class="w-full px-4 py-2 border rounded" aria-required="true" aria-label="Motivación"></textarea>
-          <p class="text-red-600 text-sm mt-1 hidden" id="error-mensaje"></p>
+              <textarea id="mensaje" name="mensaje" rows="3" required class="w-full px-4 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-yellow-400 focus:border-yellow-500" aria-required="true" aria-label="Motivación" aria-describedby="error-mensaje" aria-invalid="false"></textarea>
+            <p class="text-red-700 text-sm mt-1 hidden" id="error-mensaje" role="alert" aria-live="assertive"></p>
         </div>
       </fieldset>
-      <div class="flex gap-4">
-        <button type="submit" class="w-full bg-yellow-500 text-yellow-900 px-6 py-3 rounded font-bold hover:bg-yellow-400 transition" aria-label="Enviar aplicación">Enviar aplicación</button>
-        <button type="reset" class="w-full bg-gray-200 text-gray-700 px-6 py-3 rounded font-bold hover:bg-gray-300 transition" aria-label="Limpiar formulario">Limpiar</button>
+        <div class="flex flex-col sm:flex-row gap-4">
+          <button type="submit" class="w-full bg-yellow-500 text-gray-900 px-6 py-3 rounded font-bold hover:bg-yellow-400 transition focus:outline-none focus:ring-2 focus:ring-yellow-400 focus:ring-offset-2" aria-label="Enviar aplicación">Enviar aplicación</button>
+          <button type="reset" class="w-full bg-gray-200 text-gray-700 px-6 py-3 rounded font-bold hover:bg-gray-300 transition focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-offset-2" aria-label="Limpiar formulario">Limpiar</button>
       </div>
-      <p id="form-success" class="text-green-700 text-center mt-4 hidden">¡Aplicación enviada correctamente!</p>
+        <p id="form-success" class="text-green-800 text-center mt-4 hidden" role="status" aria-live="polite">¡Aplicación enviada correctamente!</p>
     </form>
   </main>
 
