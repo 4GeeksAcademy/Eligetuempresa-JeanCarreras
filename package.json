@@ -1,0 +1,13 @@
+{
+  "name": "brasaland-data-utils",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "demo": "tsx src/demo.ts"
+  },
+  "devDependencies": {
+    "typescript": "^5.0.0",
+    "tsx": "^3.12.7"
+  }
+}
