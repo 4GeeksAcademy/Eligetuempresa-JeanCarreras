@@ -1,3 +1,32 @@
+# Brasaland - Data Utilities
+
+Utilidades TypeScript para manipulación de datos (modelos, búsquedas, transformaciones y validaciones).
+
+Uso rápido:
+
+Instala dependencias:
+
+```bash
+npm install
+```
+
+Comprobar tipos:
+
+```bash
+npm run typecheck
+```
+
+Ejecutar demo:
+
+```bash
+npm run demo
+```
+
+Ejecutar tests:
+
+```bash
+npm test
+```
 # AI Engineering Company Project — Student Template
 
 [![4Geeks Academy](https://img.shields.io/badge/4Geeks-Academy-blue)](https://4geeksacademy.com)
