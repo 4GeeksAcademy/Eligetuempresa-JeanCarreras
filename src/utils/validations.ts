@@ -1,4 +1,4 @@
-import { Product, Customer, Order, OrderItem } from '../types/models';
+import { Customer, InventoryItem, Location, MenuItem, Order, OrderItem, Product, Supplier } from '../types/models';
 
 export function validateProduct(p: Partial<Product>): { valid: boolean; errors: string[] } {
   const errors: string[] = [];
@@ -9,6 +9,7 @@ export function validateProduct(p: Partial<Product>): { valid: boolean; errors: 
   if (typeof p.stock !== 'number' || isNaN(p.stock)) errors.push('stock debe ser número');
   else if (p.stock < 0) errors.push('stock no puede ser negativo');
   if (!p.category) errors.push('category es obligatorio');
+  if (!p.createdAt) errors.push('createdAt es obligatorio');
   return { valid: errors.length === 0, errors };
 }
 
@@ -31,6 +32,7 @@ export function validateOrder(o: Partial<Order>): { valid: boolean; errors: stri
   const errors: string[] = [];
   if (!o.id) errors.push('id es obligatorio');
   if (!o.customerId) errors.push('customerId es obligatorio');
+  if (!o.createdAt) errors.push('createdAt es obligatorio');
   if (!o.items || !Array.isArray(o.items) || o.items.length === 0) errors.push('items debe tener al menos un elemento');
   else {
     for (const [i, it] of (o.items || []).entries()) {

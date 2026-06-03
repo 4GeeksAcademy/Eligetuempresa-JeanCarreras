@@ -15,6 +15,41 @@ export interface Customer {
   createdAt: string;
 }
 
+export interface Location {
+  id: string;
+  name: string;
+  country: string;
+  currency: 'COP' | 'USD';
+  isOpen: boolean;
+  createdAt: string;
+}
+
+export interface Supplier {
+  id: string;
+  name: string;
+  category: string;
+  country: string;
+  active: boolean;
+  createdAt: string;
+}
+
+export interface MenuItem {
+  id: string;
+  name: string;
+  category: string;
+  price: number;
+  available: boolean;
+  createdAt: string;
+}
+
+export interface InventoryItem {
+  id: string;
+  productId: string;
+  quantity: number;
+  unitCost: number;
+  locationId: string;
+}
+
 export type OrderStatus = 'pending' | 'paid' | 'shipped' | 'cancelled';
 
 export interface OrderItem {
