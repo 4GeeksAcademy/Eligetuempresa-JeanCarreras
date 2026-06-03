@@ -5,12 +5,14 @@
   "scripts": {
     "typecheck": "tsc --noEmit",
     "demo": "tsx src/demo.ts",
-    "test": "vitest run"
+    "test": "vitest run",
+    "serve": "http-server src -p 3000 -a 0.0.0.0"
   },
   "devDependencies": {
     "typescript": "^5.0.0",
     "tsx": "^3.12.7",
     "vitest": "^1.0.0",
-    "@types/node": "^20.0.0"
+    "@types/node": "^20.0.0",
+    "http-server": "^14.1.1"
   }
 }

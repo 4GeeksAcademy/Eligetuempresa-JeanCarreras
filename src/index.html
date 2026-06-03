@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Brasaland Data Utils - Demo</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-50 text-slate-900">
+  <div class="min-h-screen p-6">
+    <div class="mx-auto max-w-5xl bg-white rounded-3xl shadow-xl p-6 lg:p-10">
+      <h1 class="text-3xl font-bold mb-4">Demo de utilidades de datos</h1>
+      <p class="mb-6 text-slate-600">Prueba filtros, ordenamientos, búsquedas, agregaciones y validaciones sin salir del navegador.</p>
+
+      <div class="grid gap-4 lg:grid-cols-2 mb-6">
+        <div class="space-y-3">
+          <label class="block text-sm font-semibold">Filtrar productos por categoría</label>
+          <select id="categorySelect" class="w-full rounded-xl border border-slate-300 p-3 text-slate-900">
+            <option value="">Todas</option>
+          </select>
+          <button id="btnFilter" class="w-full rounded-xl bg-sky-600 px-4 py-3 text-white hover:bg-sky-700">Filtrar</button>
+        </div>
+
+        <div class="space-y-3">
+          <label class="block text-sm font-semibold">Buscar producto por ID</label>
+          <input id="searchId" type="text" placeholder="p1, p2, p3" class="w-full rounded-xl border border-slate-300 p-3" />
+          <button id="btnSearch" class="w-full rounded-xl bg-emerald-600 px-4 py-3 text-white hover:bg-emerald-700">Buscar</button>
+        </div>
+      </div>
+
+      <div class="grid gap-4 lg:grid-cols-3 mb-6">
+        <button id="btnSortAsc" class="rounded-xl bg-indigo-600 px-4 py-3 text-white hover:bg-indigo-700">Ordenar precio asc</button>
+        <button id="btnSortDesc" class="rounded-xl bg-violet-600 px-4 py-3 text-white hover:bg-violet-700">Ordenar precio desc</button>
+        <button id="btnCount" class="rounded-xl bg-amber-500 px-4 py-3 text-slate-900 hover:bg-amber-400">Contar por categoría</button>
+      </div>
+
+      <div class="grid gap-4 lg:grid-cols-3 mb-6">
+        <button id="btnAverage" class="rounded-xl bg-emerald-500 px-4 py-3 text-slate-900 hover:bg-emerald-400">Precio promedio</button>
+        <button id="btnMaxMin" class="rounded-xl bg-fuchsia-500 px-4 py-3 text-white hover:bg-fuchsia-600">Máximo y mínimo</button>
+        <button id="btnValidate" class="rounded-xl bg-rose-600 px-4 py-3 text-white hover:bg-rose-700">Validar productos</button>
+      </div>
+
+      <div class="rounded-3xl border border-slate-200 bg-slate-50 p-5">
+        <h2 class="text-xl font-semibold mb-3">Resultados</h2>
+        <pre id="output" class="max-h-80 overflow-auto rounded-2xl bg-white p-4 text-sm leading-6 text-slate-800"></pre>
+      </div>
+
+      <div class="mt-6 rounded-3xl border border-slate-200 bg-slate-100 p-5 text-slate-600">
+        <p class="font-semibold">Servir en Codespaces o local:</p>
+        <code class="block rounded-xl bg-slate-200 p-3 mt-3">npx http-server src -p 3000 -a 0.0.0.0</code>
+      </div>
+    </div>
+  </div>
+  <script src="ui.js"></script>
+</body>
+</html>

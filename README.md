@@ -22,6 +22,18 @@ Ejecutar demo:
 npm run demo
 ```
 
+Ejecutar página de prueba local:
+
+```bash
+npm run serve
+```
+
+o bien:
+
+```bash
+npx http-server src -p 3000 -a 0.0.0.0
+```
+
 Ejecutar tests:
 
 ```bash
