@@ -8,3 +8,7 @@ services/brasaland-api/brasaland.db
 
 # Generated report outputs
 workflows/output/
+
+# Node modules and package artifacts
+node_modules/
+npm-debug.log*
