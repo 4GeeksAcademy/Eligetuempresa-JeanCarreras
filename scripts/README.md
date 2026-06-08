@@ -44,7 +44,7 @@ Starts Brasaland API locally with robust Python resolution.
 	- `services/brasaland-api/.venv/bin/python`
 	- `.venv/bin/python` (repo root)
 	- system `python3`
-- Runs `python -m uvicorn app.main:app` with configurable host/port.
+- Runs `python -m uvicorn src.main:app` with configurable host/port.
 
 Example:
 

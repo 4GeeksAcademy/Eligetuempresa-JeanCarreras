@@ -44,7 +44,7 @@ Levanta la API de Brasaland en local de forma robusta.
 	- `services/brasaland-api/.venv/bin/python`
 	- `.venv/bin/python` (raiz del repo)
 	- `python3` del sistema
-- Ejecuta `python -m uvicorn app.main:app` con host/puerto configurables.
+- Ejecuta `python -m uvicorn src.main:app` con host/puerto configurables.
 
 Ejemplo:
 

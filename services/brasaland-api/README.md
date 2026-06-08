@@ -15,6 +15,16 @@ MVP central API for Brasaland focused on multi-country operations.
 - FastAPI
 - Uvicorn
 
+## Source structure
+
+```text
+services/brasaland-api/
+├── src/                # Source package
+│   └── main.py         # FastAPI app, routes, and seed/bootstrap logic
+├── requirements.txt
+└── README.md
+```
+
 ## Run locally
 
 ```bash
@@ -22,7 +32,7 @@ cd services/brasaland-api
 python -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
-uvicorn app.main:app --reload --port 8000
+uvicorn src.main:app --reload --port 8000
 ```
 
 ## MVP endpoints

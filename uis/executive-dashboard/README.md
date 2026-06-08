@@ -27,7 +27,7 @@ cd services/brasaland-api
 python -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
-uvicorn app.main:app --reload --port 8000
+uvicorn src.main:app --reload --port 8000
 ```
 
 In another terminal:

@@ -36,4 +36,4 @@ fi
 
 echo "Levantando Brasaland API en http://$HOST:$PORT"
 cd "$SERVICE_DIR"
-exec "$PY_BIN" -m uvicorn app.main:app --host "$HOST" --port "$PORT"
+exec "$PY_BIN" -m uvicorn src.main:app --host "$HOST" --port "$PORT"

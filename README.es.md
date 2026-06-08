@@ -52,9 +52,9 @@ Estado objetivo para Felipe Guerrero (14 locales):
 | Capacidad requerida | Estado | Evidencia tecnica |
 | ---- | ---- | ---- |
 | Dashboard de ventas en tiempo real por local (COP y USD) | Listo | `uis/executive-dashboard/app.js` (consumo de `/sales/summary`, `/sales/by-store`, `/sales/daily-trend`, filtros y auto-refresh) |
-| Sistema inteligente de pedidos (historico + stock actual) | Listo | `services/brasaland-api/app/main.py` (`/api/v1/orders/recommendations`) + `uis/executive-dashboard/app.js` |
-| Alertas automaticas por local sin ventas en horario de apertura | Listo | `services/brasaland-api/app/main.py` (`/api/v1/alerts/inactivity`, `STORE_OPENING_HOURS`) + acciones ACK/RESOLVER en `uis/executive-dashboard/app.js` |
-| Cobertura de cadena (14 locales) | Listo | `services/brasaland-api/app/main.py` (seed de 14 locales + backfill de ventas y stock por local) |
+| Sistema inteligente de pedidos (historico + stock actual) | Listo | `services/brasaland-api/src/main.py` (`/api/v1/orders/recommendations`) + `uis/executive-dashboard/app.js` |
+| Alertas automaticas por local sin ventas en horario de apertura | Listo | `services/brasaland-api/src/main.py` (`/api/v1/alerts/inactivity`, `STORE_OPENING_HOURS`) + acciones ACK/RESOLVER en `uis/executive-dashboard/app.js` |
+| Cobertura de cadena (14 locales) | Listo | `services/brasaland-api/src/main.py` (seed de 14 locales + backfill de ventas y stock por local) |
 
 Validacion rapida local:
 
@@ -85,8 +85,8 @@ Estado objetivo para Lucia Fernandez:
 
 | Capacidad requerida | Estado | Evidencia tecnica |
 | ---- | ---- | ---- |
-| Historial de precios por proveedor y SKU (CO + US) | Listo | `services/brasaland-api/app/main.py` (`/api/v1/suppliers/prices`) |
-| Alertas por variacion de precio configurable por umbral | Listo | `services/brasaland-api/app/main.py` (`/api/v1/suppliers/price-alerts?threshold_pct=...`) |
+| Historial de precios por proveedor y SKU (CO + US) | Listo | `services/brasaland-api/src/main.py` (`/api/v1/suppliers/prices`) |
+| Alertas por variacion de precio configurable por umbral | Listo | `services/brasaland-api/src/main.py` (`/api/v1/suppliers/price-alerts?threshold_pct=...`) |
 | Cobertura multipais y multimoneda (COP/USD) | Listo | Filtros `country` + `currency` en endpoints de proveedores |
 | Consola visual centralizada para Compras | Listo | Panel dedicado en `uis/executive-dashboard` conectado a `/api/v1/suppliers/prices`, `/api/v1/suppliers/price-alerts` y `/api/v1/suppliers/purchases/consolidated` |
 
@@ -154,7 +154,7 @@ Estado objetivo para Ashley Turner:
 | Portal interno RRHH para vacaciones y gestion de ausencias | Listo | `POST /api/v1/hr/time-off/requests`, `GET /api/v1/hr/time-off/requests`, `POST /api/v1/hr/time-off/requests/{request_id}/action` |
 | Flujo automatizado de onboarding para personal de cocina | Listo | `POST /api/v1/hr/onboarding/cases/start`, `POST /api/v1/hr/onboarding/cases/{case_id}/advance`, `GET /api/v1/hr/onboarding/cases` |
 | Dashboard de KPIs RRHH segmentado por pais (rotacion, absentismo, cobertura vacantes) | Listo | `GET /api/v1/hr/kpis/overview` + panel `Personas y cultura` en `uis/executive-dashboard` |
-| Cobertura operativa para 115 personas activas en 14 locales | Listo | Seed `hr_employees` en `services/brasaland-api/app/main.py` (115 activos + historial de bajas por pais) |
+| Cobertura operativa para 115 personas activas en 14 locales | Listo | Seed `hr_employees` en `services/brasaland-api/src/main.py` (115 activos + historial de bajas por pais) |
 
 Validacion rapida local:
 
@@ -245,7 +245,7 @@ Estado objetivo para Nicolas Park:
 
 | Capacidad requerida | Estado | Evidencia tecnica |
 | ---- | ---- | ---- |
-| API central de Brasaland para locales, menus, ventas, clientes y proveedores | Listo | `GET /api/v1/stores`, `GET/POST /api/v1/menus/items`, `/api/v1/sales/*`, `/api/v1/customers/*`, `/api/v1/suppliers/*` en `services/brasaland-api/app/main.py` |
+| API central de Brasaland para locales, menus, ventas, clientes y proveedores | Listo | `GET /api/v1/stores`, `GET/POST /api/v1/menus/items`, `/api/v1/sales/*`, `/api/v1/customers/*`, `/api/v1/suppliers/*` en `services/brasaland-api/src/main.py` |
 | Telemetria en tiempo real desde cada local | Listo | `POST /api/v1/telemetry/events` + `GET /api/v1/telemetry/stores/status` |
 | Pipeline de datos para dashboards de operaciones, marketing y finanzas | Listo | `data/pipelines/brasaland-core/pipeline.py` genera `mart_ops_dashboard.csv`, `mart_marketing_dashboard.csv`, `mart_finance_dashboard.csv` |
 
@@ -322,20 +322,29 @@ API_BASE='http://localhost:8000' ENABLE_REPORT_DISPATCH=1 bash workflows/scripts
 ai-engineering-company-project-monorepo/
 ├── README.md
 ├── README.es.md
-├── CONTEXT.md                # Placeholder a reemplazar con el contexto asignado
-├── agents/                   # Patrones/plantillas de agentes y documentación de tools
+├── CONTEXT.md
+├── AGENTS.md
+├── agents/                   # Patrones/plantillas de agentes y tests
 ├── data/                     # raw, process, pipelines, eval
-├── docs/                     # Documentación de proyecto y arquitectura
+├── docs/                     # Documentacion de proyecto y arquitectura
 ├── infra/                    # Docker, Terraform, configuraciones de despliegue
-├── internal/                 # CLIs, scripts de migración empaquetados, utilidades internas
+├── internal/                 # CLIs y utilidades internas
 ├── mcps/                     # Servidores Model Context Protocol (MCP)
 ├── packages/
 │   └── shared/               # Paquete compartido (@repo/shared-types)
 ├── scripts/                  # Convenciones/documentación de scripts
-├── services/                 # APIs y workers en segundo plano
+├── services/
+│   └── brasaland-api/
+│       ├── src/              # Codigo fuente de la API
+│       │   └── main.py
+│       ├── requirements.txt
+│       └── README.es.md
 ├── shared/                   # Recursos/convenciones compartidas a nivel repo
 ├── skills/                   # Skills reutilizables para agentes
-├── uis/                      # Interfaces de usuario (React, Next.js, Streamlit, HTML)
+├── uis/
+│   ├── executive-dashboard/  # Dashboard ejecutivo MVP (HTML/CSS/JS)
+│   ├── marketing-loyalty-app/ # App de fidelizacion y pedidos (HTML/CSS/JS)
+│   └── public-website/       # Sitio web publico
 └── workflows/                # Documentación de automatizaciones/orquestación
 ```
 
@@ -400,7 +409,7 @@ cd services/brasaland-api
 python -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
-python -m uvicorn app.main:app --host 0.0.0.0 --port 8000
+python -m uvicorn src.main:app --host 0.0.0.0 --port 8000
 ```
 
 ---

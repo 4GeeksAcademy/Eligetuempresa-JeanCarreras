@@ -78,7 +78,7 @@ ensure_api_running() {
   echo "Levantando API local para smoke tests..."
   (
     cd "$ROOT_DIR/services/brasaland-api"
-    "$py_bin" -m uvicorn app.main:app --host 0.0.0.0 --port 8000 >/tmp/uvicorn-smoke.log 2>&1
+    "$py_bin" -m uvicorn src.main:app --host 0.0.0.0 --port 8000 >/tmp/uvicorn-smoke.log 2>&1
   ) &
   SERVER_PID=$!
 
