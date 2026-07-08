@@ -1,13 +1,16 @@
 @import "tailwindcss";
 
 :root {
-  --surface: #fffaf0;
-  --surface-strong: #ffefd6;
-  --ink: #1a1f36;
-  --muted: #56607a;
-  --brand: #0b8f8c;
-  --brand-2: #ff6f3c;
-  --line: #d8deee;
+  --surface: #061028;
+  --surface-strong: #0a1b3f;
+  --ink: #e9f0ff;
+  --muted: #a9b9de;
+  --brand: #4a82ff;
+  --brand-2: #79a5ff;
+  --line: #29487f;
+  --paper: #0c1f45;
+  --paper-soft: #102654;
+  --shadow: 0 24px 60px -34px rgba(2, 10, 28, 0.86);
 }
 
 @theme inline {
@@ -19,10 +22,23 @@ body {
   min-height: 100vh;
   color: var(--ink);
   background:
-    radial-gradient(1200px circle at 6% -10%, #ffd06b4a, transparent 60%),
-    radial-gradient(900px circle at 110% 18%, #0b8f8c36, transparent 58%),
-    linear-gradient(180deg, var(--surface), #fff);
+    radial-gradient(980px circle at 4% -16%, rgba(60, 121, 255, 0.38), transparent 55%),
+    radial-gradient(980px circle at 108% 8%, rgba(31, 83, 196, 0.42), transparent 58%),
+    radial-gradient(880px circle at 54% 118%, rgba(67, 113, 231, 0.3), transparent 60%),
+    linear-gradient(180deg, #040c20, var(--surface));
   font-family: var(--font-space-grotesk), sans-serif;
+}
+
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: -1;
+  background-image: linear-gradient(rgba(96, 136, 224, 0.12) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(96, 136, 224, 0.12) 1px, transparent 1px);
+  background-size: 34px 34px;
+  mask-image: radial-gradient(circle at center, black 48%, transparent 100%);
 }
 
 a {
@@ -31,6 +47,58 @@ a {
 
 * {
   border-color: var(--line);
+}
+
+::selection {
+  background: rgba(74, 130, 255, 0.42);
+  color: #f2f7ff;
+}
+
+section.rounded-2xl,
+header.rounded-2xl {
+  background: linear-gradient(180deg, color-mix(in srgb, var(--paper) 92%, #16377a 8%), color-mix(in srgb, var(--paper-soft) 92%, #1a3f87 8%));
+  box-shadow: var(--shadow);
+}
+
+table {
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+thead {
+  background: linear-gradient(90deg, rgba(48, 96, 208, 0.44), rgba(90, 134, 237, 0.36));
+}
+
+tbody tr {
+  transition: background-color 160ms ease;
+}
+
+tbody tr:hover {
+  background: color-mix(in srgb, #18366f 70%, #0f234d 30%);
+}
+
+input,
+select,
+textarea {
+  background: #0a1a3a;
+  color: #e9f0ff;
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: #9db0d8;
+}
+
+option {
+  color: #e9f0ff;
+  background: #0a1a3a;
+}
+
+input:focus,
+select:focus,
+textarea:focus {
+  border-color: color-mix(in srgb, var(--brand) 70%, white 30%);
+  box-shadow: 0 0 0 3px rgba(19, 63, 138, 0.2);
 }
 
 .feedback {
@@ -42,21 +110,21 @@ a {
 }
 
 .feedback-success {
-  background: #e9f9f3;
-  color: #0a6b4d;
-  border-color: #b7ead9;
+  background: linear-gradient(180deg, #153976, #1a4b95);
+  color: #d8e8ff;
+  border-color: #3864ab;
 }
 
 .feedback-error {
-  background: #fff1ec;
-  color: #b8401f;
-  border-color: #ffc9b8;
+  background: linear-gradient(180deg, #542239, #6e2749);
+  color: #ffdceb;
+  border-color: #9c4a6f;
 }
 
 .feedback-info {
-  background: #eef6ff;
-  color: #274f82;
-  border-color: #c6dcff;
+  background: linear-gradient(180deg, #12305f, #1a3f7c);
+  color: #d6e6ff;
+  border-color: #3a62a2;
 }
 
 .toast-stack {
@@ -73,7 +141,10 @@ a {
   padding: 0.8rem 1rem;
   font-size: 0.9rem;
   font-weight: 600;
-  box-shadow: 0 12px 28px -20px rgba(26, 31, 54, 0.65);
+  box-shadow: 0 20px 42px -28px rgba(15, 33, 73, 0.72);
+  backdrop-filter: blur(4px);
+  background: linear-gradient(180deg, #123060, #183c76);
+  color: #e9f0ff;
 }
 
 .modal-backdrop {
@@ -84,7 +155,7 @@ a {
   align-items: center;
   justify-content: center;
   padding: 1rem;
-  background: rgba(10, 15, 32, 0.45);
+  background: linear-gradient(180deg, rgba(9, 21, 50, 0.58), rgba(9, 21, 50, 0.7));
 }
 
 .modal-card {
@@ -92,6 +163,6 @@ a {
   border: 1px solid var(--line);
   border-radius: 1rem;
   padding: 1rem;
-  background: #fff;
-  box-shadow: 0 30px 65px -35px rgba(26, 31, 54, 0.8);
+  background: linear-gradient(180deg, #0e234c, #133162);
+  box-shadow: 0 34px 72px -34px rgba(15, 33, 73, 0.8);
 }

@@ -52,6 +52,14 @@ export default function Home() {
     return () => clearTimeout(timeoutId);
   }, [toastMessage]);
 
+  useEffect(() => {
+    return () => {
+      if (searchDebounceRef.current !== null) {
+        clearTimeout(searchDebounceRef.current);
+      }
+    };
+  }, []);
+
   const loadRecords = useCallback(async () => {
     setIsLoading(true);
     setErrorMessage("");
@@ -177,19 +185,19 @@ export default function Home() {
 
   return (
     <main className="mx-auto flex w-full max-w-7xl flex-1 flex-col gap-6 px-4 py-8 sm:px-6 lg:px-10">
-      <header className="rounded-2xl border bg-[var(--surface-strong)] p-6 shadow-[0_20px_60px_-40px_rgba(26,31,54,0.5)]">
-        <p className="font-mono text-xs uppercase tracking-[0.18em] text-[var(--brand)]">
+      <header className="rounded-2xl border border-[#32599f] bg-gradient-to-br from-[#0b2250] via-[#13397e] to-[#2455ae] p-6 text-white shadow-[0_28px_68px_-40px_rgba(10,25,60,0.8)]">
+        <p className="font-mono text-xs uppercase tracking-[0.18em] text-[#b5d5ff]">
           Personas y Cultura | Brasaland
         </p>
         <h1 className="mt-2 text-3xl font-semibold tracking-tight sm:text-4xl">
           Pipeline de candidaturas
         </h1>
-        <p className="mt-2 max-w-2xl text-sm text-[var(--muted)] sm:text-base">
+        <p className="mt-2 max-w-2xl text-sm text-[#e3eeff] sm:text-base">
           Seguimiento interno para sedes de Colombia y Florida, con foco en cobertura operativa de vacantes.
         </p>
       </header>
 
-      <section className="rounded-2xl border bg-white p-4 shadow-sm sm:p-6">
+      <section className="rounded-2xl border border-[#2e528e] bg-[#0c2047] p-4 shadow-[0_20px_52px_-42px_rgba(6,15,35,0.86)] sm:p-6">
         <div className="mb-4 flex items-center justify-between gap-2">
           <h2 className="text-lg font-semibold">Filtros</h2>
           <button
@@ -200,7 +208,7 @@ export default function Home() {
               setCreateSuccess("");
               setCreateInfo("Completa los campos requeridos antes de enviar.");
             }}
-            className="rounded-lg bg-[var(--brand)] px-3 py-2 text-sm font-semibold text-white transition hover:opacity-90"
+            className="rounded-lg bg-gradient-to-r from-[#153f8b] to-[#2f66d5] px-3 py-2 text-sm font-semibold text-white transition hover:brightness-110"
           >
             {showCreateForm ? "Cerrar formulario" : "Nueva postulacion"}
           </button>
@@ -212,7 +220,6 @@ export default function Home() {
               Buscar por nombre o correo
             </span>
             <input
-              key={qParam}
               defaultValue={qParam}
               onChange={(event) => onSearchChange(event.target.value)}
               placeholder="Escribe para filtrar"
@@ -353,7 +360,7 @@ export default function Home() {
         ) : null}
       </section>
 
-      <section className="overflow-hidden rounded-2xl border bg-white shadow-sm">
+      <section className="overflow-hidden rounded-2xl border border-[#2e528e] bg-[#0c2047] shadow-[0_20px_52px_-42px_rgba(6,15,35,0.86)]">
         {isLoading ? (
           <div className="px-4 py-6">
             <p className="feedback feedback-info">Cargando candidaturas...</p>
@@ -365,7 +372,7 @@ export default function Home() {
         ) : (
           <div className="overflow-x-auto">
             <table className="min-w-full text-sm">
-              <thead className="bg-[var(--surface)] text-left font-mono text-xs uppercase tracking-wide text-[var(--muted)]">
+              <thead className="bg-gradient-to-r from-[#28509b] to-[#3c6ed0] text-left font-mono text-xs uppercase tracking-wide text-[#e9f1ff]">
                 <tr>
                   <th className="px-4 py-3">Nombre</th>
                   <th className="px-4 py-3">Rol solicitado</th>
@@ -386,7 +393,7 @@ export default function Home() {
                       <td className="px-4 py-3">
                         <Link
                           href={`/candidates/${record.id}${listContext ? `?from=${encodeURIComponent(listContext)}` : ""}`}
-                          className="font-semibold hover:text-[var(--brand)]"
+                          className="font-semibold text-[#e8f0ff] hover:text-[#9fc3ff]"
                         >
                           {record.full_name}
                         </Link>
