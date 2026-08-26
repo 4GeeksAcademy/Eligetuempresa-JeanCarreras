@@ -44,15 +44,15 @@ bash scripts/run_api_local.sh
 
 The API supports two authentication modes:
 
-### Mode 1 (recommended): JWT Bearer Token
+### Mode 1 (recommended): JWT Bearer Token (email-based)
 
 Get a JWT token via login:
 
 ```bash
 # Login as admin
 curl -X POST http://localhost:8000/api/v1/auth/login \
-  -H "Content-Type: application/json" \
-  -d '{"username": "admin", "password": "brasaland-admin"}'
+  -H "Content-Type: application/x-www-form-urlencoded" \
+  -d 'username=admin@brasaland.com&password=brasaland-admin'
 ```
 
 Use the token in protected endpoints:
@@ -65,38 +65,23 @@ curl http://localhost:8000/api/v1/finance/kpis \
 
 ### Default users
 
-| Username | Password          | Role        |
-|----------|-------------------|-------------|
-| admin    | brasaland-admin   | admin       |
-| mariana  | brasaland-exec    | executive   |
-| felipe   | brasaland-ops     | operations  |
-| lucia    | brasaland-fin     | finance     |
-
-### Mode 2 (backward-compatible): X-API-Role + X-API-Token
-
-Legacy role tokens still work:
-
-```bash
-curl -H "X-API-Role: operations" \
-  -H "X-API-Token: brasaland-operations-token" \
-  http://localhost:8000/api/v1/sales/events
-```
-
-### Environment variables
-
-| Variable                          | Default                    | Description                        |
-|-----------------------------------|----------------------------|------------------------------------|
-| `BRASALAND_JWT_SECRET`            | brasaland-jwt-secret-dev   | Secret key for JWT signing         |
-| `BRASALAND_JWT_EXPIRE_MINUTES`    | 480                        | Token expiration in minutes        |
-| `BRASALAND_ADMIN_TOKEN`           | brasaland-admin-token      | Legacy token for admin role        |
-| `BRASALAND_EXECUTIVE_TOKEN`       | brasaland-executive-token  | Legacy token for executive role    |
-| `BRASALAND_OPERATIONS_TOKEN`      | brasaland-operations-token | Legacy token for operations role   |
-| `BRASALAND_FINANCE_TOKEN`         | brasaland-finance-token    | Legacy token for finance role      |
+| Email                | Password          | Role    |
+|----------------------|-------------------|---------|
+| admin@brasaland.com  | brasaland-admin   | admin   |
+| manager@brasaland.com| brasaland-manager | manager |
+| user@brasaland.com   | brasaland-user    | user    |
 
 ### Auth endpoints
 
-- `POST /api/v1/auth/login` — Login (public, accepts JSON with `username` and `password`)
-- `GET /api/v1/auth/me` — Current user info (requires auth)
+- `POST /api/v1/auth/login` — Login (public, accepts `application/x-www-form-urlencoded` with `username`=email and `password`)
+- `GET /api/v1/auth/me` — Current user info (requires JWT Bearer token)
+- `GET /api/v1/users` — List all users (requires admin role)
+- `POST /api/v1/users` — Create user (requires admin role)
+- `GET /api/v1/users/{id}` — Get user by ID (requires admin role)
+- `PUT /api/v1/users/{id}` — Update user (requires admin role)
+- `DELETE /api/v1/users/{id}` — Delete user (requires admin role)
+- `GET /api/v1/profiles/me` — Get current user profile (requires auth)
+- `PUT /api/v1/profiles/me` — Update current user profile (requires auth)
 
 ## MVP endpoints
 

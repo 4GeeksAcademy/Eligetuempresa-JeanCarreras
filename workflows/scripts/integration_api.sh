@@ -98,24 +98,34 @@ echo "== Integration API Brasaland =="
 ensure_api_running
 
 # 1) stores endpoint returns records
-stores_body="$(curl -fsS "$API_BASE/api/v1/stores")"
+stores_body="$(curl -fsS "$API_BASE/api/v1/stores" \
+  -H "X-API-Role: operations" \
+  -H "X-API-Token: $OPS_TOKEN")"
 assert_contains "stores payload" '"id"' "$stores_body"
 total_stores_count="$(grep -o '"id"' <<<"$stores_body" | wc -l | tr -d ' ')"
 
 # 2) country-filtered summary for CO
-summary_co="$(curl -fsS "$API_BASE/api/v1/sales/summary?period=week&currency=USD&country=CO")"
+summary_co="$(curl -fsS "$API_BASE/api/v1/sales/summary?period=week&currency=USD&country=CO" \
+  -H "X-API-Role: operations" \
+  -H "X-API-Token: $OPS_TOKEN")"
 assert_contains "sales summary CO" '"currency":"USD"' "$summary_co"
 
 # 3) markets summary includes wow field
-markets_body="$(curl -fsS "$API_BASE/api/v1/markets/summary?currency=USD")"
+markets_body="$(curl -fsS "$API_BASE/api/v1/markets/summary?currency=USD" \
+  -H "X-API-Role: operations" \
+  -H "X-API-Token: $OPS_TOKEN")"
 assert_contains "markets wow" '"wow_variation_pct"' "$markets_body"
 
 # 4) by-store filtered to US includes market field
-store_us_body="$(curl -fsS "$API_BASE/api/v1/sales/by-store?currency=USD&country=US")"
+store_us_body="$(curl -fsS "$API_BASE/api/v1/sales/by-store?currency=USD&country=US" \
+  -H "X-API-Role: operations" \
+  -H "X-API-Token: $OPS_TOKEN")"
 assert_contains "sales by-store US" '"market"' "$store_us_body"
 
 # 5) daily trend returns day key
-trend_body="$(curl -fsS "$API_BASE/api/v1/sales/daily-trend?currency=USD")"
+trend_body="$(curl -fsS "$API_BASE/api/v1/sales/daily-trend?currency=USD" \
+  -H "X-API-Role: operations" \
+  -H "X-API-Token: $OPS_TOKEN")"
 assert_contains "daily trend" '"day"' "$trend_body"
 
 # 6) finance endpoint with executive role (allowed)

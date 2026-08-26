@@ -48,15 +48,19 @@ bash scripts/run_api_local.sh
 
 La API soporta dos modos de autenticacion:
 
-### Modo 1 (recomendado): JWT Bearer Token
+## Autenticacion
+
+La API soporta dos modos de autenticacion:
+
+### Modo 1 (recomendado): JWT Bearer Token (basado en email)
 
 Obtén un token JWT mediante login:
 
 ```bash
 # Login como admin
 curl -X POST http://localhost:8000/api/v1/auth/login \
-  -H "Content-Type: application/json" \
-  -d '{"username": "admin", "password": "brasaland-admin"}'
+  -H "Content-Type: application/x-www-form-urlencoded" \
+  -d 'username=admin@brasaland.com&password=brasaland-admin'
 ```
 
 Usa el token en los endpoints protegidos:
@@ -69,38 +73,23 @@ curl http://localhost:8000/api/v1/finance/kpis \
 
 ### Usuarios por defecto
 
-| Username | Password          | Rol        |
-|----------|-------------------|------------|
-| admin    | brasaland-admin   | admin      |
-| mariana  | brasaland-exec    | executive  |
-| felipe   | brasaland-ops     | operations |
-| lucia    | brasaland-fin     | finance    |
+| Email                | Password          | Rol     |
+|----------------------|-------------------|---------|
+| admin@brasaland.com  | brasaland-admin   | admin   |
+| manager@brasaland.com| brasaland-manager | manager |
+| user@brasaland.com   | brasaland-user    | user    |
 
-### Modo 2 (backward-compatible): X-API-Role + X-API-Token
+### Endpoints de autenticacion
 
-Los tokens legacy por rol siguen funcionando:
-
-```bash
-curl -H "X-API-Role: operations" \
-  -H "X-API-Token: brasaland-operations-token" \
-  http://localhost:8000/api/v1/sales/events
-```
-
-### Variables de entorno
-
-| Variable                          | Defecto                    | Descripcion                       |
-|-----------------------------------|----------------------------|-----------------------------------|
-| `BRASALAND_JWT_SECRET`            | brasaland-jwt-secret-dev   | Clave secreta para firmar JWT     |
-| `BRASALAND_JWT_EXPIRE_MINUTES`    | 480                        | Duracion del token en minutos     |
-| `BRASALAND_ADMIN_TOKEN`           | brasaland-admin-token      | Token legacy para rol admin       |
-| `BRASALAND_EXECUTIVE_TOKEN`       | brasaland-executive-token  | Token legacy para rol executive   |
-| `BRASALAND_OPERATIONS_TOKEN`      | brasaland-operations-token | Token legacy para rol operations  |
-| `BRASALAND_FINANCE_TOKEN`         | brasaland-finance-token    | Token legacy para rol finance     |
-
-### Endpoint de autenticacion
-
-- `POST /api/v1/auth/login` — Iniciar sesion (publico, recibe JSON con `username` y `password`)
-- `GET /api/v1/auth/me` — Informacion del usuario autenticado (requiere auth)
+- `POST /api/v1/auth/login` — Iniciar sesion (publico, `application/x-www-form-urlencoded` con `username`=email y `password`)
+- `GET /api/v1/auth/me` — Informacion del usuario autenticado (requiere JWT Bearer token)
+- `GET /api/v1/users` — Listar todos los usuarios (requiere rol admin)
+- `POST /api/v1/users` — Crear usuario (requiere rol admin)
+- `GET /api/v1/users/{id}` — Obtener usuario por ID (requiere rol admin)
+- `PUT /api/v1/users/{id}` — Actualizar usuario (requiere rol admin)
+- `DELETE /api/v1/users/{id}` — Eliminar usuario (requiere rol admin)
+- `GET /api/v1/profiles/me` — Obtener perfil del usuario actual (requiere auth)
+- `PUT /api/v1/profiles/me` — Actualizar perfil del usuario actual (requiere auth)
 
 ## Endpoints MVP
 

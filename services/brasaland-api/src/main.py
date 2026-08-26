@@ -16,10 +16,11 @@ from pydantic import BaseModel
 
 from brasaland_api.auth import (
     auth_router,
-    get_current_user_jwt,
-    init_users,
+    get_current_user,
+    init_seed_users,
     require_roles,
-    TokenData,
+    Role,
+    UserInDB,
 )
 
 app = FastAPI(
@@ -36,8 +37,11 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Registrar router de autenticación JWT
+# Registrar routers de autenticación, usuarios y perfiles
+from brasaland_api.auth import users_router, profiles_router
 app.include_router(auth_router)
+app.include_router(users_router)
+app.include_router(profiles_router)
 
 
 class Store(BaseModel):
@@ -2178,7 +2182,7 @@ def init_db() -> None:
 @app.on_event("startup")
 def on_startup() -> None:
     init_db()
-    init_users()
+    init_seed_users()
 
 
 @app.get("/health")
@@ -2231,7 +2235,9 @@ async def realtime_updates_socket(websocket: WebSocket) -> None:
 
 
 @app.get("/api/v1/stores", response_model=list[Store])
-def get_stores() -> list[Store]:
+def get_stores(
+    role: str = Depends(require_roles({"operations", "executive", "admin"})),
+) -> list[Store]:
     with get_db() as db:
         rows = db.execute(
             "SELECT id, name, country, city, timezone, base_currency FROM stores ORDER BY id"
@@ -2598,6 +2604,7 @@ def get_sales_summary(
     country: Literal["CO", "US"] | None = Query(default=None),
     start_date: str | None = Query(default=None),
     end_date: str | None = Query(default=None),
+    role: str = Depends(require_roles({"operations", "executive", "admin"})),
 ) -> SalesSummary:
     start_at, end_at = resolve_period_bounds(period, start_date, end_date)
 
@@ -2632,6 +2639,7 @@ def get_market_summary(
     start_date: str | None = Query(default=None),
     end_date: str | None = Query(default=None),
     country: Literal["CO", "US"] | None = Query(default=None),
+    role: str = Depends(require_roles({"operations", "executive", "admin"})),
 ) -> list[MarketSummary]:
     start_at, end_at = resolve_period_bounds("week", start_date, end_date)
     previous_start = start_at - (end_at - start_at)
@@ -2699,6 +2707,7 @@ def get_sales_by_store(
     country: Literal["CO", "US"] | None = Query(default=None),
     start_date: str | None = Query(default=None),
     end_date: str | None = Query(default=None),
+    role: str = Depends(require_roles({"operations", "executive", "admin"})),
 ) -> list[StoreSalesRow]:
     start_at, end_at = resolve_period_bounds("week", start_date, end_date)
 
@@ -2753,6 +2762,7 @@ def get_sales_daily_trend(
     country: Literal["CO", "US"] | None = Query(default=None),
     start_date: str | None = Query(default=None),
     end_date: str | None = Query(default=None),
+    role: str = Depends(require_roles({"operations", "executive", "admin"})),
 ) -> list[DailySalesPoint]:
     start_at, end_at = resolve_period_bounds("week", start_date, end_date)
 

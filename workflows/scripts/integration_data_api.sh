@@ -96,17 +96,23 @@ ensure_api_running
 
 # 1) Invalid date format should return 400
 invalid_date_status="$(curl -sS -o /dev/null -w "%{http_code}" \
-  "$API_BASE/api/v1/sales/summary?period=week&currency=USD&start_date=2026/05/01&end_date=2026-05-08")"
+  "$API_BASE/api/v1/sales/summary?period=week&currency=USD&start_date=2026/05/01&end_date=2026-05-08" \
+  -H "X-API-Role: operations" \
+  -H "X-API-Token: $OPS_TOKEN")"
 assert_status "sales summary fecha invalida" "400" "$invalid_date_status"
 
 # 2) End date before start date should return 400
 range_error_status="$(curl -sS -o /dev/null -w "%{http_code}" \
-  "$API_BASE/api/v1/sales/summary?period=week&currency=USD&start_date=2026-05-08&end_date=2026-05-01")"
+  "$API_BASE/api/v1/sales/summary?period=week&currency=USD&start_date=2026-05-08&end_date=2026-05-01" \
+  -H "X-API-Role: operations" \
+  -H "X-API-Token: $OPS_TOKEN")"
 assert_status "sales summary rango invalido" "400" "$range_error_status"
 
 # 3) Empty future range should return 200 with total 0
 future_summary="$(curl -fsS \
-  "$API_BASE/api/v1/sales/summary?period=week&currency=USD&start_date=2100-01-01&end_date=2100-01-07")"
+  "$API_BASE/api/v1/sales/summary?period=week&currency=USD&start_date=2100-01-01&end_date=2100-01-07" \
+  -H "X-API-Role: operations" \
+  -H "X-API-Token: $OPS_TOKEN")"
 assert_contains "sales summary rango futuro" '"total_sales":0' "$future_summary"
 
 # 4) Create sales event with unknown store should return 404
