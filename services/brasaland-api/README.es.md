@@ -5,6 +5,7 @@ API central MVP para Brasaland enfocada en operaciones multipais.
 ## Alcance inicial
 
 - Endpoint de salud.
+- Autenticación JWT (login + bearer token) con backward-compatibilidad para tokens legacy.
 - Listado de locales.
 - Resumen de ventas en COP o USD.
 - Persistencia local con SQLite y datos seed.
@@ -14,14 +15,19 @@ API central MVP para Brasaland enfocada en operaciones multipais.
 - Python 3.11+
 - FastAPI
 - Uvicorn
+- python-jose[cryptography] (JWT)
+- passlib[bcrypt] (hashing de contraseñas)
 
 ## Estructura del codigo fuente
 
 ```text
 services/brasaland-api/
-├── src/                # Paquete de codigo fuente
-│   └── main.py         # App FastAPI, rutas y logica de seed/bootstrap
-├── requirements.txt
+├── pyproject.toml       # Proyecto uv: dependencias y build
+├── src/
+│   ├── main.py          # App FastAPI, rutas y logica de seed/bootstrap
+│   └── brasaland_api/
+│       ├── __init__.py
+│       └── auth.py      # Módulo de autenticación JWT
 └── README.es.md
 ```
 
@@ -29,11 +35,72 @@ services/brasaland-api/
 
 ```bash
 cd services/brasaland-api
-python -m venv .venv
-source .venv/bin/activate
-pip install -r requirements.txt
-uvicorn src.main:app --reload --port 8000
+uv run uvicorn main:app --reload --port 8000
 ```
+
+O usando el script del proyecto:
+
+```bash
+bash scripts/run_api_local.sh
+```
+
+## Autenticacion
+
+La API soporta dos modos de autenticacion:
+
+### Modo 1 (recomendado): JWT Bearer Token
+
+Obtén un token JWT mediante login:
+
+```bash
+# Login como admin
+curl -X POST http://localhost:8000/api/v1/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"username": "admin", "password": "brasaland-admin"}'
+```
+
+Usa el token en los endpoints protegidos:
+
+```bash
+TOKEN="eyJ..."
+curl http://localhost:8000/api/v1/finance/kpis \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+### Usuarios por defecto
+
+| Username | Password          | Rol        |
+|----------|-------------------|------------|
+| admin    | brasaland-admin   | admin      |
+| mariana  | brasaland-exec    | executive  |
+| felipe   | brasaland-ops     | operations |
+| lucia    | brasaland-fin     | finance    |
+
+### Modo 2 (backward-compatible): X-API-Role + X-API-Token
+
+Los tokens legacy por rol siguen funcionando:
+
+```bash
+curl -H "X-API-Role: operations" \
+  -H "X-API-Token: brasaland-operations-token" \
+  http://localhost:8000/api/v1/sales/events
+```
+
+### Variables de entorno
+
+| Variable                          | Defecto                    | Descripcion                       |
+|-----------------------------------|----------------------------|-----------------------------------|
+| `BRASALAND_JWT_SECRET`            | brasaland-jwt-secret-dev   | Clave secreta para firmar JWT     |
+| `BRASALAND_JWT_EXPIRE_MINUTES`    | 480                        | Duracion del token en minutos     |
+| `BRASALAND_ADMIN_TOKEN`           | brasaland-admin-token      | Token legacy para rol admin       |
+| `BRASALAND_EXECUTIVE_TOKEN`       | brasaland-executive-token  | Token legacy para rol executive   |
+| `BRASALAND_OPERATIONS_TOKEN`      | brasaland-operations-token | Token legacy para rol operations  |
+| `BRASALAND_FINANCE_TOKEN`         | brasaland-finance-token    | Token legacy para rol finance     |
+
+### Endpoint de autenticacion
+
+- `POST /api/v1/auth/login` — Iniciar sesion (publico, recibe JSON con `username` y `password`)
+- `GET /api/v1/auth/me` — Informacion del usuario autenticado (requiere auth)
 
 ## Endpoints MVP
 
@@ -428,8 +495,10 @@ bash workflows/scripts/integration_data_api.sh
 	- `executive`: `brasaland-executive-token`
 	- `operations`: `brasaland-operations-token`
 	- `finance`: `brasaland-finance-token`
+	- `telemetry`: `brasaland-telemetry-token`
 - Variables de entorno recomendadas en produccion:
 	- `BRASALAND_ADMIN_TOKEN`
 	- `BRASALAND_EXECUTIVE_TOKEN`
 	- `BRASALAND_OPERATIONS_TOKEN`
 	- `BRASALAND_FINANCE_TOKEN`
+	- `BRASALAND_TELEMETRY_TOKEN`

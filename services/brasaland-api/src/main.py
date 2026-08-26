@@ -14,6 +14,14 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import Response
 from pydantic import BaseModel
 
+from brasaland_api.auth import (
+    auth_router,
+    get_current_user_jwt,
+    init_users,
+    require_roles,
+    TokenData,
+)
+
 app = FastAPI(
     title="Brasaland API",
     version="0.1.0",
@@ -27,6 +35,9 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Registrar router de autenticación JWT
+app.include_router(auth_router)
 
 
 class Store(BaseModel):
@@ -900,35 +911,12 @@ def require_api_token(x_api_token: str | None = Header(default=None)) -> None:
         raise HTTPException(status_code=401, detail="Invalid or missing X-API-Token")
 
 
-def resolve_role_tokens() -> dict[str, str]:
-    return {
-        "admin": os.getenv("BRASALAND_ADMIN_TOKEN", DEFAULT_ROLE_TOKENS["admin"]),
-        "executive": os.getenv("BRASALAND_EXECUTIVE_TOKEN", DEFAULT_ROLE_TOKENS["executive"]),
-        "operations": os.getenv("BRASALAND_OPERATIONS_TOKEN", DEFAULT_ROLE_TOKENS["operations"]),
-        "finance": os.getenv("BRASALAND_FINANCE_TOKEN", DEFAULT_ROLE_TOKENS["finance"]),
-    }
-
-
-def require_roles(allowed_roles: set[str]):
-    def validator(x_api_token: str | None = Header(default=None), x_api_role: str | None = Header(default=None)) -> str:
-        if x_api_role is None or x_api_role not in allowed_roles:
-            raise HTTPException(status_code=403, detail="Role not allowed")
-
-        role_tokens = resolve_role_tokens()
-        expected_token = role_tokens.get(x_api_role)
-        if expected_token is None or x_api_token != expected_token:
-            raise HTTPException(status_code=401, detail="Invalid role token")
-
-        return x_api_role
-
-    return validator
-
-
 def validate_role_token_for_ws(role: str | None, token: str | None, allowed_roles: set[str]) -> str:
     if role is None or role not in allowed_roles:
         raise HTTPException(status_code=403, detail="Role not allowed")
 
-    role_tokens = resolve_role_tokens()
+    from brasaland_api.auth import _resolve_role_tokens
+    role_tokens = _resolve_role_tokens()
     expected_token = role_tokens.get(role)
     if expected_token is None or token != expected_token:
         raise HTTPException(status_code=401, detail="Invalid role token")
@@ -2190,6 +2178,7 @@ def init_db() -> None:
 @app.on_event("startup")
 def on_startup() -> None:
     init_db()
+    init_users()
 
 
 @app.get("/health")

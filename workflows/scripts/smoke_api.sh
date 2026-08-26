@@ -66,7 +66,9 @@ ensure_api_running() {
   fi
 
   local py_bin=""
-  if [[ -x "$ROOT_DIR/.venv/bin/python" ]]; then
+  if [[ -x "$ROOT_DIR/services/brasaland-api/.venv/bin/python" ]]; then
+    py_bin="$ROOT_DIR/services/brasaland-api/.venv/bin/python"
+  elif [[ -x "$ROOT_DIR/.venv/bin/python" ]]; then
     py_bin="$ROOT_DIR/.venv/bin/python"
   elif command -v python3 >/dev/null 2>&1; then
     py_bin="$(command -v python3)"
