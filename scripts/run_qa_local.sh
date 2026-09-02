@@ -18,13 +18,16 @@ cleanup() {
 trap cleanup EXIT
 
 echo "== Brasaland local QA =="
-echo "1/3 smoke"
+echo "1/4 smoke"
 bash "$ROOT_DIR/workflows/scripts/smoke_api.sh"
 
-echo "2/3 integration"
+echo "2/4 auth"
+bash "$ROOT_DIR/workflows/scripts/smoke_auth_api.sh"
+
+echo "3/4 integration"
 bash "$ROOT_DIR/workflows/scripts/integration_api.sh"
 
-echo "3/3 integration-data"
+echo "4/4 integration-data"
 bash "$ROOT_DIR/workflows/scripts/integration_data_api.sh"
 
 echo "QA local completado correctamente"
