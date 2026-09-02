@@ -53,6 +53,10 @@ Los tokens de recuperacion se almacenan hasheados en SQLite, expiran y se marcan
 ## Endpoints MVP
 
 - GET /health
+- POST /users crea un usuario y su perfil opcional.
+- POST /auth/login devuelve un JWT `access_token`.
+- GET /auth/me requiere `Authorization: Bearer <token>`.
+- PUT /profiles/me requiere `Authorization: Bearer <token>`.
 - GET /api/v1/stores
 - GET /api/v1/menus/items?country=CO&locale=es&currency=COP&active_only=true (requiere `X-API-Role` + `X-API-Token`, roles: `operations`, `executive`, `admin`)
 - POST /api/v1/menus/items (requiere `X-API-Role` + `X-API-Token`, roles: `operations`, `admin`)

@@ -19,6 +19,9 @@ La interfaz esta adaptada a operacion multipais (Colombia y Florida) y mantiene 
 
 - `/` listado de candidaturas.
 - `/candidates/[id]` detalle de candidatura.
+- `/login` inicio de sesion.
+- `/register` registro de usuarios.
+- `/account/profile` consulta y edicion del perfil actual.
 
 ## Endpoints usados
 
@@ -36,8 +39,15 @@ La interfaz esta adaptada a operacion multipais (Colombia y Florida) y mantiene 
 Crear `.env.local` con:
 
 ```env
-NEXT_PUBLIC_API_URL=https://playground.4geeks.com/tracker/api/v1
+NEXT_PUBLIC_API_URL=http://localhost:8000
+NEXT_PUBLIC_TRACKER_API_URL=https://playground.4geeks.com/tracker/api/v1
 ```
+
+`NEXT_PUBLIC_API_URL` debe apuntar a la API de Brasaland para `POST /users`,
+`POST /auth/login`, `GET /auth/me` y `PUT /profiles/me`.
+`NEXT_PUBLIC_TRACKER_API_URL` identifica el backend de candidaturas. Tras iniciar sesion,
+el token se guarda en `localStorage` y se envia como `Authorization: Bearer <token>` en
+ambas APIs.
 
 ## Desarrollo local
 

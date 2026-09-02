@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { IBM_Plex_Mono, Space_Grotesk } from "next/font/google";
+import { AuthGuard } from "../components/AuthGuard";
 import "./globals.css";
 
 const spaceGrotesk = Space_Grotesk({
@@ -28,7 +29,7 @@ export default function RootLayout({
       lang="es"
       className={`${spaceGrotesk.variable} ${ibmPlexMono.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col">{children}</body>
+      <body className="min-h-full flex flex-col"><AuthGuard>{children}</AuthGuard></body>
     </html>
   );
 }

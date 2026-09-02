@@ -12,6 +12,7 @@ import secrets
 import urllib.request
 from contextlib import asynccontextmanager
 from pathlib import Path
+import secrets
 from sqlite3 import Connection, Row, connect
 from typing import Literal
 from zoneinfo import ZoneInfo
@@ -46,6 +47,37 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+class UserCreate(BaseModel):
+    email: str
+    password: str
+    name: str | None = None
+    phone: str | None = None
+    address: str | None = None
+
+
+class UserLogin(BaseModel):
+    email: str
+    password: str
+
+
+class AccessTokenResponse(BaseModel):
+    access_token: str
+    token_type: str = "bearer"
+
+
+class CurrentUserProfile(BaseModel):
+    email: str
+    name: str | None = None
+    phone: str | None = None
+    address: str | None = None
+
+
+class ProfileUpdate(BaseModel):
+    name: str | None = None
+    phone: str | None = None
+    address: str | None = None
 
 
 class Store(BaseModel):
@@ -751,6 +783,8 @@ AUTH_SECRET = os.getenv("BRASALAND_AUTH_SECRET", "brasaland-local-auth-secret")
 RESET_TOKEN_TTL_MINUTES = int(os.getenv("RESET_TOKEN_TTL_MINUTES", "30"))
 FRONTEND_BASE_URL = os.getenv("FRONTEND_BASE_URL", "http://localhost:5500/uis/auth")
 FX_COP_PER_USD = 3950.0
+JWT_SECRET = os.getenv("BRASALAND_JWT_SECRET", "brasaland-local-development-secret")
+JWT_EXPIRATION_HOURS = 8
 DEFAULT_API_TOKEN = "brasaland-dev-token"
 DEFAULT_ROLE_TOKENS: dict[str, str] = {
     "admin": "brasaland-admin-token",
@@ -914,6 +948,63 @@ def get_db() -> Connection:
     connection = connect(DB_PATH)
     connection.row_factory = Row
     return connection
+
+
+def base64url_encode(value: bytes) -> str:
+    return base64.urlsafe_b64encode(value).rstrip(b"=").decode("ascii")
+
+
+def base64url_decode(value: str) -> bytes:
+    return base64.urlsafe_b64decode(value + "=" * (-len(value) % 4))
+
+
+def hash_password(password: str, salt: str | None = None) -> tuple[str, str]:
+    password_salt = salt or secrets.token_hex(16)
+    password_hash = hashlib.pbkdf2_hmac(
+        "sha256", password.encode("utf-8"), password_salt.encode("ascii"), 310_000
+    ).hex()
+    return password_salt, password_hash
+
+
+def create_access_token(user_id: int, email: str) -> str:
+    header = base64url_encode(json.dumps({"alg": "HS256", "typ": "JWT"}, separators=(",", ":")).encode())
+    payload = base64url_encode(
+        json.dumps(
+            {
+                "sub": str(user_id),
+                "email": email,
+                "exp": int((datetime.now(timezone.utc) + timedelta(hours=JWT_EXPIRATION_HOURS)).timestamp()),
+            },
+            separators=(",", ":"),
+        ).encode()
+    )
+    signature = hmac.new(JWT_SECRET.encode("utf-8"), f"{header}.{payload}".encode("ascii"), hashlib.sha256).digest()
+    return f"{header}.{payload}.{base64url_encode(signature)}"
+
+
+def get_current_user(authorization: str | None = Header(default=None)) -> Row:
+    if authorization is None or not authorization.startswith("Bearer "):
+        raise HTTPException(status_code=401, detail="Missing bearer token", headers={"WWW-Authenticate": "Bearer"})
+
+    try:
+        header, payload, signature = authorization.removeprefix("Bearer ").split(".")
+        expected_signature = hmac.new(
+            JWT_SECRET.encode("utf-8"), f"{header}.{payload}".encode("ascii"), hashlib.sha256
+        ).digest()
+        if not hmac.compare_digest(base64url_decode(signature), expected_signature):
+            raise ValueError("Invalid signature")
+        claims = json.loads(base64url_decode(payload))
+        if int(claims["exp"]) <= int(datetime.now(timezone.utc).timestamp()):
+            raise ValueError("Expired token")
+        user_id = int(claims["sub"])
+    except (KeyError, TypeError, ValueError, UnicodeDecodeError, json.JSONDecodeError) as exc:
+        raise HTTPException(status_code=401, detail="Invalid or expired bearer token", headers={"WWW-Authenticate": "Bearer"}) from exc
+
+    with get_db() as db:
+        user = db.execute("SELECT id, email FROM users WHERE id = ?", (user_id,)).fetchone()
+    if user is None:
+        raise HTTPException(status_code=401, detail="User no longer exists", headers={"WWW-Authenticate": "Bearer"})
+    return user
 
 
 def hash_password(password: str) -> str:
@@ -1146,6 +1237,29 @@ def init_db() -> None:
     ]
 
     with get_db() as db:
+        db.execute(
+            """
+            CREATE TABLE IF NOT EXISTS users (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                email TEXT NOT NULL UNIQUE,
+                password_salt TEXT NOT NULL,
+                password_hash TEXT NOT NULL,
+                created_at TEXT NOT NULL
+            )
+            """
+        )
+        db.execute(
+            """
+            CREATE TABLE IF NOT EXISTS profiles (
+                user_id INTEGER PRIMARY KEY,
+                name TEXT,
+                phone TEXT,
+                address TEXT,
+                updated_at TEXT NOT NULL,
+                FOREIGN KEY(user_id) REFERENCES users(id)
+            )
+            """
+        )
         db.execute(
             """
             CREATE TABLE IF NOT EXISTS stores (
@@ -2339,6 +2453,83 @@ def health() -> dict[str, str]:
     return {"status": "ok"}
 
 
+@app.post("/users", response_model=CurrentUserProfile, status_code=201)
+def create_user(payload: UserCreate) -> CurrentUserProfile:
+    email = payload.email.strip().lower()
+    if not email or "@" not in email:
+        raise HTTPException(status_code=422, detail="email must be valid")
+    if len(payload.password) < 8:
+        raise HTTPException(status_code=422, detail="password must contain at least 8 characters")
+
+    salt, password_hash = hash_password(payload.password)
+    now = datetime.now(timezone.utc).isoformat()
+    try:
+        with get_db() as db:
+            cursor = db.execute(
+                "INSERT INTO users (email, password_salt, password_hash, created_at) VALUES (?, ?, ?, ?)",
+                (email, salt, password_hash, now),
+            )
+            user_id = int(cursor.lastrowid)
+            db.execute(
+                "INSERT INTO profiles (user_id, name, phone, address, updated_at) VALUES (?, ?, ?, ?, ?)",
+                (user_id, payload.name, payload.phone, payload.address, now),
+            )
+    except Exception as exc:
+        if "UNIQUE constraint failed: users.email" in str(exc):
+            raise HTTPException(status_code=409, detail="An account with this email already exists") from exc
+        raise
+
+    return CurrentUserProfile(email=email, name=payload.name, phone=payload.phone, address=payload.address)
+
+
+@app.post("/auth/login", response_model=AccessTokenResponse)
+def login_user(payload: UserLogin) -> AccessTokenResponse:
+    email = payload.email.strip().lower()
+    with get_db() as db:
+        user = db.execute(
+            "SELECT id, email, password_salt, password_hash FROM users WHERE email = ?", (email,)
+        ).fetchone()
+    if user is None:
+        raise HTTPException(status_code=401, detail="Invalid email or password")
+
+    _, supplied_hash = hash_password(payload.password, user["password_salt"])
+    if not hmac.compare_digest(supplied_hash, user["password_hash"]):
+        raise HTTPException(status_code=401, detail="Invalid email or password")
+
+    return AccessTokenResponse(access_token=create_access_token(int(user["id"]), user["email"]))
+
+
+@app.get("/auth/me", response_model=CurrentUserProfile)
+def get_auth_me(user: Row = Depends(get_current_user)) -> CurrentUserProfile:
+    with get_db() as db:
+        profile = db.execute(
+            "SELECT name, phone, address FROM profiles WHERE user_id = ?", (user["id"],)
+        ).fetchone()
+    return CurrentUserProfile(
+        email=user["email"],
+        name=profile["name"] if profile else None,
+        phone=profile["phone"] if profile else None,
+        address=profile["address"] if profile else None,
+    )
+
+
+@app.put("/profiles/me", response_model=CurrentUserProfile)
+def update_auth_profile(payload: ProfileUpdate, user: Row = Depends(get_current_user)) -> CurrentUserProfile:
+    now = datetime.now(timezone.utc).isoformat()
+    with get_db() as db:
+        db.execute(
+            """
+            INSERT INTO profiles (user_id, name, phone, address, updated_at)
+            VALUES (?, ?, ?, ?, ?)
+            ON CONFLICT(user_id) DO UPDATE SET
+                name = excluded.name,
+                phone = excluded.phone,
+                address = excluded.address,
+                updated_at = excluded.updated_at
+            """,
+            (user["id"], payload.name, payload.phone, payload.address, now),
+        )
+    return CurrentUserProfile(email=user["email"], name=payload.name, phone=payload.phone, address=payload.address)
 @app.post("/auth/register", response_model=AuthTokenResponse, status_code=201)
 def register(payload: RegisterRequest) -> AuthTokenResponse:
     validate_password(payload.password)
