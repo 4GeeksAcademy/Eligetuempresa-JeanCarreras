@@ -7,6 +7,7 @@ import argparse
 import json
 import os
 import smtplib
+import sys
 from email.message import EmailMessage
 from pathlib import Path
 from urllib import request
@@ -60,18 +61,25 @@ def main() -> int:
     args = parse_args()
     report_path = Path(args.report_path)
     if not report_path.exists():
-        print(f"No existe el reporte: {report_path}")
+        print("Error: no existe el archivo de reporte indicado.", file=sys.stderr)
         return 1
 
-    report_text = report_path.read_text(encoding="utf-8")
+    try:
+        report_text = report_path.read_text(encoding="utf-8")
+    except (OSError, UnicodeDecodeError):
+        print("Error: no se pudo leer el archivo de reporte.", file=sys.stderr)
+        return 1
+
+    delivery_failed = False
 
     slack_webhook = os.getenv("SLACK_WEBHOOK_URL", "").strip()
     if slack_webhook:
         try:
             send_to_slack(slack_webhook, report_text, args.title)
             print("Reporte enviado a Slack")
-        except Exception as exc:
-            print(f"Error enviando a Slack: {exc}")
+        except Exception:
+            print("Error: no se pudo enviar el reporte a Slack.", file=sys.stderr)
+            delivery_failed = True
 
     smtp_host = os.getenv("SMTP_HOST", "").strip()
     smtp_user = os.getenv("SMTP_USER", "").strip()
@@ -83,9 +91,10 @@ def main() -> int:
         recipients = [item.strip() for item in recipient_raw.split(",") if item.strip()]
         if recipients:
             try:
+                smtp_port = int(os.getenv("SMTP_PORT", "587"))
                 send_email(
                     smtp_host=smtp_host,
-                    smtp_port=int(os.getenv("SMTP_PORT", "587")),
+                    smtp_port=smtp_port,
                     smtp_user=smtp_user,
                     smtp_password=smtp_password,
                     sender=sender,
@@ -94,10 +103,11 @@ def main() -> int:
                     body=report_text,
                 )
                 print("Reporte enviado por email")
-            except Exception as exc:
-                print(f"Error enviando email: {exc}")
+            except (OSError, ValueError, smtplib.SMTPException):
+                print("Error: no se pudo enviar el reporte por email.", file=sys.stderr)
+                delivery_failed = True
 
-    return 0
+    return 1 if delivery_failed else 0
 
 
 if __name__ == "__main__":

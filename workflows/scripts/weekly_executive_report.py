@@ -6,17 +6,29 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import sys
 from datetime import datetime, timezone
 from pathlib import Path
-from urllib.error import URLError
+from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
+
+
+class ReportGenerationError(Exception):
+    """Error recuperable al consultar los datos del reporte."""
 
 
 def fetch_json(url: str, headers: dict[str, str] | None = None) -> dict | list:
     request = Request(url, headers=headers or {})
-    with urlopen(request, timeout=10) as response:
-        payload = response.read().decode("utf-8")
-    return json.loads(payload)
+    try:
+        with urlopen(request, timeout=10) as response:
+            payload = response.read().decode("utf-8")
+    except (HTTPError, URLError, UnicodeDecodeError) as exc:
+        raise ReportGenerationError("No se pudo consultar el API de Brasaland.") from exc
+
+    try:
+        return json.loads(payload)
+    except json.JSONDecodeError as exc:
+        raise ReportGenerationError("El API devolvio datos invalidos para el reporte.") from exc
 
 
 def build_report(api_base: str, currency: str) -> str:
@@ -104,14 +116,18 @@ def main() -> int:
 
     try:
         report = build_report(args.api_base, args.currency)
-    except URLError as exc:
-        print(f"Error conectando al API: {exc}")
+    except ReportGenerationError as exc:
+        print(f"Error: {exc}", file=sys.stderr)
         return 1
 
     if args.output:
         output_path = Path(args.output)
-        output_path.parent.mkdir(parents=True, exist_ok=True)
-        output_path.write_text(report, encoding="utf-8")
+        try:
+            output_path.parent.mkdir(parents=True, exist_ok=True)
+            output_path.write_text(report, encoding="utf-8")
+        except OSError:
+            print("Error: no se pudo guardar el reporte en la ruta indicada.", file=sys.stderr)
+            return 1
         print(f"Reporte guardado en {output_path}")
     else:
         print(report)

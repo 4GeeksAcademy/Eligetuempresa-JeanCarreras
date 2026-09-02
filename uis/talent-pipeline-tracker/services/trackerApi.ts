@@ -6,10 +6,13 @@ import type {
   RecordsApiResponse,
 } from "../types/tracker";
 
+const API_UNAVAILABLE_MESSAGE = "No podemos conectar con el servicio en este momento. Intenta nuevamente.";
+const API_REQUEST_MESSAGE = "No fue posible completar la solicitud. Verifica los datos e intenta nuevamente.";
+
 function getApiBase(): string {
   const apiBase = process.env.NEXT_PUBLIC_API_URL;
   if (!apiBase) {
-    throw new Error("NEXT_PUBLIC_API_URL no esta configurada");
+    throw new Error(API_UNAVAILABLE_MESSAGE);
   }
 
   return apiBase;
@@ -38,25 +41,40 @@ function normalizeNotes(payload: unknown): Note[] {
 }
 
 async function requestJson<T>(url: string, init?: RequestInit): Promise<T> {
-  const response = await fetch(url, {
-    ...init,
-    headers: {
-      Accept: "application/json",
-      ...(init?.headers ?? {}),
-    },
-  });
-
-  if (!response.ok) {
-    throw new Error(`Error ${response.status} en ${url}`);
+  let response: Response;
+  try {
+    response = await fetch(url, {
+      ...init,
+      headers: {
+        Accept: "application/json",
+        ...(init?.headers ?? {}),
+      },
+    });
+  } catch {
+    throw new Error(API_UNAVAILABLE_MESSAGE);
   }
 
-  return (await response.json()) as T;
+  if (!response.ok) {
+    throw new Error(API_REQUEST_MESSAGE);
+  }
+
+  try {
+    return (await response.json()) as T;
+  } catch {
+    throw new Error(API_REQUEST_MESSAGE);
+  }
 }
 
 async function requestNoContent(url: string, init?: RequestInit): Promise<void> {
-  const response = await fetch(url, init);
+  let response: Response;
+  try {
+    response = await fetch(url, init);
+  } catch {
+    throw new Error(API_UNAVAILABLE_MESSAGE);
+  }
+
   if (!response.ok) {
-    throw new Error(`Error ${response.status} en ${url}`);
+    throw new Error(API_REQUEST_MESSAGE);
   }
 }
 

@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Toast } from "../components/Toast";
 import { createRecord, fetchAllRecords } from "../services/trackerApi";
 import {
@@ -16,7 +16,7 @@ import {
   type ToastTone,
 } from "../types/tracker";
 
-export default function Home() {
+function HomeContent() {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -367,7 +367,14 @@ export default function Home() {
           </div>
         ) : errorMessage ? (
           <div className="px-4 py-6">
-            <p className="feedback feedback-error">Error cargando datos: {errorMessage}</p>
+            <p className="feedback feedback-error">No se pudieron cargar las candidaturas. {errorMessage}</p>
+            <button
+              type="button"
+              onClick={() => void loadRecords()}
+              className="mt-3 rounded-lg border bg-white px-3 py-2 text-sm font-semibold text-[var(--brand-2)] transition hover:bg-[var(--surface)]"
+            >
+              Reintentar
+            </button>
           </div>
         ) : (
           <div className="overflow-x-auto">
@@ -412,5 +419,21 @@ export default function Home() {
 
       <Toast message={toastMessage} tone={toastTone} />
     </main>
+  );
+}
+
+export default function Home() {
+  return (
+    <Suspense
+      fallback={
+        <main className="mx-auto flex w-full max-w-7xl flex-1 flex-col gap-6 px-4 py-8 sm:px-6 lg:px-10">
+          <section className="rounded-2xl border border-[#2e528e] bg-[#0c2047] p-6 text-[var(--muted)] shadow-[0_20px_52px_-42px_rgba(6,15,35,0.86)]">
+            Cargando candidaturas...
+          </section>
+        </main>
+      }
+    >
+      <HomeContent />
+    </Suspense>
   );
 }
