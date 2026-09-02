@@ -8,6 +8,7 @@ API central MVP para Brasaland enfocada en operaciones multipais.
 - Listado de locales.
 - Resumen de ventas en COP o USD.
 - Persistencia local con SQLite y datos seed.
+- Autenticacion de usuarios con registro, login, recuperacion y cambio de contraseña.
 
 ## Stack
 
@@ -34,6 +35,20 @@ source .venv/bin/activate
 pip install -r requirements.txt
 uvicorn src.main:app --reload --port 8000
 ```
+
+## Autenticacion y recuperacion de contraseña
+
+La interfaz esta en `uis/auth/`. Abre `index.html` para login, `forgot-password.html` para solicitar un enlace, `reset-password.html?token=...` para completar el reset y `account/change-password.html` para el cambio con sesion iniciada.
+
+Variables de entorno (ver `.env.example`):
+
+- `BRASALAND_AUTH_SECRET`: secreto largo y aleatorio para firmar sesiones.
+- `RESEND_API_KEY`: API key de Resend; nunca se incluye en el codigo.
+- `RESEND_FROM`: remitente verificado o `Brasaland <onboarding@resend.dev>` en desarrollo.
+- `FRONTEND_BASE_URL`: URL base que recibira el enlace de reset.
+- `RESET_TOKEN_TTL_MINUTES`: expiracion del token, 30 minutos por defecto.
+
+Los tokens de recuperacion se almacenan hasheados en SQLite, expiran y se marcan como usados tras un reset exitoso. `POST /auth/forgot-password` siempre responde 200 con un mensaje neutro para evitar enumeracion de cuentas.
 
 ## Endpoints MVP
 

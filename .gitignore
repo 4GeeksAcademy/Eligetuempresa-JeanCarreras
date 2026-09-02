@@ -2,6 +2,11 @@ __pycache__/
 *.pyc
 .venv/
 **/.venv/
+.env
+**/.env
+*.env.save
+!.env.example
+!**/.env.example
 
 # Runtime artifacts for local API execution
 services/brasaland-api/brasaland.db
