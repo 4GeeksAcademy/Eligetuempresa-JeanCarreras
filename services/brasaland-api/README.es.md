@@ -9,6 +9,7 @@ API central MVP para Brasaland enfocada en operaciones multipais.
 - Listado de locales.
 - Resumen de ventas en COP o USD.
 - Persistencia local con SQLite y datos seed.
+- Autenticacion de usuarios con registro, login, recuperacion y cambio de contraseña.
 
 ## Stack
 
@@ -43,10 +44,6 @@ O usando el script del proyecto:
 ```bash
 bash scripts/run_api_local.sh
 ```
-
-## Autenticacion
-
-La API soporta dos modos de autenticacion:
 
 ## Autenticacion
 
@@ -91,9 +88,27 @@ curl http://localhost:8000/api/v1/finance/kpis \
 - `GET /api/v1/profiles/me` — Obtener perfil del usuario actual (requiere auth)
 - `PUT /api/v1/profiles/me` — Actualizar perfil del usuario actual (requiere auth)
 
+## Autenticacion y recuperacion de contraseña
+
+La interfaz esta en `uis/auth/`. Abre `index.html` para login, `forgot-password.html` para solicitar un enlace, `reset-password.html?token=...` para completar el reset y `account/change-password.html` para el cambio con sesion iniciada.
+
+Variables de entorno (ver `.env.example`):
+
+- `BRASALAND_AUTH_SECRET`: secreto largo y aleatorio para firmar sesiones.
+- `RESEND_API_KEY`: API key de Resend; nunca se incluye en el codigo.
+- `RESEND_FROM`: remitente verificado o `Brasaland <onboarding@resend.dev>` en desarrollo.
+- `FRONTEND_BASE_URL`: URL base que recibira el enlace de reset.
+- `RESET_TOKEN_TTL_MINUTES`: expiracion del token, 30 minutos por defecto.
+
+Los tokens de recuperacion se almacenan hasheados en SQLite, expiran y se marcan como usados tras un reset exitoso. `POST /auth/forgot-password` siempre responde 200 con un mensaje neutro para evitar enumeracion de cuentas.
+
 ## Endpoints MVP
 
 - GET /health
+- POST /users crea un usuario y su perfil opcional.
+- POST /auth/login devuelve un JWT `access_token`.
+- GET /auth/me requiere `Authorization: Bearer <token>`.
+- PUT /profiles/me requiere `Authorization: Bearer <token>`.
 - GET /api/v1/stores
 - GET /api/v1/menus/items?country=CO&locale=es&currency=COP&active_only=true (requiere `X-API-Role` + `X-API-Token`, roles: `operations`, `executive`, `admin`)
 - POST /api/v1/menus/items (requiere `X-API-Role` + `X-API-Token`, roles: `operations`, `admin`)

@@ -5,14 +5,10 @@ import type {
   RecordCreatePayload,
   RecordsApiResponse,
 } from "../types/tracker";
+import { protectedRequestNoContentUrl, protectedRequestUrl } from "./authApi";
 
 function getApiBase(): string {
-  const apiBase = process.env.NEXT_PUBLIC_API_URL;
-  if (!apiBase) {
-    throw new Error("NEXT_PUBLIC_API_URL no esta configurada");
-  }
-
-  return apiBase;
+  return process.env.NEXT_PUBLIC_TRACKER_API_URL ?? "https://playground.4geeks.com/tracker/api/v1";
 }
 
 function normalizeRecord(record: CandidateApiRecord): CandidateRecord {
@@ -38,26 +34,11 @@ function normalizeNotes(payload: unknown): Note[] {
 }
 
 async function requestJson<T>(url: string, init?: RequestInit): Promise<T> {
-  const response = await fetch(url, {
-    ...init,
-    headers: {
-      Accept: "application/json",
-      ...(init?.headers ?? {}),
-    },
-  });
-
-  if (!response.ok) {
-    throw new Error(`Error ${response.status} en ${url}`);
-  }
-
-  return (await response.json()) as T;
+  return await protectedRequestUrl<T>(url, init);
 }
 
 async function requestNoContent(url: string, init?: RequestInit): Promise<void> {
-  const response = await fetch(url, init);
-  if (!response.ok) {
-    throw new Error(`Error ${response.status} en ${url}`);
-  }
+  await protectedRequestNoContentUrl(url, init);
 }
 
 async function fetchRecordsPage(page: number, limit: number): Promise<RecordsApiResponse> {

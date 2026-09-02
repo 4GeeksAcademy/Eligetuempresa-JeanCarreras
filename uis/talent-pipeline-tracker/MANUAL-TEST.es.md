@@ -2,7 +2,8 @@
 
 ## Preparacion
 
-1. Confirmar variable en `.env.local`.
+1. Configurar `NEXT_PUBLIC_API_URL=http://localhost:8000` y, si aplica,
+   `NEXT_PUBLIC_TRACKER_API_URL` en `.env.local`.
 2. Ejecutar `npm run dev`.
 3. Abrir `http://localhost:3000`.
 
