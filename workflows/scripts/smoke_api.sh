@@ -66,7 +66,9 @@ ensure_api_running() {
   fi
 
   local py_bin=""
-  if [[ -x "$ROOT_DIR/.venv/bin/python" ]]; then
+  if [[ -x "$ROOT_DIR/services/brasaland-api/.venv/bin/python" ]]; then
+    py_bin="$ROOT_DIR/services/brasaland-api/.venv/bin/python"
+  elif [[ -x "$ROOT_DIR/.venv/bin/python" ]]; then
     py_bin="$ROOT_DIR/.venv/bin/python"
   elif command -v python3 >/dev/null 2>&1; then
     py_bin="$(command -v python3)"
@@ -105,8 +107,10 @@ ensure_api_running
 health_body="$(curl -fsS "$API_BASE/health")"
 assert_contains "health" '"status":"ok"' "$health_body"
 
-# 2) Sales summary
-summary_body="$(curl -fsS "$API_BASE/api/v1/sales/summary?period=week&currency=$CURRENCY&start_date=$START_DATE&end_date=$END_DATE")"
+# 2) Sales summary (con token legacy de operations)
+summary_body="$(curl -fsS "$API_BASE/api/v1/sales/summary?period=week&currency=$CURRENCY&start_date=$START_DATE&end_date=$END_DATE" \
+  -H "X-API-Role: operations" \
+  -H "X-API-Token: $OPS_TOKEN")"
 assert_contains "sales summary" '"total_sales"' "$summary_body"
 
 # 3) Finance KPI with valid finance role

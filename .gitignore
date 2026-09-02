@@ -10,6 +10,7 @@ __pycache__/
 
 # Runtime artifacts for local API execution
 services/brasaland-api/brasaland.db
+services/brasaland-api/brasaland_db.json
 
 # Generated report outputs
 workflows/output/

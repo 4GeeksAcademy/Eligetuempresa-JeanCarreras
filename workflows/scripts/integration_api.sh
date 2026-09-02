@@ -63,7 +63,9 @@ ensure_api_running() {
   fi
 
   local py_bin=""
-  if [[ -x "$ROOT_DIR/.venv/bin/python" ]]; then
+  if [[ -x "$ROOT_DIR/services/brasaland-api/.venv/bin/python" ]]; then
+    py_bin="$ROOT_DIR/services/brasaland-api/.venv/bin/python"
+  elif [[ -x "$ROOT_DIR/.venv/bin/python" ]]; then
     py_bin="$ROOT_DIR/.venv/bin/python"
   elif command -v python3 >/dev/null 2>&1; then
     py_bin="$(command -v python3)"
@@ -96,24 +98,34 @@ echo "== Integration API Brasaland =="
 ensure_api_running
 
 # 1) stores endpoint returns records
-stores_body="$(curl -fsS "$API_BASE/api/v1/stores")"
+stores_body="$(curl -fsS "$API_BASE/api/v1/stores" \
+  -H "X-API-Role: operations" \
+  -H "X-API-Token: $OPS_TOKEN")"
 assert_contains "stores payload" '"id"' "$stores_body"
 total_stores_count="$(grep -o '"id"' <<<"$stores_body" | wc -l | tr -d ' ')"
 
 # 2) country-filtered summary for CO
-summary_co="$(curl -fsS "$API_BASE/api/v1/sales/summary?period=week&currency=USD&country=CO")"
+summary_co="$(curl -fsS "$API_BASE/api/v1/sales/summary?period=week&currency=USD&country=CO" \
+  -H "X-API-Role: operations" \
+  -H "X-API-Token: $OPS_TOKEN")"
 assert_contains "sales summary CO" '"currency":"USD"' "$summary_co"
 
 # 3) markets summary includes wow field
-markets_body="$(curl -fsS "$API_BASE/api/v1/markets/summary?currency=USD")"
+markets_body="$(curl -fsS "$API_BASE/api/v1/markets/summary?currency=USD" \
+  -H "X-API-Role: operations" \
+  -H "X-API-Token: $OPS_TOKEN")"
 assert_contains "markets wow" '"wow_variation_pct"' "$markets_body"
 
 # 4) by-store filtered to US includes market field
-store_us_body="$(curl -fsS "$API_BASE/api/v1/sales/by-store?currency=USD&country=US")"
+store_us_body="$(curl -fsS "$API_BASE/api/v1/sales/by-store?currency=USD&country=US" \
+  -H "X-API-Role: operations" \
+  -H "X-API-Token: $OPS_TOKEN")"
 assert_contains "sales by-store US" '"market"' "$store_us_body"
 
 # 5) daily trend returns day key
-trend_body="$(curl -fsS "$API_BASE/api/v1/sales/daily-trend?currency=USD")"
+trend_body="$(curl -fsS "$API_BASE/api/v1/sales/daily-trend?currency=USD" \
+  -H "X-API-Role: operations" \
+  -H "X-API-Token: $OPS_TOKEN")"
 assert_contains "daily trend" '"day"' "$trend_body"
 
 # 6) finance endpoint with executive role (allowed)
@@ -191,7 +203,7 @@ assert_status "create alert action executive prohibido" "403" "$alert_action_exe
 # 13) inactivity alerts without role (forbidden)
 alerts_no_role_status="$(curl -sS -o /dev/null -w "%{http_code}" \
   "$API_BASE/api/v1/alerts/inactivity?window_minutes=60")"
-assert_status "alerts inactivity sin role" "403" "$alerts_no_role_status"
+assert_status "alerts inactivity sin role" "401" "$alerts_no_role_status"
 
 # 15.1) alerts inactivity respects opening hours with deterministic reference time
 alerts_opening_hours_body="$(curl -fsS \
@@ -222,7 +234,7 @@ assert_contains "alerts sla payload" '"resolved_within_sla_pct"' "$alerts_sla_bo
 # 15) alerts SLA without role (forbidden)
 alerts_sla_no_role_status="$(curl -sS -o /dev/null -w "%{http_code}" \
   "$API_BASE/api/v1/alerts/inactivity/sla?days=7")"
-assert_status "alerts sla sin role" "403" "$alerts_sla_no_role_status"
+assert_status "alerts sla sin role" "401" "$alerts_sla_no_role_status"
 
 # 16) training resources with operations role (allowed)
 training_list_status="$(curl -sS -o /dev/null -w "%{http_code}" \
@@ -314,7 +326,7 @@ assert_status "supplier prices finance prohibido" "403" "$supplier_prices_financ
 # 25) supplier alerts without role (forbidden)
 supplier_alerts_no_role_status="$(curl -sS -o /dev/null -w "%{http_code}" \
   "$API_BASE/api/v1/suppliers/price-alerts")"
-assert_status "supplier alerts sin role" "403" "$supplier_alerts_no_role_status"
+assert_status "supplier alerts sin role" "401" "$supplier_alerts_no_role_status"
 
 # 26) customers summary with executive role (allowed)
 customers_summary_status="$(curl -sS -o /dev/null -w "%{http_code}" \
@@ -386,7 +398,7 @@ assert_contains "smart orders trazabilidad" '"days_history"' "$smart_orders_body
 # 32) smart order recommendations without role (forbidden)
 smart_orders_no_role_status="$(curl -sS -o /dev/null -w "%{http_code}" \
   "$API_BASE/api/v1/orders/recommendations?country=CO")"
-assert_status "smart orders sin role" "403" "$smart_orders_no_role_status"
+assert_status "smart orders sin role" "401" "$smart_orders_no_role_status"
 
 # 33) inventory receipt with operations role (allowed) and recommendation auto-close
 inventory_receipt_payload='{"store_id":"med-001","sku":"CHICKEN","received_qty":5,"unit_cost":12100,"currency":"COP","note":"recepcion central"}'
@@ -438,7 +450,7 @@ assert_status "inventory receipts offset" "200" "$inventory_receipts_offset_stat
 # 36) inventory receipts list without role (forbidden)
 inventory_receipts_no_role_status="$(curl -sS -o /dev/null -w "%{http_code}" \
   "$API_BASE/api/v1/inventory/receipts?limit=5")"
-assert_status "inventory receipts list sin role" "403" "$inventory_receipts_no_role_status"
+assert_status "inventory receipts list sin role" "401" "$inventory_receipts_no_role_status"
 
 # 22) executive ask with executive role (allowed)
 exec_ask_status="$(curl -sS -o /dev/null -w "%{http_code}" \

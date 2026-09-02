@@ -19,9 +19,12 @@ MVP central API for Brasaland focused on multi-country operations.
 
 ```text
 services/brasaland-api/
-├── src/                # Source package
-│   └── main.py         # FastAPI app, routes, and seed/bootstrap logic
-├── requirements.txt
+├── pyproject.toml       # uv project: dependencies and build
+├── src/
+│   ├── main.py          # FastAPI app, routes, and seed/bootstrap logic
+│   └── brasaland_api/
+│       ├── __init__.py
+│       └── auth.py      # JWT authentication module
 └── README.md
 ```
 
@@ -29,11 +32,56 @@ services/brasaland-api/
 
 ```bash
 cd services/brasaland-api
-python -m venv .venv
-source .venv/bin/activate
-pip install -r requirements.txt
-uvicorn src.main:app --reload --port 8000
+uv run uvicorn main:app --reload --port 8000
+
+Or using the project script:
+
+```bash
+bash scripts/run_api_local.sh
 ```
+
+## Authentication
+
+The API supports two authentication modes:
+
+### Mode 1 (recommended): JWT Bearer Token (email-based)
+
+Get a JWT token via login:
+
+```bash
+# Login as admin
+curl -X POST http://localhost:8000/api/v1/auth/login \
+  -H "Content-Type: application/x-www-form-urlencoded" \
+  -d 'username=admin@brasaland.com&password=brasaland-admin'
+```
+
+Use the token in protected endpoints:
+
+```bash
+TOKEN="eyJ..."
+curl http://localhost:8000/api/v1/finance/kpis \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+### Default users
+
+| Email                | Password          | Role    |
+|----------------------|-------------------|---------|
+| admin@brasaland.com  | brasaland-admin   | admin   |
+| manager@brasaland.com| brasaland-manager | manager |
+| user@brasaland.com   | brasaland-user    | user    |
+
+### Auth endpoints
+
+- `POST /api/v1/auth/login` — Login (public, accepts `application/x-www-form-urlencoded` with `username`=email and `password`)
+- `GET /api/v1/auth/me` — Current user info (requires JWT Bearer token)
+- `GET /api/v1/users` — List all users (requires admin role)
+- `POST /api/v1/users` — Create user (requires admin role)
+- `GET /api/v1/users/{id}` — Get user by ID (requires admin role)
+- `PUT /api/v1/users/{id}` — Update user (requires admin role)
+- `DELETE /api/v1/users/{id}` — Delete user (requires admin role)
+- `GET /api/v1/profiles/me` — Get current user profile (requires auth)
+- `PUT /api/v1/profiles/me` — Update current user profile (requires auth)
 
 ## MVP endpoints
 
@@ -390,6 +438,7 @@ bash workflows/scripts/integration_data_api.sh
   - `executive`: `brasaland-executive-token`
   - `operations`: `brasaland-operations-token`
   - `finance`: `brasaland-finance-token`
+  - `test`: `brasaland-test-token`
 - Recommended production environment variables:
   - `BRASALAND_ADMIN_TOKEN`
   - `BRASALAND_EXECUTIVE_TOKEN`

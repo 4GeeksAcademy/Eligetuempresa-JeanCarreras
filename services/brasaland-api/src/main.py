@@ -24,13 +24,22 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import Response
 from pydantic import BaseModel
 
+from .brasaland_api.auth import (
+    auth_router,
+    get_current_user,
+    init_seed_users,
+    require_roles,
+    Role,
+    UserInDB,
+)
+
 load_dotenv(Path(__file__).resolve().parent.parent / ".env")
 
 @asynccontextmanager
 async def lifespan(_: FastAPI):
     init_db()
+    init_seed_users()
     yield
-
 
 app = FastAPI(
     title="Brasaland API",
@@ -48,36 +57,11 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-
-class UserCreate(BaseModel):
-    email: str
-    password: str
-    name: str | None = None
-    phone: str | None = None
-    address: str | None = None
-
-
-class UserLogin(BaseModel):
-    email: str
-    password: str
-
-
-class AccessTokenResponse(BaseModel):
-    access_token: str
-    token_type: str = "bearer"
-
-
-class CurrentUserProfile(BaseModel):
-    email: str
-    name: str | None = None
-    phone: str | None = None
-    address: str | None = None
-
-
-class ProfileUpdate(BaseModel):
-    name: str | None = None
-    phone: str | None = None
-    address: str | None = None
+# Registrar routers de autenticación, usuarios y perfiles
+from .brasaland_api.auth import users_router, profiles_router
+app.include_router(auth_router)
+app.include_router(users_router)
+app.include_router(profiles_router)
 
 
 class Store(BaseModel):
@@ -950,63 +934,6 @@ def get_db() -> Connection:
     return connection
 
 
-def base64url_encode(value: bytes) -> str:
-    return base64.urlsafe_b64encode(value).rstrip(b"=").decode("ascii")
-
-
-def base64url_decode(value: str) -> bytes:
-    return base64.urlsafe_b64decode(value + "=" * (-len(value) % 4))
-
-
-def hash_password(password: str, salt: str | None = None) -> tuple[str, str]:
-    password_salt = salt or secrets.token_hex(16)
-    password_hash = hashlib.pbkdf2_hmac(
-        "sha256", password.encode("utf-8"), password_salt.encode("ascii"), 310_000
-    ).hex()
-    return password_salt, password_hash
-
-
-def create_access_token(user_id: int, email: str) -> str:
-    header = base64url_encode(json.dumps({"alg": "HS256", "typ": "JWT"}, separators=(",", ":")).encode())
-    payload = base64url_encode(
-        json.dumps(
-            {
-                "sub": str(user_id),
-                "email": email,
-                "exp": int((datetime.now(timezone.utc) + timedelta(hours=JWT_EXPIRATION_HOURS)).timestamp()),
-            },
-            separators=(",", ":"),
-        ).encode()
-    )
-    signature = hmac.new(JWT_SECRET.encode("utf-8"), f"{header}.{payload}".encode("ascii"), hashlib.sha256).digest()
-    return f"{header}.{payload}.{base64url_encode(signature)}"
-
-
-def get_current_user(authorization: str | None = Header(default=None)) -> Row:
-    if authorization is None or not authorization.startswith("Bearer "):
-        raise HTTPException(status_code=401, detail="Missing bearer token", headers={"WWW-Authenticate": "Bearer"})
-
-    try:
-        header, payload, signature = authorization.removeprefix("Bearer ").split(".")
-        expected_signature = hmac.new(
-            JWT_SECRET.encode("utf-8"), f"{header}.{payload}".encode("ascii"), hashlib.sha256
-        ).digest()
-        if not hmac.compare_digest(base64url_decode(signature), expected_signature):
-            raise ValueError("Invalid signature")
-        claims = json.loads(base64url_decode(payload))
-        if int(claims["exp"]) <= int(datetime.now(timezone.utc).timestamp()):
-            raise ValueError("Expired token")
-        user_id = int(claims["sub"])
-    except (KeyError, TypeError, ValueError, UnicodeDecodeError, json.JSONDecodeError) as exc:
-        raise HTTPException(status_code=401, detail="Invalid or expired bearer token", headers={"WWW-Authenticate": "Bearer"}) from exc
-
-    with get_db() as db:
-        user = db.execute("SELECT id, email FROM users WHERE id = ?", (user_id,)).fetchone()
-    if user is None:
-        raise HTTPException(status_code=401, detail="User no longer exists", headers={"WWW-Authenticate": "Bearer"})
-    return user
-
-
 def hash_password(password: str) -> str:
     salt = secrets.token_bytes(16)
     digest = hashlib.pbkdf2_hmac("sha256", password.encode(), salt, 210_000)
@@ -1117,35 +1044,12 @@ def require_api_token(x_api_token: str | None = Header(default=None)) -> None:
         raise HTTPException(status_code=401, detail="Invalid or missing X-API-Token")
 
 
-def resolve_role_tokens() -> dict[str, str]:
-    return {
-        "admin": os.getenv("BRASALAND_ADMIN_TOKEN", DEFAULT_ROLE_TOKENS["admin"]),
-        "executive": os.getenv("BRASALAND_EXECUTIVE_TOKEN", DEFAULT_ROLE_TOKENS["executive"]),
-        "operations": os.getenv("BRASALAND_OPERATIONS_TOKEN", DEFAULT_ROLE_TOKENS["operations"]),
-        "finance": os.getenv("BRASALAND_FINANCE_TOKEN", DEFAULT_ROLE_TOKENS["finance"]),
-    }
-
-
-def require_roles(allowed_roles: set[str]):
-    def validator(x_api_token: str | None = Header(default=None), x_api_role: str | None = Header(default=None)) -> str:
-        if x_api_role is None or x_api_role not in allowed_roles:
-            raise HTTPException(status_code=403, detail="Role not allowed")
-
-        role_tokens = resolve_role_tokens()
-        expected_token = role_tokens.get(x_api_role)
-        if expected_token is None or x_api_token != expected_token:
-            raise HTTPException(status_code=401, detail="Invalid role token")
-
-        return x_api_role
-
-    return validator
-
-
 def validate_role_token_for_ws(role: str | None, token: str | None, allowed_roles: set[str]) -> str:
     if role is None or role not in allowed_roles:
         raise HTTPException(status_code=403, detail="Role not allowed")
 
-    role_tokens = resolve_role_tokens()
+    from brasaland_api.auth import _resolve_role_tokens
+    role_tokens = _resolve_role_tokens()
     expected_token = role_tokens.get(role)
     if expected_token is None or token != expected_token:
         raise HTTPException(status_code=401, detail="Invalid role token")
@@ -1237,29 +1141,6 @@ def init_db() -> None:
     ]
 
     with get_db() as db:
-        db.execute(
-            """
-            CREATE TABLE IF NOT EXISTS users (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                email TEXT NOT NULL UNIQUE,
-                password_salt TEXT NOT NULL,
-                password_hash TEXT NOT NULL,
-                created_at TEXT NOT NULL
-            )
-            """
-        )
-        db.execute(
-            """
-            CREATE TABLE IF NOT EXISTS profiles (
-                user_id INTEGER PRIMARY KEY,
-                name TEXT,
-                phone TEXT,
-                address TEXT,
-                updated_at TEXT NOT NULL,
-                FOREIGN KEY(user_id) REFERENCES users(id)
-            )
-            """
-        )
         db.execute(
             """
             CREATE TABLE IF NOT EXISTS stores (
@@ -2453,83 +2334,6 @@ def health() -> dict[str, str]:
     return {"status": "ok"}
 
 
-@app.post("/users", response_model=CurrentUserProfile, status_code=201)
-def create_user(payload: UserCreate) -> CurrentUserProfile:
-    email = payload.email.strip().lower()
-    if not email or "@" not in email:
-        raise HTTPException(status_code=422, detail="email must be valid")
-    if len(payload.password) < 8:
-        raise HTTPException(status_code=422, detail="password must contain at least 8 characters")
-
-    salt, password_hash = hash_password(payload.password)
-    now = datetime.now(timezone.utc).isoformat()
-    try:
-        with get_db() as db:
-            cursor = db.execute(
-                "INSERT INTO users (email, password_salt, password_hash, created_at) VALUES (?, ?, ?, ?)",
-                (email, salt, password_hash, now),
-            )
-            user_id = int(cursor.lastrowid)
-            db.execute(
-                "INSERT INTO profiles (user_id, name, phone, address, updated_at) VALUES (?, ?, ?, ?, ?)",
-                (user_id, payload.name, payload.phone, payload.address, now),
-            )
-    except Exception as exc:
-        if "UNIQUE constraint failed: users.email" in str(exc):
-            raise HTTPException(status_code=409, detail="An account with this email already exists") from exc
-        raise
-
-    return CurrentUserProfile(email=email, name=payload.name, phone=payload.phone, address=payload.address)
-
-
-@app.post("/auth/login", response_model=AccessTokenResponse)
-def login_user(payload: UserLogin) -> AccessTokenResponse:
-    email = payload.email.strip().lower()
-    with get_db() as db:
-        user = db.execute(
-            "SELECT id, email, password_salt, password_hash FROM users WHERE email = ?", (email,)
-        ).fetchone()
-    if user is None:
-        raise HTTPException(status_code=401, detail="Invalid email or password")
-
-    _, supplied_hash = hash_password(payload.password, user["password_salt"])
-    if not hmac.compare_digest(supplied_hash, user["password_hash"]):
-        raise HTTPException(status_code=401, detail="Invalid email or password")
-
-    return AccessTokenResponse(access_token=create_access_token(int(user["id"]), user["email"]))
-
-
-@app.get("/auth/me", response_model=CurrentUserProfile)
-def get_auth_me(user: Row = Depends(get_current_user)) -> CurrentUserProfile:
-    with get_db() as db:
-        profile = db.execute(
-            "SELECT name, phone, address FROM profiles WHERE user_id = ?", (user["id"],)
-        ).fetchone()
-    return CurrentUserProfile(
-        email=user["email"],
-        name=profile["name"] if profile else None,
-        phone=profile["phone"] if profile else None,
-        address=profile["address"] if profile else None,
-    )
-
-
-@app.put("/profiles/me", response_model=CurrentUserProfile)
-def update_auth_profile(payload: ProfileUpdate, user: Row = Depends(get_current_user)) -> CurrentUserProfile:
-    now = datetime.now(timezone.utc).isoformat()
-    with get_db() as db:
-        db.execute(
-            """
-            INSERT INTO profiles (user_id, name, phone, address, updated_at)
-            VALUES (?, ?, ?, ?, ?)
-            ON CONFLICT(user_id) DO UPDATE SET
-                name = excluded.name,
-                phone = excluded.phone,
-                address = excluded.address,
-                updated_at = excluded.updated_at
-            """,
-            (user["id"], payload.name, payload.phone, payload.address, now),
-        )
-    return CurrentUserProfile(email=user["email"], name=payload.name, phone=payload.phone, address=payload.address)
 @app.post("/auth/register", response_model=AuthTokenResponse, status_code=201)
 def register(payload: RegisterRequest) -> AuthTokenResponse:
     validate_password(payload.password)
@@ -2647,7 +2451,9 @@ async def realtime_updates_socket(websocket: WebSocket) -> None:
 
 
 @app.get("/api/v1/stores", response_model=list[Store])
-def get_stores() -> list[Store]:
+def get_stores(
+    role: str = Depends(require_roles({"operations", "executive", "admin"})),
+) -> list[Store]:
     with get_db() as db:
         rows = db.execute(
             "SELECT id, name, country, city, timezone, base_currency FROM stores ORDER BY id"
@@ -3014,6 +2820,7 @@ def get_sales_summary(
     country: Literal["CO", "US"] | None = Query(default=None),
     start_date: str | None = Query(default=None),
     end_date: str | None = Query(default=None),
+    role: str = Depends(require_roles({"operations", "executive", "admin"})),
 ) -> SalesSummary:
     start_at, end_at = resolve_period_bounds(period, start_date, end_date)
 
@@ -3048,6 +2855,7 @@ def get_market_summary(
     start_date: str | None = Query(default=None),
     end_date: str | None = Query(default=None),
     country: Literal["CO", "US"] | None = Query(default=None),
+    role: str = Depends(require_roles({"operations", "executive", "admin"})),
 ) -> list[MarketSummary]:
     start_at, end_at = resolve_period_bounds("week", start_date, end_date)
     previous_start = start_at - (end_at - start_at)
@@ -3115,6 +2923,7 @@ def get_sales_by_store(
     country: Literal["CO", "US"] | None = Query(default=None),
     start_date: str | None = Query(default=None),
     end_date: str | None = Query(default=None),
+    role: str = Depends(require_roles({"operations", "executive", "admin"})),
 ) -> list[StoreSalesRow]:
     start_at, end_at = resolve_period_bounds("week", start_date, end_date)
 
@@ -3169,6 +2978,7 @@ def get_sales_daily_trend(
     country: Literal["CO", "US"] | None = Query(default=None),
     start_date: str | None = Query(default=None),
     end_date: str | None = Query(default=None),
+    role: str = Depends(require_roles({"operations", "executive", "admin"})),
 ) -> list[DailySalesPoint]:
     start_at, end_at = resolve_period_bounds("week", start_date, end_date)
 
