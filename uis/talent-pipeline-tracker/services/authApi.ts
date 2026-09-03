@@ -1,5 +1,8 @@
 import { getAccessToken, notifyUnauthorized, type UserProfile } from "./auth";
 
+const API_UNAVAILABLE_MESSAGE = "No podemos conectar con el servicio en este momento. Intenta nuevamente.";
+const API_REQUEST_MESSAGE = "No fue posible completar la solicitud. Verifica los datos e intenta nuevamente.";
+
 type LoginResponse = {
   access_token?: string;
   token?: string;
@@ -16,51 +19,52 @@ export type RegisterPayload = {
 function getApiBase(): string {
   const apiBase = process.env.NEXT_PUBLIC_API_URL;
   if (!apiBase) {
-    throw new Error("NEXT_PUBLIC_API_URL no esta configurada");
+    throw new Error(API_UNAVAILABLE_MESSAGE);
   }
 
   return apiBase.replace(/\/$/, "");
 }
 
 async function getErrorMessage(response: Response): Promise<string> {
-  const fallback = `Error ${response.status}. Intenta de nuevo.`;
-
-  try {
-    const body = (await response.json()) as { detail?: unknown; message?: unknown };
-    if (typeof body.detail === "string") {
-      return body.detail;
-    }
-    if (typeof body.message === "string") {
-      return body.message;
-    }
-  } catch {
-    return fallback;
+  if (response.status === 401) {
+    return "La sesion ha terminado. Inicia sesion nuevamente.";
   }
 
-  return fallback;
+  return API_REQUEST_MESSAGE;
 }
 
 async function requestAuth<T>(path: string, init: RequestInit): Promise<T> {
-  const response = await fetch(`${getApiBase()}${path}`, {
-    ...init,
-    headers: {
-      Accept: "application/json",
-      "Content-Type": "application/json",
-      ...(init.headers ?? {}),
-    },
-  });
+  let response: Response;
+  try {
+    response = await fetch(`${getApiBase()}${path}`, {
+      ...init,
+      headers: {
+        Accept: "application/json",
+        "Content-Type": "application/json",
+        ...(init.headers ?? {}),
+      },
+    });
+  } catch {
+    throw new Error(API_UNAVAILABLE_MESSAGE);
+  }
 
   if (!response.ok) {
     throw new Error(await getErrorMessage(response));
   }
 
-  return (await response.json()) as T;
+  try {
+    return (await response.json()) as T;
+  } catch {
+    throw new Error(API_REQUEST_MESSAGE);
+  }
 }
 
 export async function login(email: string, password: string): Promise<string> {
+  const credentials = new URLSearchParams({ username: email, password });
   const response = await requestAuth<LoginResponse>("/auth/login", {
     method: "POST",
-    body: JSON.stringify({ email, password }),
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: credentials.toString(),
   });
   const token = response.access_token ?? response.token;
 
@@ -100,15 +104,20 @@ export async function protectedRequestUrl<T>(url: string, init: RequestInit = {}
     throw new Error("La sesion ha terminado. Inicia sesion nuevamente.");
   }
 
-  const response = await fetch(url, {
-    ...init,
-    headers: {
-      Accept: "application/json",
-      ...(init.body ? { "Content-Type": "application/json" } : {}),
-      Authorization: `Bearer ${token}`,
-      ...(init.headers ?? {}),
-    },
-  });
+  let response: Response;
+  try {
+    response = await fetch(url, {
+      ...init,
+      headers: {
+        Accept: "application/json",
+        ...(init.body ? { "Content-Type": "application/json" } : {}),
+        Authorization: `Bearer ${token}`,
+        ...(init.headers ?? {}),
+      },
+    });
+  } catch {
+    throw new Error(API_UNAVAILABLE_MESSAGE);
+  }
 
   if (response.status === 401) {
     notifyUnauthorized();
@@ -119,7 +128,11 @@ export async function protectedRequestUrl<T>(url: string, init: RequestInit = {}
     throw new Error(await getErrorMessage(response));
   }
 
-  return (await response.json()) as T;
+  try {
+    return (await response.json()) as T;
+  } catch {
+    throw new Error(API_REQUEST_MESSAGE);
+  }
 }
 
 export async function protectedRequestNoContent(path: string, init: RequestInit = {}): Promise<void> {
@@ -133,14 +146,19 @@ export async function protectedRequestNoContentUrl(url: string, init: RequestIni
     throw new Error("La sesion ha terminado. Inicia sesion nuevamente.");
   }
 
-  const response = await fetch(url, {
-    ...init,
-    headers: {
-      Accept: "application/json",
-      Authorization: `Bearer ${token}`,
-      ...(init.headers ?? {}),
-    },
-  });
+  let response: Response;
+  try {
+    response = await fetch(url, {
+      ...init,
+      headers: {
+        Accept: "application/json",
+        Authorization: `Bearer ${token}`,
+        ...(init.headers ?? {}),
+      },
+    });
+  } catch {
+    throw new Error(API_UNAVAILABLE_MESSAGE);
+  }
 
   if (response.status === 401) {
     notifyUnauthorized();

@@ -42,6 +42,7 @@ const RECEIPTS_ROLE = "operations";
 const RECEIPTS_TOKEN = "brasaland-operations-token";
 
 const statusText = document.getElementById("statusText");
+const retryDashboardButton = document.getElementById("retryDashboard");
 const weeklySalesEl = document.getElementById("weeklySales");
 const avgTicketEl = document.getElementById("avgTicket");
 const activeStoresEl = document.getElementById("activeStores");
@@ -963,50 +964,70 @@ function renderTrend(trend, currency) {
 
 async function fetchJson(path) {
   if (!API_BASE) {
-    throw new Error("API base no configurada");
+    throw new Error("La conexion con la API no esta disponible. Reintenta en unos minutos.");
   }
-  const response = await fetch(`${API_BASE}${path}`);
+  let response;
+  try {
+    response = await fetch(`${API_BASE}${path}`);
+  } catch (_error) {
+    throw new Error("No se pudo conectar con la API. Reintenta en unos minutos.");
+  }
   if (!response.ok) {
-    throw new Error(`Request failed (${response.status})`);
+    throw new Error("No fue posible obtener los datos solicitados. Reintenta nuevamente.");
   }
-  return response.json();
+  try {
+    return await response.json();
+  } catch (_error) {
+    throw new Error("La API devolvio datos no disponibles. Reintenta nuevamente.");
+  }
 }
 
 async function fetchJsonWithHeaders(path, headers) {
   if (!API_BASE) {
-    throw new Error("API base no configurada");
+    throw new Error("La conexion con la API no esta disponible. Reintenta en unos minutos.");
   }
-  const response = await fetch(`${API_BASE}${path}`, { headers });
+  let response;
+  try {
+    response = await fetch(`${API_BASE}${path}`, { headers });
+  } catch (_error) {
+    throw new Error("No se pudo conectar con la API. Reintenta en unos minutos.");
+  }
   if (!response.ok) {
-    throw new Error(`Request failed (${response.status})`);
+    throw new Error("No fue posible obtener los datos solicitados. Reintenta nuevamente.");
   }
-  return response.json();
+  try {
+    return await response.json();
+  } catch (_error) {
+    throw new Error("La API devolvio datos no disponibles. Reintenta nuevamente.");
+  }
 }
 
 async function postJsonWithHeaders(path, payload, headers) {
   if (!API_BASE) {
-    throw new Error("API base no configurada");
+    throw new Error("La conexion con la API no esta disponible. Reintenta en unos minutos.");
   }
-  const response = await fetch(`${API_BASE}${path}`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      ...headers,
-    },
-    body: JSON.stringify(payload),
-  });
+  let response;
+  try {
+    response = await fetch(`${API_BASE}${path}`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...headers,
+      },
+      body: JSON.stringify(payload),
+    });
+  } catch (_error) {
+    throw new Error("No se pudo conectar con la API. Reintenta en unos minutos.");
+  }
 
   if (!response.ok) {
-    let detail = "No fue posible registrar la recepcion";
-    try {
-      const body = await response.json();
-      detail = body.detail || detail;
-    } catch (error) {
-      detail = `${detail} (${response.status})`;
-    }
-    throw new Error(detail);
+    throw new Error("No fue posible registrar la informacion. Revisa los datos e intenta nuevamente.");
   }
-  return response.json();
+  try {
+    return await response.json();
+  } catch (_error) {
+    throw new Error("La API devolvio datos no disponibles. Reintenta nuevamente.");
+  }
 }
 
 function renderFinance(finance, currency) {
@@ -1614,7 +1635,7 @@ function scheduleRealtimeDashboardRefresh() {
   }
   realtimeRefreshTimerId = setTimeout(() => {
     realtimeRefreshTimerId = null;
-    loadDashboard();
+    void refreshDashboard();
   }, REALTIME_REFRESH_DEBOUNCE_MS);
 }
 
@@ -1693,7 +1714,7 @@ function setupAutoRefresh() {
   const refreshSeconds = Number(refreshIntervalEl.value || "0");
   if (refreshSeconds > 0) {
     refreshTimerId = setInterval(() => {
-      loadDashboard();
+      void refreshDashboard();
     }, refreshSeconds * 1000);
   }
 }
@@ -1991,7 +2012,26 @@ async function loadDashboard() {
     receiptsOffset = 0;
     renderReceipts(fallback.receipts, false);
     salesCurrencyDetailEl.textContent = "Consolidado USD";
-    statusText.textContent = `API no disponible en ${API_BASE}. Mostrando modo demo.`;
+    statusText.textContent = "No fue posible conectar con la API. Se muestran datos demo; reintenta para actualizar.";
+    if (retryDashboardButton) {
+      retryDashboardButton.hidden = false;
+    }
+    return;
+  }
+
+  if (retryDashboardButton) {
+    retryDashboardButton.hidden = true;
+  }
+}
+
+async function refreshDashboard() {
+  try {
+    await loadDashboard();
+  } catch (_error) {
+    statusText.textContent = "No fue posible actualizar el panel. Reintenta nuevamente.";
+    if (retryDashboardButton) {
+      retryDashboardButton.hidden = false;
+    }
   }
 }
 
@@ -2002,20 +2042,26 @@ function bootstrapDashboard() {
 
   if (applyFiltersButton) {
     applyFiltersButton.addEventListener("click", () => {
-      loadDashboard();
+      void refreshDashboard();
+    });
+  }
+
+  if (retryDashboardButton) {
+    retryDashboardButton.addEventListener("click", () => {
+      void refreshDashboard();
     });
   }
 
   if (refreshIntervalEl) {
     refreshIntervalEl.addEventListener("change", () => {
       setupAutoRefresh();
-      loadDashboard();
+      void refreshDashboard();
     });
   }
 
   if (currencyFilterEl) {
     currencyFilterEl.addEventListener("change", () => {
-      loadDashboard();
+      void refreshDashboard();
     });
   }
 
@@ -2074,7 +2120,7 @@ function bootstrapDashboard() {
   setDefaultHrDates();
   setupAutoRefresh();
   connectRealtimeSocket();
-  loadDashboard();
+  void refreshDashboard();
 }
 
 bootstrapDashboard();

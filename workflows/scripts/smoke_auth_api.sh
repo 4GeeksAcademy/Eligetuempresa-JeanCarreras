@@ -14,8 +14,9 @@ created_status=$(curl -sS -o /tmp/brasaland-auth-create.json -w "%{http_code}" \
 test "$created_status" = "201"
 
 token=$(curl -fsS -X POST "$API_BASE/auth/login" \
-  -H "Content-Type: application/json" \
-  -d "{\"email\":\"$EMAIL\",\"password\":\"$PASSWORD\"}" \
+  -H "Content-Type: application/x-www-form-urlencoded" \
+  --data-urlencode "username=$EMAIL" \
+  --data-urlencode "password=$PASSWORD" \
   | sed -n 's/.*"access_token":"\([^"]*\)".*/\1/p')
 test -n "$token"
 
