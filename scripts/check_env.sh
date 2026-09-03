@@ -37,18 +37,18 @@ if ! "$PY_BIN" - <<'PY'
 import importlib.util
 import sys
 
-required = ["fastapi", "uvicorn", "pydantic"]
+required = ["fastapi", "uvicorn", "pydantic", "jose", "passlib"]
 missing = [name for name in required if importlib.util.find_spec(name) is None]
 
 if missing:
     print("Faltan paquetes Python requeridos:", ", ".join(missing))
     sys.exit(1)
 
-print("Dependencias Python OK: fastapi, uvicorn, pydantic")
+print("Dependencias Python OK: fastapi, uvicorn, pydantic, jose, passlib")
 PY
 then
   echo "Tip: instala dependencias con:"
-  echo "  cd services/brasaland-api && python -m venv .venv && source .venv/bin/activate && pip install -r requirements.txt"
+  echo "  cd services/brasaland-api && uv sync"
   exit 1
 fi
 

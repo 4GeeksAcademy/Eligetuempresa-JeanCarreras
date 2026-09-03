@@ -5,23 +5,30 @@ API central MVP para Brasaland enfocada en operaciones multipais.
 ## Alcance inicial
 
 - Endpoint de salud.
+- Autenticación JWT (login + bearer token) con backward-compatibilidad para tokens legacy.
 - Listado de locales.
 - Resumen de ventas en COP o USD.
 - Persistencia local con SQLite y datos seed.
+- Autenticacion de usuarios con registro, login, recuperacion y cambio de contraseña.
 
 ## Stack
 
 - Python 3.11+
 - FastAPI
 - Uvicorn
+- python-jose[cryptography] (JWT)
+- passlib[bcrypt] (hashing de contraseñas)
 
 ## Estructura del codigo fuente
 
 ```text
 services/brasaland-api/
-├── src/                # Paquete de codigo fuente
-│   └── main.py         # App FastAPI, rutas y logica de seed/bootstrap
-├── requirements.txt
+├── pyproject.toml       # Proyecto uv: dependencias y build
+├── src/
+│   ├── main.py          # App FastAPI, rutas y logica de seed/bootstrap
+│   └── brasaland_api/
+│       ├── __init__.py
+│       └── auth.py      # Módulo de autenticación JWT
 └── README.es.md
 ```
 
@@ -29,15 +36,79 @@ services/brasaland-api/
 
 ```bash
 cd services/brasaland-api
-python -m venv .venv
-source .venv/bin/activate
-pip install -r requirements.txt
-uvicorn src.main:app --reload --port 8000
+uv run uvicorn main:app --reload --port 8000
 ```
+
+O usando el script del proyecto:
+
+```bash
+bash scripts/run_api_local.sh
+```
+
+## Autenticacion
+
+La API soporta dos modos de autenticacion:
+
+### Modo 1 (recomendado): JWT Bearer Token (basado en email)
+
+Obtén un token JWT mediante login:
+
+```bash
+# Login como admin
+curl -X POST http://localhost:8000/api/v1/auth/login \
+  -H "Content-Type: application/x-www-form-urlencoded" \
+  -d 'username=admin@brasaland.com&password=brasaland-admin'
+```
+
+Usa el token en los endpoints protegidos:
+
+```bash
+TOKEN="eyJ..."
+curl http://localhost:8000/api/v1/finance/kpis \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+### Usuarios por defecto
+
+| Email                | Password          | Rol     |
+|----------------------|-------------------|---------|
+| admin@brasaland.com  | brasaland-admin   | admin   |
+| manager@brasaland.com| brasaland-manager | manager |
+| user@brasaland.com   | brasaland-user    | user    |
+
+### Endpoints de autenticacion
+
+- `POST /api/v1/auth/login` — Iniciar sesion (publico, `application/x-www-form-urlencoded` con `username`=email y `password`)
+- `GET /api/v1/auth/me` — Informacion del usuario autenticado (requiere JWT Bearer token)
+- `GET /api/v1/users` — Listar todos los usuarios (requiere rol admin)
+- `POST /api/v1/users` — Crear usuario (requiere rol admin)
+- `GET /api/v1/users/{id}` — Obtener usuario por ID (requiere rol admin)
+- `PUT /api/v1/users/{id}` — Actualizar usuario (requiere rol admin)
+- `DELETE /api/v1/users/{id}` — Eliminar usuario (requiere rol admin)
+- `GET /api/v1/profiles/me` — Obtener perfil del usuario actual (requiere auth)
+- `PUT /api/v1/profiles/me` — Actualizar perfil del usuario actual (requiere auth)
+
+## Autenticacion y recuperacion de contraseña
+
+La interfaz esta en `uis/auth/`. Abre `index.html` para login, `forgot-password.html` para solicitar un enlace, `reset-password.html?token=...` para completar el reset y `account/change-password.html` para el cambio con sesion iniciada.
+
+Variables de entorno (ver `.env.example`):
+
+- `BRASALAND_AUTH_SECRET`: secreto largo y aleatorio para firmar sesiones.
+- `RESEND_API_KEY`: API key de Resend; nunca se incluye en el codigo.
+- `RESEND_FROM`: remitente verificado o `Brasaland <onboarding@resend.dev>` en desarrollo.
+- `FRONTEND_BASE_URL`: URL base que recibira el enlace de reset.
+- `RESET_TOKEN_TTL_MINUTES`: expiracion del token, 30 minutos por defecto.
+
+Los tokens de recuperacion se almacenan hasheados en SQLite, expiran y se marcan como usados tras un reset exitoso. `POST /auth/forgot-password` siempre responde 200 con un mensaje neutro para evitar enumeracion de cuentas.
 
 ## Endpoints MVP
 
 - GET /health
+- POST /users crea un usuario y su perfil opcional.
+- POST /auth/login devuelve un JWT `access_token`.
+- GET /auth/me requiere `Authorization: Bearer <token>`.
+- PUT /profiles/me requiere `Authorization: Bearer <token>`.
 - GET /api/v1/stores
 - GET /api/v1/menus/items?country=CO&locale=es&currency=COP&active_only=true (requiere `X-API-Role` + `X-API-Token`, roles: `operations`, `executive`, `admin`)
 - POST /api/v1/menus/items (requiere `X-API-Role` + `X-API-Token`, roles: `operations`, `admin`)
@@ -428,8 +499,10 @@ bash workflows/scripts/integration_data_api.sh
 	- `executive`: `brasaland-executive-token`
 	- `operations`: `brasaland-operations-token`
 	- `finance`: `brasaland-finance-token`
+	- `telemetry`: `brasaland-telemetry-token`
 - Variables de entorno recomendadas en produccion:
 	- `BRASALAND_ADMIN_TOKEN`
 	- `BRASALAND_EXECUTIVE_TOKEN`
 	- `BRASALAND_OPERATIONS_TOKEN`
 	- `BRASALAND_FINANCE_TOKEN`
+	- `BRASALAND_TELEMETRY_TOKEN`

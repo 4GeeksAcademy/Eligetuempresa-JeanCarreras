@@ -1,24 +1,52 @@
 from datetime import datetime, timedelta, timezone
 import asyncio
+import base64
 import csv
+import hashlib
+import hmac
 import io
+import json
+import logging
 import os
+import secrets
+import urllib.request
+from contextlib import asynccontextmanager
 from pathlib import Path
 from sqlite3 import Connection, Row, connect
 from typing import Literal
 from zoneinfo import ZoneInfo
 
 from fastapi import Depends, FastAPI, Header, HTTPException, Query, Request
+from dotenv import load_dotenv
 from fastapi import WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, Response
 from pydantic import BaseModel
 
+from .brasaland_api.auth import (
+    auth_router,
+    get_current_user,
+    init_seed_users,
+    require_roles,
+    Role,
+    UserInDB,
+)
+
+load_dotenv(Path(__file__).resolve().parent.parent / ".env")
+
+@asynccontextmanager
+async def lifespan(_: FastAPI):
+    init_db()
+    init_seed_users()
+    yield
+
 app = FastAPI(
     title="Brasaland API",
     version="0.1.0",
     description="API central MVP para locales y resumen de ventas.",
+    lifespan=lifespan,
 )
+logger = logging.getLogger(__name__)
 
 app.add_middleware(
     CORSMiddleware,
@@ -27,6 +55,12 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Registrar routers de autenticación, usuarios y perfiles
+from .brasaland_api.auth import users_router, profiles_router
+app.include_router(auth_router)
+app.include_router(users_router)
+app.include_router(profiles_router)
 
 
 @app.exception_handler(Exception)
@@ -706,8 +740,42 @@ class HrKpiOverviewResponse(BaseModel):
     by_country: list[HrKpiCountrySummary]
 
 
+class RegisterRequest(BaseModel):
+    email: str
+    password: str
+
+
+class LoginRequest(BaseModel):
+    email: str
+    password: str
+
+
+class AuthTokenResponse(BaseModel):
+    access_token: str
+    token_type: str = "bearer"
+
+
+class ForgotPasswordRequest(BaseModel):
+    email: str
+
+
+class ResetPasswordRequest(BaseModel):
+    token: str
+    new_password: str
+
+
+class ChangePasswordRequest(BaseModel):
+    current_password: str
+    new_password: str
+
+
 DB_PATH = Path(__file__).resolve().parent.parent / "brasaland.db"
+AUTH_SECRET = os.getenv("BRASALAND_AUTH_SECRET", "brasaland-local-auth-secret")
+RESET_TOKEN_TTL_MINUTES = int(os.getenv("RESET_TOKEN_TTL_MINUTES", "30"))
+FRONTEND_BASE_URL = os.getenv("FRONTEND_BASE_URL", "http://localhost:5500/uis/auth")
 FX_COP_PER_USD = 3950.0
+JWT_SECRET = os.getenv("BRASALAND_JWT_SECRET", "brasaland-local-development-secret")
+JWT_EXPIRATION_HOURS = 8
 DEFAULT_API_TOKEN = "brasaland-dev-token"
 DEFAULT_ROLE_TOKENS: dict[str, str] = {
     "admin": "brasaland-admin-token",
@@ -873,6 +941,81 @@ def get_db() -> Connection:
     return connection
 
 
+def hash_password(password: str) -> str:
+    salt = secrets.token_bytes(16)
+    digest = hashlib.pbkdf2_hmac("sha256", password.encode(), salt, 210_000)
+    return f"pbkdf2_sha256$210000${salt.hex()}${digest.hex()}"
+
+
+def verify_password(password: str, encoded: str) -> bool:
+    try:
+        algorithm, iterations, salt_hex, digest_hex = encoded.split("$", 3)
+        if algorithm != "pbkdf2_sha256":
+            return False
+        candidate = hashlib.pbkdf2_hmac(
+            "sha256", password.encode(), bytes.fromhex(salt_hex), int(iterations)
+        )
+        return hmac.compare_digest(candidate.hex(), digest_hex)
+    except (ValueError, TypeError):
+        return False
+
+
+def sign_auth_token(user_id: int, expires_at: datetime) -> str:
+    payload = {"sub": str(user_id), "exp": int(expires_at.timestamp())}
+    encoded = base64.urlsafe_b64encode(json.dumps(payload, separators=(",", ":")).encode()).decode().rstrip("=")
+    signature = hmac.new(AUTH_SECRET.encode(), encoded.encode(), hashlib.sha256).hexdigest()
+    return f"{encoded}.{signature}"
+
+
+def get_authenticated_user(authorization: str | None = Header(default=None)) -> Row:
+    if not authorization or not authorization.lower().startswith("bearer "):
+        raise HTTPException(status_code=401, detail="Missing bearer token")
+    try:
+        encoded, signature = authorization[7:].split(".", 1)
+        expected = hmac.new(AUTH_SECRET.encode(), encoded.encode(), hashlib.sha256).hexdigest()
+        if not hmac.compare_digest(signature, expected):
+            raise ValueError
+        payload = json.loads(base64.urlsafe_b64decode(encoded + "=" * (-len(encoded) % 4)))
+        if int(payload["exp"]) <= int(datetime.now(timezone.utc).timestamp()):
+            raise ValueError
+        user_id = int(payload["sub"])
+    except (ValueError, KeyError, TypeError, json.JSONDecodeError, UnicodeDecodeError):
+        raise HTTPException(status_code=401, detail="Invalid or expired bearer token")
+    with get_db() as db:
+        user = db.execute("SELECT * FROM users WHERE id = ?", (user_id,)).fetchone()
+    if user is None:
+        raise HTTPException(status_code=401, detail="User not found")
+    return user
+
+
+def validate_password(password: str) -> None:
+    if len(password) < 8:
+        raise HTTPException(status_code=400, detail="Password must contain at least 8 characters")
+
+
+def send_reset_email(email: str, reset_url: str) -> None:
+    api_key = os.getenv("RESEND_API_KEY")
+    if not api_key:
+        return
+    payload = json.dumps({
+        "from": os.getenv("RESEND_FROM", "Brasaland <onboarding@resend.dev>"),
+        "to": [email],
+        "subject": "Restablece tu contraseña de Brasaland",
+        "html": f"<p>Solicitaste restablecer tu contraseña.</p><p><a href=\"{reset_url}\">Restablecer contraseña</a></p><p>El enlace caduca en {RESET_TOKEN_TTL_MINUTES} minutos.</p>",
+    }).encode()
+    request = urllib.request.Request(
+        "https://api.resend.com/emails",
+        data=payload,
+        headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
+        method="POST",
+    )
+    try:
+        with urllib.request.urlopen(request, timeout=10):
+            pass
+    except Exception:
+        logger.exception("Resend password reset email failed")
+
+
 def parse_date_or_none(value: str | None) -> datetime | None:
     if value is None:
         return None
@@ -908,35 +1051,12 @@ def require_api_token(x_api_token: str | None = Header(default=None)) -> None:
         raise HTTPException(status_code=401, detail="Invalid or missing X-API-Token")
 
 
-def resolve_role_tokens() -> dict[str, str]:
-    return {
-        "admin": os.getenv("BRASALAND_ADMIN_TOKEN", DEFAULT_ROLE_TOKENS["admin"]),
-        "executive": os.getenv("BRASALAND_EXECUTIVE_TOKEN", DEFAULT_ROLE_TOKENS["executive"]),
-        "operations": os.getenv("BRASALAND_OPERATIONS_TOKEN", DEFAULT_ROLE_TOKENS["operations"]),
-        "finance": os.getenv("BRASALAND_FINANCE_TOKEN", DEFAULT_ROLE_TOKENS["finance"]),
-    }
-
-
-def require_roles(allowed_roles: set[str]):
-    def validator(x_api_token: str | None = Header(default=None), x_api_role: str | None = Header(default=None)) -> str:
-        if x_api_role is None or x_api_role not in allowed_roles:
-            raise HTTPException(status_code=403, detail="Role not allowed")
-
-        role_tokens = resolve_role_tokens()
-        expected_token = role_tokens.get(x_api_role)
-        if expected_token is None or x_api_token != expected_token:
-            raise HTTPException(status_code=401, detail="Invalid role token")
-
-        return x_api_role
-
-    return validator
-
-
 def validate_role_token_for_ws(role: str | None, token: str | None, allowed_roles: set[str]) -> str:
     if role is None or role not in allowed_roles:
         raise HTTPException(status_code=403, detail="Role not allowed")
 
-    role_tokens = resolve_role_tokens()
+    from brasaland_api.auth import _resolve_role_tokens
+    role_tokens = _resolve_role_tokens()
     expected_token = role_tokens.get(role)
     if expected_token is None or token != expected_token:
         raise HTTPException(status_code=401, detail="Invalid role token")
@@ -1037,6 +1157,27 @@ def init_db() -> None:
                 city TEXT NOT NULL,
                 timezone TEXT NOT NULL,
                 base_currency TEXT NOT NULL
+            )
+            """
+        )
+        db.execute(
+            """
+            CREATE TABLE IF NOT EXISTS users (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                email TEXT NOT NULL UNIQUE COLLATE NOCASE,
+                password_hash TEXT NOT NULL,
+                password_changed_at TEXT NOT NULL
+            )
+            """
+        )
+        db.execute(
+            """
+            CREATE TABLE IF NOT EXISTS password_reset_tokens (
+                token_hash TEXT PRIMARY KEY,
+                user_id INTEGER NOT NULL,
+                expires_at TEXT NOT NULL,
+                used_at TEXT,
+                FOREIGN KEY(user_id) REFERENCES users(id)
             )
             """
         )
@@ -2195,14 +2336,81 @@ def init_db() -> None:
             )
 
 
-@app.on_event("startup")
-def on_startup() -> None:
-    init_db()
-
-
 @app.get("/health")
 def health() -> dict[str, str]:
     return {"status": "ok"}
+
+
+@app.post("/auth/register", response_model=AuthTokenResponse, status_code=201)
+def register(payload: RegisterRequest) -> AuthTokenResponse:
+    validate_password(payload.password)
+    email = payload.email.strip().lower()
+    if not email or "@" not in email:
+        raise HTTPException(status_code=400, detail="Valid email is required")
+    now = datetime.now(timezone.utc)
+    try:
+        with get_db() as db:
+            cursor = db.execute(
+                "INSERT INTO users (email, password_hash, password_changed_at) VALUES (?, ?, ?)",
+                (email, hash_password(payload.password), now.isoformat()),
+            )
+            user_id = int(cursor.lastrowid)
+    except Exception as exc:
+        if "UNIQUE" in str(exc).upper():
+            raise HTTPException(status_code=409, detail="Email already registered") from exc
+        raise
+    return AuthTokenResponse(access_token=sign_auth_token(user_id, now + timedelta(hours=8)))
+
+
+@app.post("/auth/login", response_model=AuthTokenResponse)
+def login(payload: LoginRequest) -> AuthTokenResponse:
+    with get_db() as db:
+        user = db.execute("SELECT * FROM users WHERE email = ? COLLATE NOCASE", (payload.email.strip(),)).fetchone()
+    if user is None or not verify_password(payload.password, user["password_hash"]):
+        raise HTTPException(status_code=401, detail="Invalid email or password")
+    return AuthTokenResponse(access_token=sign_auth_token(user["id"], datetime.now(timezone.utc) + timedelta(hours=8)))
+
+
+@app.post("/auth/forgot-password")
+def forgot_password(payload: ForgotPasswordRequest) -> dict[str, str]:
+    with get_db() as db:
+        user = db.execute("SELECT id FROM users WHERE email = ? COLLATE NOCASE", (payload.email.strip(),)).fetchone()
+        if user is not None:
+            raw_token = secrets.token_urlsafe(32)
+            expires_at = datetime.now(timezone.utc) + timedelta(minutes=RESET_TOKEN_TTL_MINUTES)
+            db.execute(
+                "INSERT INTO password_reset_tokens (token_hash, user_id, expires_at) VALUES (?, ?, ?)",
+                (hashlib.sha256(raw_token.encode()).hexdigest(), user["id"], expires_at.isoformat()),
+            )
+            send_reset_email(payload.email.strip(), f"{FRONTEND_BASE_URL.rstrip('/')}/reset-password?token={raw_token}")
+    return {"message": "Si esa dirección está registrada, recibirás un enlace en breve"}
+
+
+@app.post("/auth/reset-password")
+def reset_password(payload: ResetPasswordRequest) -> dict[str, str]:
+    validate_password(payload.new_password)
+    now = datetime.now(timezone.utc)
+    token_hash = hashlib.sha256(payload.token.encode()).hexdigest()
+    with get_db() as db:
+        token = db.execute("SELECT * FROM password_reset_tokens WHERE token_hash = ?", (token_hash,)).fetchone()
+        if token is None or token["used_at"] is not None or datetime.fromisoformat(token["expires_at"]) <= now:
+            raise HTTPException(status_code=400, detail="Invalid, expired, or already used reset token")
+        db.execute("UPDATE users SET password_hash = ?, password_changed_at = ? WHERE id = ?", (hash_password(payload.new_password), now.isoformat(), token["user_id"]))
+        db.execute("UPDATE password_reset_tokens SET used_at = ? WHERE user_id = ? AND used_at IS NULL", (now.isoformat(), token["user_id"]))
+        db.execute("UPDATE password_reset_tokens SET used_at = ? WHERE token_hash = ?", (now.isoformat(), token_hash))
+    return {"message": "Password updated successfully"}
+
+
+@app.post("/auth/change-password")
+def change_password(payload: ChangePasswordRequest, user: Row = Depends(get_authenticated_user)) -> dict[str, str]:
+    validate_password(payload.new_password)
+    if not verify_password(payload.current_password, user["password_hash"]):
+        raise HTTPException(status_code=400, detail="Current password is incorrect")
+    with get_db() as db:
+        now = datetime.now(timezone.utc).isoformat()
+        db.execute("UPDATE users SET password_hash = ?, password_changed_at = ? WHERE id = ?", (hash_password(payload.new_password), now, user["id"]))
+        db.execute("UPDATE password_reset_tokens SET used_at = ? WHERE user_id = ? AND used_at IS NULL", (now, user["id"]))
+    return {"message": "Password updated successfully"}
 
 
 @app.websocket("/ws/realtime")
@@ -2250,7 +2458,9 @@ async def realtime_updates_socket(websocket: WebSocket) -> None:
 
 
 @app.get("/api/v1/stores", response_model=list[Store])
-def get_stores() -> list[Store]:
+def get_stores(
+    role: str = Depends(require_roles({"operations", "executive", "admin"})),
+) -> list[Store]:
     with get_db() as db:
         rows = db.execute(
             "SELECT id, name, country, city, timezone, base_currency FROM stores ORDER BY id"
@@ -2617,6 +2827,7 @@ def get_sales_summary(
     country: Literal["CO", "US"] | None = Query(default=None),
     start_date: str | None = Query(default=None),
     end_date: str | None = Query(default=None),
+    role: str = Depends(require_roles({"operations", "executive", "admin"})),
 ) -> SalesSummary:
     start_at, end_at = resolve_period_bounds(period, start_date, end_date)
 
@@ -2651,6 +2862,7 @@ def get_market_summary(
     start_date: str | None = Query(default=None),
     end_date: str | None = Query(default=None),
     country: Literal["CO", "US"] | None = Query(default=None),
+    role: str = Depends(require_roles({"operations", "executive", "admin"})),
 ) -> list[MarketSummary]:
     start_at, end_at = resolve_period_bounds("week", start_date, end_date)
     previous_start = start_at - (end_at - start_at)
@@ -2718,6 +2930,7 @@ def get_sales_by_store(
     country: Literal["CO", "US"] | None = Query(default=None),
     start_date: str | None = Query(default=None),
     end_date: str | None = Query(default=None),
+    role: str = Depends(require_roles({"operations", "executive", "admin"})),
 ) -> list[StoreSalesRow]:
     start_at, end_at = resolve_period_bounds("week", start_date, end_date)
 
@@ -2772,6 +2985,7 @@ def get_sales_daily_trend(
     country: Literal["CO", "US"] | None = Query(default=None),
     start_date: str | None = Query(default=None),
     end_date: str | None = Query(default=None),
+    role: str = Depends(require_roles({"operations", "executive", "admin"})),
 ) -> list[DailySalesPoint]:
     start_at, end_at = resolve_period_bounds("week", start_date, end_date)
 

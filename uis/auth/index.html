@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Brasaland | Acceso</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <main class="auth-shell">
+      <section class="brand-panel"><p class="eyebrow">Brasaland Digital</p><h1>Tu cuenta,<br /><em>siempre cerca.</em></h1><p>Accede a tus herramientas y mantén el control de tu operación.</p></section>
+      <section class="form-panel" aria-live="polite">
+        <a class="back" href="login.html">← Volver al acceso</a>
+        <div id="view-login" class="view"><p class="eyebrow">Bienvenido</p><h2>Inicia sesión</h2><p class="intro">Accede a tu espacio de trabajo.</p><form data-form="login"><label>Email<input name="email" type="email" autocomplete="email" required /></label><label>Contraseña<input name="password" type="password" autocomplete="current-password" required /></label><button type="submit">Entrar <span>→</span></button><p class="feedback" data-feedback></p></form><a class="text-link" href="forgot-password.html">¿Olvidaste tu contraseña?</a></div>
+        <div id="view-forgot" class="view"><p class="eyebrow">Recuperación</p><h2>Restablece tu acceso</h2><p class="intro">Te enviaremos un enlace seguro para crear una contraseña nueva.</p><form data-form="forgot"><label>Email<input name="email" type="email" autocomplete="email" required /></label><button type="submit">Enviar enlace <span>→</span></button><p class="feedback" data-feedback></p></form></div>
+        <div id="view-reset" class="view"><p class="eyebrow">Nueva contraseña</p><h2>Crea una contraseña nueva</h2><p class="intro">Elige una contraseña de al menos 8 caracteres.</p><form data-form="reset"><label>Nueva contraseña<input name="password" type="password" minlength="8" autocomplete="new-password" required /></label><label>Confirmar contraseña<input name="confirmation" type="password" minlength="8" autocomplete="new-password" required /></label><button type="submit">Guardar contraseña <span>→</span></button><p class="feedback" data-feedback></p></form><a class="text-link" href="forgot-password.html">Solicitar otro enlace</a></div>
+        <div id="view-change" class="view"><p class="eyebrow">Seguridad</p><h2>Cambia tu contraseña</h2><p class="intro">Protege tu cuenta con una contraseña nueva.</p><form data-form="change"><label>Contraseña actual<input name="current_password" type="password" autocomplete="current-password" required /></label><label>Nueva contraseña<input name="password" type="password" minlength="8" autocomplete="new-password" required /></label><label>Confirmar contraseña<input name="confirmation" type="password" minlength="8" autocomplete="new-password" required /></label><button type="submit">Actualizar contraseña <span>→</span></button><p class="feedback" data-feedback></p></form></div>
+      </section>
+    </main>
+    <script src="app.js"></script>
+  </body>
+</html>

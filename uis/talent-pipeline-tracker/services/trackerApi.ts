@@ -5,17 +5,10 @@ import type {
   RecordCreatePayload,
   RecordsApiResponse,
 } from "../types/tracker";
-
-const API_UNAVAILABLE_MESSAGE = "No podemos conectar con el servicio en este momento. Intenta nuevamente.";
-const API_REQUEST_MESSAGE = "No fue posible completar la solicitud. Verifica los datos e intenta nuevamente.";
+import { protectedRequestNoContentUrl, protectedRequestUrl } from "./authApi";
 
 function getApiBase(): string {
-  const apiBase = process.env.NEXT_PUBLIC_API_URL;
-  if (!apiBase) {
-    throw new Error(API_UNAVAILABLE_MESSAGE);
-  }
-
-  return apiBase;
+  return process.env.NEXT_PUBLIC_TRACKER_API_URL ?? "https://playground.4geeks.com/tracker/api/v1";
 }
 
 function normalizeRecord(record: CandidateApiRecord): CandidateRecord {
@@ -41,41 +34,11 @@ function normalizeNotes(payload: unknown): Note[] {
 }
 
 async function requestJson<T>(url: string, init?: RequestInit): Promise<T> {
-  let response: Response;
-  try {
-    response = await fetch(url, {
-      ...init,
-      headers: {
-        Accept: "application/json",
-        ...(init?.headers ?? {}),
-      },
-    });
-  } catch {
-    throw new Error(API_UNAVAILABLE_MESSAGE);
-  }
-
-  if (!response.ok) {
-    throw new Error(API_REQUEST_MESSAGE);
-  }
-
-  try {
-    return (await response.json()) as T;
-  } catch {
-    throw new Error(API_REQUEST_MESSAGE);
-  }
+  return await protectedRequestUrl<T>(url, init);
 }
 
 async function requestNoContent(url: string, init?: RequestInit): Promise<void> {
-  let response: Response;
-  try {
-    response = await fetch(url, init);
-  } catch {
-    throw new Error(API_UNAVAILABLE_MESSAGE);
-  }
-
-  if (!response.ok) {
-    throw new Error(API_REQUEST_MESSAGE);
-  }
+  await protectedRequestNoContentUrl(url, init);
 }
 
 async function fetchRecordsPage(page: number, limit: number): Promise<RecordsApiResponse> {
