@@ -17,6 +17,26 @@ dependencies = [
     "uvicorn==0.35.0",
 ]
 
+[dependency-groups]
+dev = [
+    "httpx==0.28.1",
+    "pytest==8.4.1",
+    "pytest-cov>=6.0.0",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "--strict-markers"
+
+[tool.coverage.run]
+source = ["src.brasaland_api.auth"]
+omit = ["tests/*"]
+
+[tool.coverage.report]
+fail_under = 70
+show_missing = true
+skip_covered = true
+
 [project.scripts]
 brasaland-api = "brasaland_api:main"
 
