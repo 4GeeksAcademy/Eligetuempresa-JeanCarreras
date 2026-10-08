@@ -313,7 +313,19 @@ export default function CandidateDetailPage() {
     return (
       <main className="mx-auto flex w-full max-w-5xl flex-1 flex-col gap-6 px-4 py-8 sm:px-6 lg:px-10">
         <section className="rounded-2xl border bg-white p-6 text-[var(--brand-2)] shadow-sm">
-          <p className="feedback feedback-error">Error cargando candidatura: {errorMessage || "No se encontro el registro"}</p>
+          <p className="feedback feedback-error">
+            No se pudo cargar la candidatura. {errorMessage || "El registro no esta disponible."}
+          </p>
+          <button
+            type="button"
+            onClick={() => {
+              setIsLoading(true);
+              void loadDetail();
+            }}
+            className="mt-3 rounded-lg border bg-white px-3 py-2 text-sm font-semibold"
+          >
+            Reintentar
+          </button>
         </section>
         <Link href={backHref} className="rounded-lg border bg-white px-3 py-2 text-sm font-semibold w-fit">
           Volver al listado

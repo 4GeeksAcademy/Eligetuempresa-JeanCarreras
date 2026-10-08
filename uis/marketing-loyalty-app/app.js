@@ -26,6 +26,7 @@ const OPS_ROLE = "operations";
 const OPS_TOKEN = "brasaland-operations-token";
 
 const statusText = document.getElementById("statusText");
+const retryAppButton = document.getElementById("retryApp");
 const customerSelect = document.getElementById("customerSelect");
 const currencySelect = document.getElementById("currencySelect");
 const pointsMetric = document.getElementById("pointsMetric");
@@ -46,38 +47,49 @@ let cachedCustomers = [];
 
 async function fetchJson(path, headers = {}) {
   if (!API_BASE) {
-    throw new Error("API base no configurada");
+    throw new Error("La conexion con la API no esta disponible. Reintenta en unos minutos.");
   }
-  const response = await fetch(`${API_BASE}${path}`, { headers });
+  let response;
+  try {
+    response = await fetch(`${API_BASE}${path}`, { headers });
+  } catch (_error) {
+    throw new Error("No se pudo conectar con la API. Reintenta en unos minutos.");
+  }
   if (!response.ok) {
-    throw new Error(`Request failed (${response.status})`);
+    throw new Error("No fue posible obtener los datos solicitados. Reintenta nuevamente.");
   }
-  return response.json();
+  try {
+    return await response.json();
+  } catch (_error) {
+    throw new Error("La API devolvio datos no disponibles. Reintenta nuevamente.");
+  }
 }
 
 async function postJson(path, payload, headers = {}) {
   if (!API_BASE) {
-    throw new Error("API base no configurada");
+    throw new Error("La conexion con la API no esta disponible. Reintenta en unos minutos.");
   }
-  const response = await fetch(`${API_BASE}${path}`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      ...headers,
-    },
-    body: JSON.stringify(payload),
-  });
+  let response;
+  try {
+    response = await fetch(`${API_BASE}${path}`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...headers,
+      },
+      body: JSON.stringify(payload),
+    });
+  } catch (_error) {
+    throw new Error("No se pudo conectar con la API. Reintenta en unos minutos.");
+  }
   if (!response.ok) {
-    let detail = `Request failed (${response.status})`;
-    try {
-      const body = await response.json();
-      detail = body.detail || detail;
-    } catch (_error) {
-      // Keep fallback detail.
-    }
-    throw new Error(detail);
+    throw new Error("No fue posible registrar el pedido. Revisa los datos e intenta nuevamente.");
   }
-  return response.json();
+  try {
+    return await response.json();
+  } catch (_error) {
+    throw new Error("La API devolvio datos no disponibles. Reintenta nuevamente.");
+  }
 }
 
 function moneyFormatter(currency) {
@@ -247,6 +259,9 @@ async function submitOrder(event) {
 }
 
 async function refreshAll() {
+  if (retryAppButton) {
+    retryAppButton.hidden = true;
+  }
   statusText.textContent = API_BASE ? `Conectando con ${API_BASE}...` : "Modo demo no habilitado para esta app.";
   try {
     await Promise.all([loadStores(), loadCustomers()]);
@@ -257,21 +272,30 @@ async function refreshAll() {
       second: "2-digit",
     })}`;
   } catch (error) {
-    statusText.textContent = `No fue posible cargar la app: ${error.message}`;
+    statusText.textContent = `No fue posible cargar la app: ${error.message} Reintenta nuevamente.`;
+    if (retryAppButton) {
+      retryAppButton.hidden = false;
+    }
   }
 }
 
 function bootstrap() {
   customerSelect.addEventListener("change", () => {
-    loadCustomerExperience();
+    void refreshAll();
   });
 
   currencySelect.addEventListener("change", () => {
-    refreshAll();
+    void refreshAll();
   });
 
+  if (retryAppButton) {
+    retryAppButton.addEventListener("click", () => {
+      void refreshAll();
+    });
+  }
+
   orderForm.addEventListener("submit", submitOrder);
-  refreshAll();
+  void refreshAll();
 }
 
 bootstrap();
