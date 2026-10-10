@@ -1,0 +1,634 @@
+{
+  "format": "brasaland-event-catalog/v1",
+  "schemaVersion": "1.0.0",
+  "description": "Contrato versionado de telemetria Brasaland. properties es una allowlist cerrada por event_type.",
+  "envelope": {
+    "required": ["eventId", "timestamp", "sessionId", "userId", "event_type", "schemaVersion", "requestId", "properties"],
+    "fields": {
+      "eventId": {"type": "string", "format": "uuid", "required": true, "description": "Identificador unico para deduplicacion."},
+      "timestamp": {"type": "string", "format": "date-time", "required": true, "description": "Instante UTC ISO 8601 en que ocurrio el hecho."},
+      "sessionId": {"type": ["string", "null"], "required": true, "description": "Sesion seudonima; null antes de autenticar o en procesos sin sesion."},
+      "userId": {"type": ["string", "null"], "required": true, "description": "ID HMAC seudonimo; null para anónimo/proceso. Nunca email ni ID interno en claro."},
+      "event_type": {"type": "string", "required": true, "description": "Nombre entidad_accion de un tipo declarado en catalog."},
+      "schemaVersion": {"type": "string", "required": true, "const": "1.0.0", "description": "Version del envelope/contrato."},
+      "requestId": {"type": "string", "required": true, "description": "ID de correlacion generado en el borde y propagado por cliente/API/logs."},
+      "properties": {"type": "object", "required": true, "additionalProperties": false, "description": "Payload limitado a allowlist del evento."}
+    }
+  },
+  "conventions": {
+    "propertyTypes": ["string", "integer", "number", "boolean"],
+    "classificationValues": ["obligatorio_rfi", "baseline_context", "oportunidad"],
+    "deliveryModes": ["stream", "batch"],
+    "countryValues": ["CO", "US"],
+    "currencyValues": ["COP", "USD"],
+    "privacy": "Cada propiedad declara sensitive y sanitization. No enviar PII ni valores fuera de allowlist.",
+    "validation": "allowlist debe ser exactamente las claves de properties; required debe ser subconjunto de allowlist. event_type es unico. Todos los eventos heredan envelope.required."
+  },
+  "catalog": [
+    {
+      "event_type": "sales_event_recorded",
+      "classification": "baseline_context",
+      "description": "Venta canónica confirmada; fuente para ventas por local/pais/moneda.",
+      "hypothesis": "El volumen y valor de ventas varia por local y mercado.",
+      "decision": "Ajustar operacion y comparar resultados preservando moneda de origen.",
+      "delivery": {"mode": "batch", "cadence": "15 min; agregacion diaria/semanal", "reason": "Los reportes de ventas no requieren reaccion en segundos."},
+      "pii": false,
+      "privacy": "No incluir comprador ni lineas de pedido; importar idempotentemente desde el evento transaccional.",
+      "allowlist": ["sale_id", "store_id", "country", "sold_at", "total_amount", "currency", "timezone"],
+      "required": ["sale_id", "store_id", "country", "sold_at", "total_amount", "currency", "timezone"],
+      "properties": {
+        "sale_id": {"type": "string", "required": true, "description": "ID de venta operacional, no identificador de cliente.", "sensitive": false, "sanitization": "Validar formato y alcance Brasaland."},
+        "store_id": {"type": "string", "required": true, "description": "ID canonico del local.", "sensitive": false, "sanitization": "Allowlist de locales."},
+        "country": {"type": "string", "enum": ["CO", "US"], "required": true, "description": "Pais del local.", "sensitive": false, "sanitization": "Enum cerrado."},
+        "sold_at": {"type": "string", "format": "date-time", "required": true, "description": "Hora de venta ISO 8601.", "sensitive": false, "sanitization": "Normalizar a UTC sin perder timezone del local."},
+        "total_amount": {"type": "number", "required": true, "description": "Importe bruto de la venta en moneda indicada.", "sensitive": false, "sanitization": "Numero finito >= 0; no sumar monedas distintas."},
+        "currency": {"type": "string", "enum": ["COP", "USD"], "required": true, "description": "Moneda original.", "sensitive": false, "sanitization": "Enum cerrado."},
+        "timezone": {"type": "string", "required": true, "description": "Zona IANA del local.", "sensitive": false, "sanitization": "Validar contra configuracion del local."}
+      }
+    },
+    {
+      "event_type": "finance_kpi_snapshot_recorded",
+      "classification": "baseline_context",
+      "description": "Snapshot agregado de ticket promedio y margen estimado.",
+      "hypothesis": "Ticket promedio o margen estimado cambia por pais/local.",
+      "decision": "Priorizar revision comercial y financiera.",
+      "delivery": {"mode": "batch", "cadence": "diario", "reason": "El cierre consolidado no necesita actualizacion por segundo."},
+      "pii": false,
+      "privacy": "Solo agregado por periodo, pais/local y moneda; indicar version de conversion si se consolida.",
+      "allowlist": ["period_start", "period_end", "store_id", "country", "currency", "sales_count", "total_sales", "average_ticket", "estimated_gross_margin_pct", "fx_rate_version"],
+      "required": ["period_start", "period_end", "country", "currency", "sales_count", "total_sales", "average_ticket", "estimated_gross_margin_pct"],
+      "properties": {
+        "period_start": {"type": "string", "format": "date-time", "required": true, "description": "Inicio del periodo incluido.", "sensitive": false, "sanitization": "UTC ISO 8601."},
+        "period_end": {"type": "string", "format": "date-time", "required": true, "description": "Fin exclusivo del periodo.", "sensitive": false, "sanitization": "UTC ISO 8601; validar mayor que inicio."},
+        "store_id": {"type": "string", "required": false, "description": "Local; omitido para agregado nacional/cadena.", "sensitive": false, "sanitization": "Allowlist de locales."},
+        "country": {"type": "string", "enum": ["CO", "US"], "required": true, "description": "Mercado incluido.", "sensitive": false, "sanitization": "Enum cerrado."},
+        "currency": {"type": "string", "enum": ["COP", "USD"], "required": true, "description": "Moneda del snapshot.", "sensitive": false, "sanitization": "Enum cerrado; conservar moneda original o fx_rate_version."},
+        "sales_count": {"type": "integer", "required": true, "description": "Numero de ventas incluidas.", "sensitive": false, "sanitization": "Entero >= 0."},
+        "total_sales": {"type": "number", "required": true, "description": "Ventas totales del periodo.", "sensitive": false, "sanitization": "Numero finito >= 0."},
+        "average_ticket": {"type": "number", "required": true, "description": "Total dividido por ventas; cero si no hay ventas.", "sensitive": false, "sanitization": "Numero finito; definir denominador cero."},
+        "estimated_gross_margin_pct": {"type": "number", "required": true, "description": "Margen estimado porcentual, no contable.", "sensitive": false, "sanitization": "Rango documentado y marcar como estimado."},
+        "fx_rate_version": {"type": "string", "required": false, "description": "Version de tasa usada para convertir moneda.", "sensitive": false, "sanitization": "Referencia versionada; no aceptar texto libre."}
+      }
+    },
+    {
+      "event_type": "inventory_outbound_order_submitted",
+      "classification": "obligatorio_rfi",
+      "description": "Orden de salida aceptada y persistida por flujo trazable.",
+      "hypothesis": "El volumen/cantidad de salidas varia por local y SKU.",
+      "decision": "Reponer, investigar consumo y reducir riesgo de quiebre.",
+      "delivery": {"mode": "stream", "cadence": "por confirmacion", "reason": "Operaciones necesita existencias recientes durante el turno."},
+      "pii": false,
+      "privacy": "Solo actor HMAC en envelope; no incluir nota libre. Evento futuro: no existe ruta de salida hoy.",
+      "allowlist": ["order_id", "store_id", "country", "sku", "quantity", "unit", "reason_code", "movement_id"],
+      "required": ["order_id", "store_id", "country", "sku", "quantity", "unit", "reason_code", "movement_id"],
+      "properties": {
+        "order_id": {"type": "string", "required": true, "description": "ID de orden aceptada.", "sensitive": false, "sanitization": "ID operacional validado."},
+        "store_id": {"type": "string", "required": true, "description": "Local de salida.", "sensitive": false, "sanitization": "Allowlist de locales."},
+        "country": {"type": "string", "enum": ["CO", "US"], "required": true, "description": "Pais del local.", "sensitive": false, "sanitization": "Enum cerrado."},
+        "sku": {"type": "string", "required": true, "description": "SKU afectado.", "sensitive": false, "sanitization": "Validar contra catalogo; no nombre libre."},
+        "quantity": {"type": "number", "required": true, "description": "Cantidad de salida positiva.", "sensitive": false, "sanitization": "Numero finito > 0."},
+        "unit": {"type": "string", "required": true, "description": "Unidad canonica del SKU.", "sensitive": false, "sanitization": "Enum del catalogo."},
+        "reason_code": {"type": "string", "required": true, "description": "Motivo operacional codificado.", "sensitive": false, "sanitization": "Enum cerrado; no notas."},
+        "movement_id": {"type": "string", "required": true, "description": "ID del movimiento de stock persistido.", "sensitive": false, "sanitization": "Solo emitir tras commit."}
+      }
+    },
+    {
+      "event_type": "inventory_receipt_created",
+      "classification": "oportunidad",
+      "description": "Entrada de inventario confirmada mediante recibo.",
+      "hypothesis": "Las recepciones cierran recomendaciones y cambian cobertura.",
+      "decision": "Conciliar cantidades/costos y confirmar reposicion.",
+      "delivery": {"mode": "stream", "cadence": "por commit", "reason": "La disponibilidad del stock debe reflejarse en el turno actual."},
+      "pii": false,
+      "privacy": "No enviar note; evento actual corresponde a /api/v1/inventory/receipts.",
+      "allowlist": ["receipt_id", "store_id", "country", "sku", "received_qty", "unit", "unit_cost", "currency"],
+      "required": ["receipt_id", "store_id", "country", "sku", "received_qty", "unit", "currency"],
+      "properties": {
+        "receipt_id": {"type": "string", "required": true, "description": "ID del recibo confirmado.", "sensitive": false, "sanitization": "ID operacional."},
+        "store_id": {"type": "string", "required": true, "description": "Local receptor.", "sensitive": false, "sanitization": "Allowlist de locales."},
+        "country": {"type": "string", "enum": ["CO", "US"], "required": true, "description": "Pais del local.", "sensitive": false, "sanitization": "Enum cerrado."},
+        "sku": {"type": "string", "required": true, "description": "SKU recibido.", "sensitive": false, "sanitization": "Validar catalogo."},
+        "received_qty": {"type": "number", "required": true, "description": "Cantidad recibida.", "sensitive": false, "sanitization": "Numero finito > 0."},
+        "unit": {"type": "string", "required": true, "description": "Unidad del SKU.", "sensitive": false, "sanitization": "Enum del catalogo."},
+        "unit_cost": {"type": "number", "required": false, "description": "Costo unitario declarado.", "sensitive": false, "sanitization": "Numero finito >= 0; acceso limitado a compras/finanzas."},
+        "currency": {"type": "string", "enum": ["COP", "USD"], "required": true, "description": "Moneda del costo.", "sensitive": false, "sanitization": "Enum cerrado."}
+      }
+    },
+    {
+      "event_type": "inventory_validation_failed",
+      "classification": "obligatorio_rfi",
+      "description": "Validacion de inventario rechazada antes de confirmar movimiento.",
+      "hypothesis": "Errores se concentran en SKU o regla de validacion.",
+      "decision": "Corregir catalogo, validacion, UX o capacitacion.",
+      "delivery": {"mode": "batch", "cadence": "15 min", "reason": "Importa la tendencia de errores, no alertar por cada intento."},
+      "pii": false,
+      "privacy": "No incluir entrada libre ni detalle HTTP; usar codigo de regla y SKU validado cuando exista.",
+      "allowlist": ["store_id", "country", "sku", "validation_code", "operation", "field_name"],
+      "required": ["country", "validation_code", "operation"],
+      "properties": {
+        "store_id": {"type": "string", "required": false, "description": "Local del intento, si se conoce.", "sensitive": false, "sanitization": "Allowlist de locales."},
+        "country": {"type": "string", "enum": ["CO", "US"], "required": true, "description": "Pais del contexto.", "sensitive": false, "sanitization": "Enum cerrado."},
+        "sku": {"type": "string", "required": false, "description": "SKU canonico asociado.", "sensitive": false, "sanitization": "Solo SKU existente; omitir input invalido."},
+        "validation_code": {"type": "string", "required": true, "description": "Codigo estable de regla fallida.", "sensitive": false, "sanitization": "Enum cerrado y sin mensaje libre."},
+        "operation": {"type": "string", "required": true, "description": "Tipo de operacion intentada.", "sensitive": false, "sanitization": "Enum de operaciones."},
+        "field_name": {"type": "string", "required": false, "description": "Campo validado, nunca su valor.", "sensitive": false, "sanitization": "Allowlist estatica de campos."}
+      }
+    },
+    {
+      "event_type": "inventory_direct_stock_edit_rejected",
+      "classification": "obligatorio_rfi",
+      "description": "Intento de mutar stock fuera de movimientos autorizados; siempre rechazado.",
+      "hypothesis": "Usuarios o clientes intentan saltar el ledger de movimientos.",
+      "decision": "Investigar UX/permisos y mantener la regla de trazabilidad.",
+      "delivery": {"mode": "stream", "cadence": "por intento", "reason": "Un intento de elusion requiere deteccion inmediata."},
+      "pii": true,
+      "privacy": "userId del envelope solo HMAC; nunca payload, token o direccion de red.",
+      "allowlist": ["store_id", "country", "sku", "rejection_code", "actor_type"],
+      "required": ["country", "rejection_code", "actor_type"],
+      "properties": {
+        "store_id": {"type": "string", "required": false, "description": "Local objetivo si se resolvio.", "sensitive": false, "sanitization": "Allowlist de locales."},
+        "country": {"type": "string", "enum": ["CO", "US"], "required": true, "description": "Pais del recurso.", "sensitive": false, "sanitization": "Enum cerrado."},
+        "sku": {"type": "string", "required": false, "description": "SKU objetivo conocido.", "sensitive": false, "sanitization": "Validar contra catalogo."},
+        "rejection_code": {"type": "string", "required": true, "description": "Motivo de rechazo codificado.", "sensitive": false, "sanitization": "Enum cerrado."},
+        "actor_type": {"type": "string", "enum": ["user", "service", "anonymous"], "required": true, "description": "Clase de actor, no su identidad directa.", "sensitive": false, "sanitization": "Enum cerrado."}
+      }
+    },
+    {
+      "event_type": "inventory_stock_threshold_triggered",
+      "classification": "obligatorio_rfi",
+      "description": "Stock cruza el minimo configurado hacia abajo.",
+      "hypothesis": "Los cruces de minimo preceden riesgo de quiebre.",
+      "decision": "Priorizar reposicion del SKU/local durante el turno.",
+      "delivery": {"mode": "stream", "cadence": "por transicion", "reason": "La respuesta operativa debe ocurrir antes del proximo servicio."},
+      "pii": false,
+      "privacy": "Sin identidad personal en payload; deduplicar hasta recuperacion sobre umbral.",
+      "allowlist": ["store_id", "country", "sku", "current_stock", "min_stock", "unit", "timezone"],
+      "required": ["store_id", "country", "sku", "current_stock", "min_stock", "unit", "timezone"],
+      "properties": {
+        "store_id": {"type": "string", "required": true, "description": "Local afectado.", "sensitive": false, "sanitization": "Allowlist de locales."},
+        "country": {"type": "string", "enum": ["CO", "US"], "required": true, "description": "Pais del local.", "sensitive": false, "sanitization": "Enum cerrado."},
+        "sku": {"type": "string", "required": true, "description": "SKU bajo minimo.", "sensitive": false, "sanitization": "Validar catalogo."},
+        "current_stock": {"type": "number", "required": true, "description": "Existencia al cruce.", "sensitive": false, "sanitization": "Numero finito >= 0."},
+        "min_stock": {"type": "number", "required": true, "description": "Minimo vigente al cruce.", "sensitive": false, "sanitization": "Numero finito >= 0."},
+        "unit": {"type": "string", "required": true, "description": "Unidad canonica.", "sensitive": false, "sanitization": "Enum del catalogo."},
+        "timezone": {"type": "string", "required": true, "description": "Zona del local para priorizar horario.", "sensitive": false, "sanitization": "Validar zona IANA del local."}
+      }
+    },
+    {
+      "event_type": "inventory_stockout_detected",
+      "classification": "baseline_context",
+      "description": "Stock agotado segun regla aprobada de disponibilidad.",
+      "hypothesis": "Quiebres se concentran por categoria, SKU y local.",
+      "decision": "Redistribuir, reponer o ajustar disponibilidad del menu.",
+      "delivery": {"mode": "stream", "cadence": "por transicion", "reason": "El quiebre afecta ventas y servicio inmediatos."},
+      "pii": false,
+      "privacy": "Evento operacional sin datos de cliente; requiere definicion de stockout acordada.",
+      "allowlist": ["store_id", "country", "sku", "category", "unit", "detected_at"],
+      "required": ["store_id", "country", "sku", "category", "unit", "detected_at"],
+      "properties": {
+        "store_id": {"type": "string", "required": true, "description": "Local afectado.", "sensitive": false, "sanitization": "Allowlist de locales."},
+        "country": {"type": "string", "enum": ["CO", "US"], "required": true, "description": "Pais del local.", "sensitive": false, "sanitization": "Enum cerrado."},
+        "sku": {"type": "string", "required": true, "description": "SKU agotado.", "sensitive": false, "sanitization": "Validar catalogo."},
+        "category": {"type": "string", "required": true, "description": "Categoria canonica de insumo.", "sensitive": false, "sanitization": "Enum/catalogo; no texto libre."},
+        "unit": {"type": "string", "required": true, "description": "Unidad del SKU.", "sensitive": false, "sanitization": "Enum del catalogo."},
+        "detected_at": {"type": "string", "format": "date-time", "required": true, "description": "Momento de deteccion.", "sensitive": false, "sanitization": "ISO 8601 UTC."}
+      }
+    },
+    {
+      "event_type": "inventory_overstock_detected",
+      "classification": "baseline_context",
+      "description": "Stock supera umbral de sobrestock acordado.",
+      "hypothesis": "El exceso se concentra por categoria/local y aumenta costo o merma.",
+      "decision": "Reducir compras o redistribuir inventario.",
+      "delivery": {"mode": "batch", "cadence": "diario", "reason": "La redistribucion se decide en ciclo de compra, no por segundo."},
+      "pii": false,
+      "privacy": "Regla de exceso debe versionarse; evento de transicion, no repetido por consulta.",
+      "allowlist": ["store_id", "country", "sku", "category", "current_stock", "target_stock", "unit", "rule_version"],
+      "required": ["store_id", "country", "sku", "category", "current_stock", "target_stock", "unit", "rule_version"],
+      "properties": {
+        "store_id": {"type": "string", "required": true, "description": "Local afectado.", "sensitive": false, "sanitization": "Allowlist de locales."},
+        "country": {"type": "string", "enum": ["CO", "US"], "required": true, "description": "Pais.", "sensitive": false, "sanitization": "Enum cerrado."},
+        "sku": {"type": "string", "required": true, "description": "SKU en exceso.", "sensitive": false, "sanitization": "Validar catalogo."},
+        "category": {"type": "string", "required": true, "description": "Categoria canonica.", "sensitive": false, "sanitization": "Enum/catalogo."},
+        "current_stock": {"type": "number", "required": true, "description": "Stock observado.", "sensitive": false, "sanitization": "Numero finito >= 0."},
+        "target_stock": {"type": "number", "required": true, "description": "Objetivo de stock aplicable.", "sensitive": false, "sanitization": "Numero finito >= 0."},
+        "unit": {"type": "string", "required": true, "description": "Unidad canonica.", "sensitive": false, "sanitization": "Enum del catalogo."},
+        "rule_version": {"type": "string", "required": true, "description": "Version de politica de sobrestock.", "sensitive": false, "sanitization": "Identificador versionado."}
+      }
+    },
+    {
+      "event_type": "inventory_recommendation_generated",
+      "classification": "oportunidad",
+      "description": "Recomendacion de reposicion calculada para SKU/local.",
+      "hypothesis": "Cobertura proyectada permite anticipar faltantes y calibrar recomendaciones.",
+      "decision": "Ordenar primero riesgo critico y revisar calidad del modelo/regla.",
+      "delivery": {"mode": "batch", "cadence": "cada hora", "reason": "La recomendacion recalculada por lectura no amerita streaming continuo."},
+      "pii": false,
+      "privacy": "No incluir tickets ni ventas individualizadas; usar metricas agregadas.",
+      "allowlist": ["store_id", "country", "sku", "current_stock", "projected_days_of_cover", "recommended_order_qty", "risk_level", "currency"],
+      "required": ["store_id", "country", "sku", "current_stock", "projected_days_of_cover", "recommended_order_qty", "risk_level", "currency"],
+      "properties": {
+        "store_id": {"type": "string", "required": true, "description": "Local recomendado.", "sensitive": false, "sanitization": "Allowlist de locales."},
+        "country": {"type": "string", "enum": ["CO", "US"], "required": true, "description": "Pais.", "sensitive": false, "sanitization": "Enum cerrado."},
+        "sku": {"type": "string", "required": true, "description": "SKU.", "sensitive": false, "sanitization": "Validar catalogo."},
+        "current_stock": {"type": "number", "required": true, "description": "Existencia observada.", "sensitive": false, "sanitization": "Numero finito >= 0."},
+        "projected_days_of_cover": {"type": "number", "required": true, "description": "Dias proyectados de cobertura.", "sensitive": false, "sanitization": "Numero finito >= 0."},
+        "recommended_order_qty": {"type": "number", "required": true, "description": "Cantidad sugerida, no orden confirmada.", "sensitive": false, "sanitization": "Numero finito >= 0."},
+        "risk_level": {"type": "string", "enum": ["ok", "warning", "critical"], "required": true, "description": "Nivel de riesgo calculado.", "sensitive": false, "sanitization": "Enum cerrado y versionar regla."},
+        "currency": {"type": "string", "enum": ["COP", "USD"], "required": true, "description": "Moneda de costo si aplica.", "sensitive": false, "sanitization": "Enum cerrado."}
+      }
+    },
+    {
+      "event_type": "auth_login_succeeded",
+      "classification": "oportunidad",
+      "description": "Autenticacion local completada correctamente.",
+      "hypothesis": "La adopcion de backoffice difiere por rol y mercado.",
+      "decision": "Planificar soporte y evaluar acceso al sistema.",
+      "delivery": {"mode": "batch", "cadence": "diario", "reason": "El analisis de adopcion es agregado y no requiere reaccion inmediata."},
+      "pii": true,
+      "privacy": "userId HMAC; no email, token, IP ni huella de dispositivo.",
+      "allowlist": ["auth_method", "role", "country"],
+      "required": ["auth_method", "role"],
+      "properties": {
+        "auth_method": {"type": "string", "required": true, "description": "Metodo de autenticacion.", "sensitive": false, "sanitization": "Enum de metodos aprobados."},
+        "role": {"type": "string", "required": true, "description": "Rol de acceso.", "sensitive": false, "sanitization": "Enum de roles; nunca permisos libres."},
+        "country": {"type": "string", "enum": ["CO", "US"], "required": false, "description": "Pais asociado a la cuenta si aplica.", "sensitive": false, "sanitization": "Enum cerrado."}
+      }
+    },
+    {
+      "event_type": "auth_login_failed",
+      "classification": "obligatorio_rfi",
+      "description": "Intento de login fallido, incluido usuario inexistente con respuesta indistinguible.",
+      "hypothesis": "Tasa alta o repetitiva indica friccion o intento automatizado.",
+      "decision": "Investigar y aplicar mitigacion sin revelar existencia de cuenta.",
+      "delivery": {"mode": "stream", "cadence": "agregado cada minuto", "reason": "Ataques repetidos deben detectarse en minutos."},
+      "pii": true,
+      "privacy": "No guardar email ni hash de email; userId null para fallo no resuelto. Aplicar limite y agregacion anti-enumeracion.",
+      "allowlist": ["failure_code", "auth_method", "country", "source_class"],
+      "required": ["failure_code", "auth_method", "source_class"],
+      "properties": {
+        "failure_code": {"type": "string", "required": true, "description": "Clase generica de fallo.", "sensitive": false, "sanitization": "Enum; nunca indicar si email existe."},
+        "auth_method": {"type": "string", "required": true, "description": "Metodo probado.", "sensitive": false, "sanitization": "Enum cerrado."},
+        "country": {"type": "string", "enum": ["CO", "US"], "required": false, "description": "Pais solo si conocido por contexto autorizado.", "sensitive": false, "sanitization": "Enum cerrado; no inferir por IP."},
+        "source_class": {"type": "string", "enum": ["web", "api", "service", "unknown"], "required": true, "description": "Clase de cliente, no identificador de red.", "sensitive": false, "sanitization": "Enum cerrado."}
+      }
+    },
+    {
+      "event_type": "auth_session_expired",
+      "classification": "obligatorio_rfi",
+      "description": "Sesion autenticada rechazada por expiracion de credencial.",
+      "hypothesis": "Expiraciones durante tareas interrumpen operadores.",
+      "decision": "Revisar duracion, renovacion o recuperacion de sesion.",
+      "delivery": {"mode": "batch", "cadence": "15 min", "reason": "Se gestiona por tasa/impacto, no por cada expiracion aislada."},
+      "pii": true,
+      "privacy": "No conservar token; userId HMAC solo si puede validarse sin aceptar la sesion expirada.",
+      "allowlist": ["role", "route_group", "session_age_minutes", "country"],
+      "required": ["route_group"],
+      "properties": {
+        "role": {"type": "string", "required": false, "description": "Rol conocido por claim validado parcialmente.", "sensitive": false, "sanitization": "Enum de roles; omitir si no confiable."},
+        "route_group": {"type": "string", "required": true, "description": "Grupo de ruta solicitada.", "sensitive": false, "sanitization": "Plantilla de ruta, sin path params."},
+        "session_age_minutes": {"type": "number", "required": false, "description": "Edad estimada de sesion al rechazo.", "sensitive": false, "sanitization": "Numero finito >= 0; omitir si no verificable."},
+        "country": {"type": "string", "enum": ["CO", "US"], "required": false, "description": "Pais de contexto si conocido.", "sensitive": false, "sanitization": "Enum cerrado."}
+      }
+    },
+    {
+      "event_type": "auth_access_denied",
+      "classification": "oportunidad",
+      "description": "Actor autenticado no autorizado para recurso/accion.",
+      "hypothesis": "Denegaciones persistentes indican rol mal asignado o actividad indebida.",
+      "decision": "Corregir permisos o investigar acceso anomalo.",
+      "delivery": {"mode": "stream", "cadence": "inmediato en recurso sensible; resto 15 min", "reason": "Denegacion de acciones sensibles puede requerir respuesta de seguridad."},
+      "pii": true,
+      "privacy": "Actor solo HMAC en envelope; ruta reducida a grupo, sin IP/token.",
+      "allowlist": ["role", "resource_group", "action", "country"],
+      "required": ["role", "resource_group", "action"],
+      "properties": {
+        "role": {"type": "string", "required": true, "description": "Rol autenticado.", "sensitive": false, "sanitization": "Enum de roles."},
+        "resource_group": {"type": "string", "required": true, "description": "Grupo logico del recurso.", "sensitive": false, "sanitization": "Enum de recursos; sin path params."},
+        "action": {"type": "string", "required": true, "description": "Accion denegada.", "sensitive": false, "sanitization": "Enum de acciones."},
+        "country": {"type": "string", "enum": ["CO", "US"], "required": false, "description": "Pais del recurso.", "sensitive": false, "sanitization": "Enum cerrado."}
+      }
+    },
+    {
+      "event_type": "navigation_section_viewed",
+      "classification": "obligatorio_rfi",
+      "description": "Seccion interna visible/activa en backoffice.",
+      "hypothesis": "Uso por seccion difiere por rol/local.",
+      "decision": "Priorizar UX y formacion de secciones poco usadas o criticas.",
+      "delivery": {"mode": "batch", "cadence": "diario", "reason": "La adopcion se analiza como tendencia, sin accion segundo a segundo."},
+      "pii": true,
+      "privacy": "userId HMAC; no URLs completas, query strings ni navegacion fuera de Brasaland.",
+      "allowlist": ["section_id", "role", "store_id", "country", "client_platform"],
+      "required": ["section_id", "client_platform"],
+      "properties": {
+        "section_id": {"type": "string", "required": true, "description": "Identificador estatico de seccion.", "sensitive": false, "sanitization": "Enum de rutas internas permitidas."},
+        "role": {"type": "string", "required": false, "description": "Rol del usuario.", "sensitive": false, "sanitization": "Enum de roles."},
+        "store_id": {"type": "string", "required": false, "description": "Local de contexto, no domicilio del empleado.", "sensitive": false, "sanitization": "Allowlist de locales."},
+        "country": {"type": "string", "enum": ["CO", "US"], "required": false, "description": "Pais de contexto.", "sensitive": false, "sanitization": "Enum cerrado."},
+        "client_platform": {"type": "string", "enum": ["web", "mobile_web", "desktop_app"], "required": true, "description": "Clase de cliente.", "sensitive": false, "sanitization": "Enum cerrado."}
+      }
+    },
+    {
+      "event_type": "navigation_flow_started",
+      "classification": "oportunidad",
+      "description": "Inicio explicito de flujo medible para formar denominador de abandono.",
+      "hypothesis": "El abandono requiere comparar inicios y finales del mismo flujo.",
+      "decision": "Ubicar pasos que generan friccion y priorizar rediseño.",
+      "delivery": {"mode": "batch", "cadence": "diario", "reason": "El embudo se evalua agregado."},
+      "pii": true,
+      "privacy": "flow_instance_id aleatorio por sesion, no correlacionable fuera del flujo.",
+      "allowlist": ["flow_id", "flow_instance_id", "entry_point", "client_platform"],
+      "required": ["flow_id", "flow_instance_id", "entry_point", "client_platform"],
+      "properties": {
+        "flow_id": {"type": "string", "required": true, "description": "Flujo interno versionado.", "sensitive": false, "sanitization": "Enum allowlist."},
+        "flow_instance_id": {"type": "string", "required": true, "description": "UUID aleatorio para enlazar pasos del flujo.", "sensitive": false, "sanitization": "UUID nuevo; no reutilizar entre flujos."},
+        "entry_point": {"type": "string", "required": true, "description": "Punto interno de inicio.", "sensitive": false, "sanitization": "Enum de secciones internas."},
+        "client_platform": {"type": "string", "enum": ["web", "mobile_web", "desktop_app"], "required": true, "description": "Clase de cliente.", "sensitive": false, "sanitization": "Enum cerrado."}
+      }
+    },
+    {
+      "event_type": "navigation_flow_abandoned",
+      "classification": "obligatorio_rfi",
+      "description": "Flujo iniciado sin evento terminal dentro de 30 min o cancelacion observable.",
+      "hypothesis": "Un paso/flujo presenta friccion o falla.",
+      "decision": "Investigar paso, error asociado y simplificar flujo.",
+      "delivery": {"mode": "batch", "cadence": "15 min tras timeout", "reason": "La investigacion de abandono es analitica y puede esperar minutos."},
+      "pii": true,
+      "privacy": "No capturar texto/formularios; inferencia best-effort, identificar trigger para no confundir inactividad con abandono voluntario.",
+      "allowlist": ["flow_id", "flow_instance_id", "last_step_id", "abandon_reason", "elapsed_seconds", "client_platform"],
+      "required": ["flow_id", "flow_instance_id", "last_step_id", "abandon_reason", "elapsed_seconds", "client_platform"],
+      "properties": {
+        "flow_id": {"type": "string", "required": true, "description": "Flujo versionado.", "sensitive": false, "sanitization": "Enum allowlist."},
+        "flow_instance_id": {"type": "string", "required": true, "description": "ID aleatorio enlazado con inicio.", "sensitive": false, "sanitization": "UUID del flujo."},
+        "last_step_id": {"type": "string", "required": true, "description": "Ultimo paso estatico alcanzado.", "sensitive": false, "sanitization": "Enum por flujo."},
+        "abandon_reason": {"type": "string", "enum": ["timeout", "cancelled", "page_closed", "unknown"], "required": true, "description": "Senal de abandono observada.", "sensitive": false, "sanitization": "Enum; no inferir motivo humano."},
+        "elapsed_seconds": {"type": "number", "required": true, "description": "Duracion desde inicio.", "sensitive": false, "sanitization": "Numero finito >= 0."},
+        "client_platform": {"type": "string", "enum": ["web", "mobile_web", "desktop_app"], "required": true, "description": "Clase de cliente.", "sensitive": false, "sanitization": "Enum cerrado."}
+      }
+    },
+    {
+      "event_type": "api_latency_recorded",
+      "classification": "obligatorio_rfi",
+      "description": "Medicion de latencia/resultado de solicitud API sin payload.",
+      "hypothesis": "Latencia o error elevado por ruta degradan operacion.",
+      "decision": "Optimizar endpoint, asignar capacidad o activar respuesta a incidente.",
+      "delivery": {"mode": "stream", "cadence": "agregado por minuto; detalle batch", "reason": "SLO incumplido debe detectarse durante el incidente."},
+      "pii": false,
+      "privacy": "Excluir URL con parametros, IP, headers, cuerpos y query; ruta normalizada.",
+      "allowlist": ["route_template", "method", "status_code", "duration_ms", "service_version", "country"],
+      "required": ["route_template", "method", "status_code", "duration_ms", "service_version"],
+      "properties": {
+        "route_template": {"type": "string", "required": true, "description": "Plantilla API sin IDs ni query.", "sensitive": false, "sanitization": "Lista de rutas registradas."},
+        "method": {"type": "string", "enum": ["GET", "POST", "PUT", "PATCH", "DELETE", "OTHER"], "required": true, "description": "Metodo HTTP.", "sensitive": false, "sanitization": "Enum cerrado."},
+        "status_code": {"type": "integer", "required": true, "description": "Codigo de respuesta.", "sensitive": false, "sanitization": "Rango 100-599."},
+        "duration_ms": {"type": "number", "required": true, "description": "Duracion monotonicamente medida.", "sensitive": false, "sanitization": "Numero finito >= 0."},
+        "service_version": {"type": "string", "required": true, "description": "Version desplegada.", "sensitive": false, "sanitization": "Identificador de release."},
+        "country": {"type": "string", "enum": ["CO", "US"], "required": false, "description": "Pais del recurso si conocido.", "sensitive": false, "sanitization": "Enum cerrado."}
+      }
+    },
+    {
+      "event_type": "frontend_page_load_recorded",
+      "classification": "obligatorio_rfi",
+      "description": "Carga de vista completada y medida en cliente.",
+      "hypothesis": "Carga lenta por pagina/plataforma afecta tareas operativas.",
+      "decision": "Priorizar optimizacion por p95 y pagina.",
+      "delivery": {"mode": "batch", "cadence": "15 min agregado", "reason": "Se usa para tendencias de rendimiento; no alertar por muestra aislada."},
+      "pii": false,
+      "privacy": "No fingerprint; ruta estatica y metricas temporales agregadas.",
+      "allowlist": ["page_id", "duration_ms", "client_platform", "app_version", "country"],
+      "required": ["page_id", "duration_ms", "client_platform", "app_version"],
+      "properties": {
+        "page_id": {"type": "string", "required": true, "description": "Vista interna estatica.", "sensitive": false, "sanitization": "Enum allowlist; sin URL completa."},
+        "duration_ms": {"type": "number", "required": true, "description": "Tiempo de carga medido por Navigation Timing.", "sensitive": false, "sanitization": "Numero finito >= 0; limitar valores extremos."},
+        "client_platform": {"type": "string", "enum": ["web", "mobile_web", "desktop_app"], "required": true, "description": "Plataforma cliente.", "sensitive": false, "sanitization": "Enum cerrado."},
+        "app_version": {"type": "string", "required": true, "description": "Version cliente.", "sensitive": false, "sanitization": "Formato de release."},
+        "country": {"type": "string", "enum": ["CO", "US"], "required": false, "description": "Pais de contexto autorizado.", "sensitive": false, "sanitization": "Enum cerrado; no inferir por IP."}
+      }
+    },
+    {
+      "event_type": "frontend_error_captured",
+      "classification": "obligatorio_rfi",
+      "description": "Excepcion cliente no capturada o fallo de recurso relevante.",
+      "hypothesis": "Errores se agrupan por version/pagina y bloquean tareas.",
+      "decision": "Corregir release y priorizar error por frecuencia/impacto.",
+      "delivery": {"mode": "stream", "cadence": "conteo/huella por minuto", "reason": "Errores nuevos o crecientes pueden requerir mitigacion en el despliegue actual."},
+      "pii": true,
+      "privacy": "Solo huella derivada de stack saneado; eliminar mensajes, rutas absolutas, valores y datos de usuario.",
+      "allowlist": ["error_fingerprint", "error_class", "page_id", "app_version", "fatal", "source_area"],
+      "required": ["error_fingerprint", "error_class", "page_id", "app_version", "fatal", "source_area"],
+      "properties": {
+        "error_fingerprint": {"type": "string", "required": true, "description": "Hash de stack normalizado y redactado.", "sensitive": true, "sanitization": "Quitar rutas, literales y frames externos; hash tras limpieza."},
+        "error_class": {"type": "string", "required": true, "description": "Clase de excepcion, sin mensaje.", "sensitive": false, "sanitization": "Nombre de clase allowlist/longitud limitada."},
+        "page_id": {"type": "string", "required": true, "description": "Vista interna.", "sensitive": false, "sanitization": "Enum allowlist."},
+        "app_version": {"type": "string", "required": true, "description": "Release cliente.", "sensitive": false, "sanitization": "Formato de release."},
+        "fatal": {"type": "boolean", "required": true, "description": "Si impide continuar la tarea.", "sensitive": false, "sanitization": "Booleano calculado."},
+        "source_area": {"type": "string", "required": true, "description": "Modulo interno que origino fallo.", "sensitive": false, "sanitization": "Enum de modulos."}
+      }
+    },
+    {
+      "event_type": "backend_error_captured",
+      "classification": "oportunidad",
+      "description": "Fallo de servidor clasificado sin excepcion/payload crudo.",
+      "hypothesis": "Regresiones se concentran por ruta y release.",
+      "decision": "Mitigar incidente y corregir causa priorizando tasa e impacto.",
+      "delivery": {"mode": "stream", "cadence": "por excepcion critica y agregacion por minuto", "reason": "5xx y fallas criticas afectan tareas en curso."},
+      "pii": true,
+      "privacy": "No enviar stack completo, SQL, request body, token ni mensaje potencialmente personal; usar huella saneada.",
+      "allowlist": ["error_fingerprint", "error_class", "route_template", "status_code", "service_version", "critical"],
+      "required": ["error_fingerprint", "error_class", "route_template", "status_code", "service_version", "critical"],
+      "properties": {
+        "error_fingerprint": {"type": "string", "required": true, "description": "Hash de stack normalizado.", "sensitive": true, "sanitization": "Redactar literales/identificadores antes de hash."},
+        "error_class": {"type": "string", "required": true, "description": "Clase de error sin mensaje.", "sensitive": false, "sanitization": "Limitar longitud y validar nombre de clase."},
+        "route_template": {"type": "string", "required": true, "description": "Ruta registrada sin parámetros.", "sensitive": false, "sanitization": "Lista de rutas."},
+        "status_code": {"type": "integer", "required": true, "description": "Codigo de respuesta.", "sensitive": false, "sanitization": "Rango 100-599."},
+        "service_version": {"type": "string", "required": true, "description": "Release del servidor.", "sensitive": false, "sanitization": "Identificador de release."},
+        "critical": {"type": "boolean", "required": true, "description": "Severidad segun regla versionada.", "sensitive": false, "sanitization": "Booleano derivado de politica."}
+      }
+    },
+    {
+      "event_type": "pos_connectivity_observed",
+      "classification": "oportunidad",
+      "description": "Cambio de estado o heartbeat consolidado de conectividad POS.",
+      "hypothesis": "Locales desconectados o sin reporte durante apertura pierden visibilidad de ventas.",
+      "decision": "Contactar local o restaurar integracion antes de prolongar inactividad.",
+      "delivery": {"mode": "stream", "cadence": "cambio de estado; heartbeat maximo 5 min", "reason": "La inactividad durante horas de apertura requiere deteccion cercana a tiempo real."},
+      "pii": false,
+      "privacy": "No enviar IP/hostname ni payload POS; terminal_version es version, no serial.",
+      "allowlist": ["store_id", "country", "source_system", "connectivity_state", "observed_at", "latency_ms", "terminal_version"],
+      "required": ["store_id", "country", "source_system", "connectivity_state", "observed_at"],
+      "properties": {
+        "store_id": {"type": "string", "required": true, "description": "Local que reporta.", "sensitive": false, "sanitization": "Allowlist de locales."},
+        "country": {"type": "string", "enum": ["CO", "US"], "required": true, "description": "Pais.", "sensitive": false, "sanitization": "Enum cerrado."},
+        "source_system": {"type": "string", "required": true, "description": "Integracion POS canonica.", "sensitive": false, "sanitization": "Enum de integraciones."},
+        "connectivity_state": {"type": "string", "enum": ["online", "stale", "offline"], "required": true, "description": "Estado segun ventana de frescura.", "sensitive": false, "sanitization": "Enum y umbral versionado."},
+        "observed_at": {"type": "string", "format": "date-time", "required": true, "description": "Instante de observacion.", "sensitive": false, "sanitization": "UTC ISO 8601."},
+        "latency_ms": {"type": "number", "required": false, "description": "RTT si la fuente lo permite.", "sensitive": false, "sanitization": "Numero finito >= 0."},
+        "terminal_version": {"type": "string", "required": false, "description": "Version de software, nunca serial unico.", "sensitive": false, "sanitization": "Formato de version."}
+      }
+    },
+    {
+      "event_type": "supplier_price_changed",
+      "classification": "oportunidad",
+      "description": "Precio de proveedor distinto al precio vigente comparable.",
+      "hypothesis": "Variaciones de precio afectan compras y margen por pais/categoria.",
+      "decision": "Revisar negociacion o actualizar costos y presupuesto.",
+      "delivery": {"mode": "batch", "cadence": "diario/importacion", "reason": "La revision al recibir lista/factura basta para reaccion de compras."},
+      "pii": false,
+      "privacy": "Dato comercial restringido a compras/finanzas; no incluir email de contacto/proveedor-persona.",
+      "allowlist": ["supplier_id", "sku", "country", "previous_price", "new_price", "currency", "effective_at"],
+      "required": ["supplier_id", "sku", "country", "previous_price", "new_price", "currency", "effective_at"],
+      "properties": {
+        "supplier_id": {"type": "string", "required": true, "description": "ID comercial de proveedor.", "sensitive": false, "sanitization": "ID interno; acceso restringido."},
+        "sku": {"type": "string", "required": true, "description": "SKU cotizado.", "sensitive": false, "sanitization": "Validar catalogo."},
+        "country": {"type": "string", "enum": ["CO", "US"], "required": true, "description": "Mercado del precio.", "sensitive": false, "sanitization": "Enum cerrado."},
+        "previous_price": {"type": "number", "required": true, "description": "Precio anterior comparable.", "sensitive": false, "sanitization": "Numero finito >= 0."},
+        "new_price": {"type": "number", "required": true, "description": "Precio nuevo.", "sensitive": false, "sanitization": "Numero finito >= 0."},
+        "currency": {"type": "string", "enum": ["COP", "USD"], "required": true, "description": "Moneda del precio.", "sensitive": false, "sanitization": "Enum cerrado."},
+        "effective_at": {"type": "string", "format": "date-time", "required": true, "description": "Inicio de vigencia.", "sensitive": false, "sanitization": "UTC ISO 8601."}
+      }
+    },
+    {
+      "event_type": "customer_order_completed",
+      "classification": "baseline_context",
+      "description": "Pedido completado para medir frecuencia y retencion por cohortes.",
+      "hypothesis": "La recurrencia cambia por mercado/cohorte y puede orientar fidelizacion.",
+      "decision": "Ajustar campanas y experiencia de fidelizacion en agregado.",
+      "delivery": {"mode": "batch", "cadence": "diario", "reason": "Cohortes se analizan en ventanas, no requieren streaming."},
+      "pii": true,
+      "privacy": "customer_ref HMAC rotatorio con alcance y retencion aprobados; no nombre/email/detalle de compra.",
+      "allowlist": ["order_id", "customer_ref", "store_id", "country", "ordered_at", "total_amount", "currency", "channel"],
+      "required": ["order_id", "customer_ref", "store_id", "country", "ordered_at", "total_amount", "currency", "channel"],
+      "properties": {
+        "order_id": {"type": "string", "required": true, "description": "ID del pedido sin datos personales.", "sensitive": false, "sanitization": "ID aleatorio/no codificar customer ID."},
+        "customer_ref": {"type": "string", "required": true, "description": "Seudonimo rotatorio para recurrencia.", "sensitive": true, "sanitization": "HMAC con clave rotatoria; impedir reidentificacion/exportacion."},
+        "store_id": {"type": "string", "required": true, "description": "Local asociado.", "sensitive": false, "sanitization": "Allowlist de locales."},
+        "country": {"type": "string", "enum": ["CO", "US"], "required": true, "description": "Pais.", "sensitive": false, "sanitization": "Enum cerrado."},
+        "ordered_at": {"type": "string", "format": "date-time", "required": true, "description": "Hora de confirmacion.", "sensitive": false, "sanitization": "UTC ISO 8601."},
+        "total_amount": {"type": "number", "required": true, "description": "Importe total sin detalle de linea.", "sensitive": false, "sanitization": "Numero finito >= 0."},
+        "currency": {"type": "string", "enum": ["COP", "USD"], "required": true, "description": "Moneda original.", "sensitive": false, "sanitization": "Enum cerrado."},
+        "channel": {"type": "string", "required": true, "description": "Canal de compra canonico.", "sensitive": false, "sanitization": "Enum de canales."}
+      }
+    },
+    {
+      "event_type": "training_recipe_update_published",
+      "classification": "baseline_context",
+      "description": "Nueva version de receta/procedimiento publicada para distribucion.",
+      "hypothesis": "Cambios importantes tardan en llegar a locales.",
+      "decision": "Priorizar entrega, medir tiempo a disponibilidad y escalar retrasos.",
+      "delivery": {"mode": "stream", "cadence": "por publicacion", "reason": "El contenido operativo aprobado debe distribuirse sin demora."},
+      "pii": false,
+      "privacy": "No incluir contenido ni change_summary; actor solo rol/HMAC envelope.",
+      "allowlist": ["update_id", "resource_id", "version", "locale", "mandatory", "published_at"],
+      "required": ["update_id", "resource_id", "version", "locale", "mandatory", "published_at"],
+      "properties": {
+        "update_id": {"type": "string", "required": true, "description": "ID de actualizacion.", "sensitive": false, "sanitization": "ID operacional."},
+        "resource_id": {"type": "string", "required": true, "description": "ID de receta/procedimiento.", "sensitive": false, "sanitization": "Catalogo de recursos."},
+        "version": {"type": "string", "required": true, "description": "Version publicada.", "sensitive": false, "sanitization": "Formato versionado."},
+        "locale": {"type": "string", "enum": ["es", "en"], "required": true, "description": "Idioma publicado.", "sensitive": false, "sanitization": "Enum cerrado."},
+        "mandatory": {"type": "boolean", "required": true, "description": "Si requiere adopcion obligatoria.", "sensitive": false, "sanitization": "Booleano."},
+        "published_at": {"type": "string", "format": "date-time", "required": true, "description": "Instante de publicacion.", "sensitive": false, "sanitization": "UTC ISO 8601."}
+      }
+    },
+    {
+      "event_type": "training_recipe_update_acknowledged",
+      "classification": "baseline_context",
+      "description": "Local reconoce recepcion/adopcion de version publicada.",
+      "hypothesis": "Locales tardan o no reconocen cambios obligatorios.",
+      "decision": "Escalar formacion y cerrar brechas de adopcion.",
+      "delivery": {"mode": "batch", "cadence": "cada hora; alertar solo SLA vencido", "reason": "La confirmacion se analiza por cobertura y plazo, no requiere una alerta individual."},
+      "pii": true,
+      "privacy": "No incluir nombre de quien confirma; conservar rol solo si hace falta y con permiso.",
+      "allowlist": ["update_id", "store_id", "country", "version", "acknowledged_at", "status"],
+      "required": ["update_id", "store_id", "country", "version", "acknowledged_at", "status"],
+      "properties": {
+        "update_id": {"type": "string", "required": true, "description": "Actualizacion reconocida.", "sensitive": false, "sanitization": "ID de catalogo."},
+        "store_id": {"type": "string", "required": true, "description": "Local que confirma.", "sensitive": false, "sanitization": "Allowlist de locales."},
+        "country": {"type": "string", "enum": ["CO", "US"], "required": true, "description": "Pais.", "sensitive": false, "sanitization": "Enum cerrado."},
+        "version": {"type": "string", "required": true, "description": "Version recibida.", "sensitive": false, "sanitization": "Version del recurso."},
+        "acknowledged_at": {"type": "string", "format": "date-time", "required": true, "description": "Instante de confirmacion.", "sensitive": false, "sanitization": "UTC ISO 8601."},
+        "status": {"type": "string", "enum": ["acknowledged", "adopted"], "required": true, "description": "Recepcion o adopcion segun flujo definido.", "sensitive": false, "sanitization": "Enum cerrado; no equiparar ambos estados."}
+      }
+    },
+    {
+      "event_type": "hr_vacancy_filled",
+      "classification": "baseline_context",
+      "description": "Vacante cubierta, para tiempo medio de cobertura.",
+      "hypothesis": "Tiempo de cobertura difiere por pais, local y rol.",
+      "decision": "Ajustar capacidad/prioridad de reclutamiento.",
+      "delivery": {"mode": "batch", "cadence": "diario", "reason": "KPI de dotacion; no exige reaccion en segundos."},
+      "pii": true,
+      "privacy": "Sin candidato ni empleado identificable; agregar por cohorte minima de 5.",
+      "allowlist": ["vacancy_ref", "store_id", "country", "role_group", "opened_at", "filled_at", "time_to_fill_days"],
+      "required": ["vacancy_ref", "country", "role_group", "opened_at", "filled_at", "time_to_fill_days"],
+      "properties": {
+        "vacancy_ref": {"type": "string", "required": true, "description": "Referencia seudonima de vacante.", "sensitive": true, "sanitization": "HMAC o ID no reversible; nunca candidato."},
+        "store_id": {"type": "string", "required": false, "description": "Local de la vacante.", "sensitive": false, "sanitization": "Allowlist de locales."},
+        "country": {"type": "string", "enum": ["CO", "US"], "required": true, "description": "Pais de contratacion.", "sensitive": false, "sanitization": "Enum cerrado."},
+        "role_group": {"type": "string", "required": true, "description": "Familia de rol agregada.", "sensitive": false, "sanitization": "Enum; no titulo libre si identifica persona."},
+        "opened_at": {"type": "string", "format": "date-time", "required": true, "description": "Inicio de vacante.", "sensitive": false, "sanitization": "UTC ISO 8601."},
+        "filled_at": {"type": "string", "format": "date-time", "required": true, "description": "Fecha de cobertura confirmada.", "sensitive": false, "sanitization": "UTC ISO 8601."},
+        "time_to_fill_days": {"type": "number", "required": true, "description": "Duracion entre apertura y cobertura.", "sensitive": false, "sanitization": "Derivar de fechas; >= 0."}
+      }
+    },
+    {
+      "event_type": "hr_absence_recorded",
+      "classification": "baseline_context",
+      "description": "Ausencia operacional registrada para KPI agregado de absentismo.",
+      "hypothesis": "Ausencias agregadas afectan cobertura de turnos por pais/local.",
+      "decision": "Ajustar cobertura de personal y dimensionamiento.",
+      "delivery": {"mode": "batch", "cadence": "diario", "reason": "Planificacion de turnos utiliza totales diarios/agregados."},
+      "pii": true,
+      "privacy": "No capturar motivo, condicion de salud ni identificador directo; suprimir grupos <5.",
+      "allowlist": ["country", "store_id", "role_group", "absence_days", "period_start", "period_end"],
+      "required": ["country", "role_group", "absence_days", "period_start", "period_end"],
+      "properties": {
+        "country": {"type": "string", "enum": ["CO", "US"], "required": true, "description": "Pais.", "sensitive": false, "sanitization": "Enum cerrado."},
+        "store_id": {"type": "string", "required": false, "description": "Local, sujeto a umbral de cohorte.", "sensitive": false, "sanitization": "Allowlist y supresion de grupo <5."},
+        "role_group": {"type": "string", "required": true, "description": "Familia de rol amplia.", "sensitive": false, "sanitization": "Enum general; evitar grupos identificables."},
+        "absence_days": {"type": "number", "required": true, "description": "Dias agregados de ausencia.", "sensitive": false, "sanitization": "Numero >= 0 y cohorte minima."},
+        "period_start": {"type": "string", "format": "date-time", "required": true, "description": "Inicio del periodo.", "sensitive": false, "sanitization": "UTC ISO 8601."},
+        "period_end": {"type": "string", "format": "date-time", "required": true, "description": "Fin exclusivo del periodo.", "sensitive": false, "sanitization": "UTC ISO 8601."}
+      }
+    },
+    {
+      "event_type": "hr_employment_status_changed",
+      "classification": "baseline_context",
+      "description": "Cambio agregado de estado laboral, para indicador de rotacion.",
+      "hypothesis": "Rotacion cambia por mercado, local o familia de rol.",
+      "decision": "Revisar retencion y planificacion de plantilla.",
+      "delivery": {"mode": "batch", "cadence": "diario", "reason": "La rotacion se interpreta en periodos y cohortes."},
+      "pii": true,
+      "privacy": "Sin employee ID, causa ni datos de contrato; publicar agregado con cohorte minima 5.",
+      "allowlist": ["country", "store_id", "role_group", "change_type", "effective_at", "headcount_delta"],
+      "required": ["country", "role_group", "change_type", "effective_at", "headcount_delta"],
+      "properties": {
+        "country": {"type": "string", "enum": ["CO", "US"], "required": true, "description": "Pais.", "sensitive": false, "sanitization": "Enum cerrado."},
+        "store_id": {"type": "string", "required": false, "description": "Local sujeto a cohorte minima.", "sensitive": false, "sanitization": "Allowlist; suprimir grupo <5."},
+        "role_group": {"type": "string", "required": true, "description": "Familia de rol amplia.", "sensitive": false, "sanitization": "Enum general."},
+        "change_type": {"type": "string", "enum": ["hire", "termination", "leave", "return"], "required": true, "description": "Tipo agregado de cambio.", "sensitive": false, "sanitization": "Enum; no incluir motivo."},
+        "effective_at": {"type": "string", "format": "date-time", "required": true, "description": "Fecha efectiva.", "sensitive": false, "sanitization": "UTC ISO 8601."},
+        "headcount_delta": {"type": "integer", "required": true, "description": "Cambio de dotacion agregado.", "sensitive": false, "sanitization": "Entero y cohorte minima."}
+      }
+    },
+    {
+      "event_type": "audit_sensitive_action_recorded",
+      "classification": "oportunidad",
+      "description": "Accion sensible completada o denegada con resultado auditable.",
+      "hypothesis": "Cambios o exportaciones sensibles deben poder atribuirse y revisarse.",
+      "decision": "Investigar abuso y mejorar controles/auditoria.",
+      "delivery": {"mode": "stream", "cadence": "por accion", "reason": "Acciones sensibles requieren trazabilidad y respuesta rapida."},
+      "pii": true,
+      "privacy": "Actor HMAC en envelope; no comentario libre, email, token ni valor anterior/nuevo sensible.",
+      "allowlist": ["action_code", "outcome", "resource_type", "resource_ref", "role", "country"],
+      "required": ["action_code", "outcome", "resource_type", "role"],
+      "properties": {
+        "action_code": {"type": "string", "required": true, "description": "Accion sensible codificada.", "sensitive": false, "sanitization": "Enum de acciones revisadas."},
+        "outcome": {"type": "string", "enum": ["success", "rejected", "failure"], "required": true, "description": "Resultado.", "sensitive": false, "sanitization": "Enum cerrado."},
+        "resource_type": {"type": "string", "required": true, "description": "Tipo del recurso afectado.", "sensitive": false, "sanitization": "Enum cerrado."},
+        "resource_ref": {"type": "string", "required": false, "description": "Referencia no sensible necesaria para auditoria.", "sensitive": true, "sanitization": "Pseudonimizar; permitir solo tipos aprobados."},
+        "role": {"type": "string", "required": true, "description": "Rol efectivo.", "sensitive": false, "sanitization": "Enum de roles."},
+        "country": {"type": "string", "enum": ["CO", "US"], "required": false, "description": "Pais del recurso.", "sensitive": false, "sanitization": "Enum cerrado."}
+      }
+    }
+  ]
+}
