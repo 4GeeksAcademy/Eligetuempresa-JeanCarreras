@@ -41,6 +41,14 @@ Abrir en navegador:
 
 - http://localhost:5500
 
+## Telemetria
+
+El servicio compartido está en `telemetry.js`. Acumula lotes de hasta 20 eventos o 10 segundos, reintenta con backoff y usa `sendBeacon` al ocultar la pestaña. En este frontend estático, el deployment puede inyectar `window.NEXT_PUBLIC_TELEMETRY_ENDPOINT` antes de cargar el servicio; el servidor local deriva `/telemetry/events` de la URL de la API cuando no se inyecta. El navegador no puede leer `.env.local` directamente.
+
+Se capturan `navigation_section_viewed`, `frontend_page_load_recorded`, `frontend_error_captured` y `api_latency_recorded`; además de `inventory_validation_failed`, `inventory_receipt_created`, `training_recipe_update_published`, `auth_login_failed` y `auth_login_succeeded`. Las propiedades siguen las allowlists de `docs/telemetry/event-schemas.json`; no se envían credenciales, preguntas del asistente ni notas de recibo.
+
+Los eventos de salida de inventario, edición directa rechazada y cruce descendente de umbral no se emiten porque este MVP no tiene esos flujos. Tampoco se infiere expiración de sesión a partir de un 401 genérico. Requieren productores de dominio que distingan esos hechos con certeza.
+
 ## Proximo paso
 
 - Incorporar drill-down por local.

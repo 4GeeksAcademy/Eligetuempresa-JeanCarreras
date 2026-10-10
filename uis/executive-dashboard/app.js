@@ -134,6 +134,58 @@ const RECEIPTS_PAGE_SIZE = 8;
 let receiptsOffset = 0;
 const REALTIME_REFRESH_DEBOUNCE_MS = 500;
 const REALTIME_RECONNECT_BASE_MS = 1500;
+const apiLatencyWindows = new Map();
+
+function recordApiLatency(path, method, statusCode, startedAt) {
+  const routeTemplate = new URL(path, API_BASE).pathname
+    .replace(/\/[0-9a-f]{8}-[0-9a-f-]{27,}/gi, "/:id")
+    .replace(/\/\d+(?=\/|$)/g, "/:id");
+  const minute = Math.floor(Date.now() / 60000);
+  const key = `${routeTemplate}:${method}:${statusCode}:${minute}`;
+  if (apiLatencyWindows.has(key)) {
+    return;
+  }
+  apiLatencyWindows.set(key, true);
+  if (apiLatencyWindows.size > 120) {
+    apiLatencyWindows.delete(apiLatencyWindows.keys().next().value);
+  }
+
+  window.BrasalandTelemetry?.track("api_latency_recorded", {
+    route_template: routeTemplate,
+    method,
+    status_code: statusCode,
+    duration_ms: Math.max(0, performance.now() - startedAt),
+    service_version: "0.1.0",
+  });
+}
+
+function instrumentSectionViews() {
+  if (typeof IntersectionObserver !== "function") {
+    return;
+  }
+
+  const lastViewedAt = new Map();
+  const observer = new IntersectionObserver((entries) => {
+    for (const entry of entries) {
+      if (!entry.isIntersecting || document.visibilityState !== "visible") {
+        continue;
+      }
+      const section = entry.target;
+      const sectionId = section.classList[0] || "dashboard_section";
+      const lastViewed = lastViewedAt.get(sectionId) || 0;
+      if (Date.now() - lastViewed < 30000) {
+        continue;
+      }
+      lastViewedAt.set(sectionId, Date.now());
+      window.BrasalandTelemetry?.track("navigation_section_viewed", {
+        section_id: sectionId,
+        client_platform: window.matchMedia("(max-width: 767px)").matches ? "mobile" : "desktop",
+      });
+    }
+  }, { threshold: 0.3 });
+
+  document.querySelectorAll("main.layout > section").forEach((section) => observer.observe(section));
+}
 
 function monthStartIsoDate() {
   const now = new Date();
@@ -680,6 +732,15 @@ async function submitTrainingUpdate(event) {
         "X-API-Token": ALERT_ACTION_TOKEN,
       },
     );
+    const update = result.update;
+    window.BrasalandTelemetry?.track("training_recipe_update_published", {
+      update_id: String(update.update_id),
+      resource_id: update.resource_id,
+      version: update.version,
+      locale: update.locale,
+      mandatory: update.mandatory,
+      published_at: update.published_at,
+    });
     trainingUpdateStatusEl.textContent = `Update #${result.update.update_id} publicado para ${result.update.delivered_stores} locales.`;
     await loadDashboard();
   } catch (error) {
@@ -966,12 +1027,15 @@ async function fetchJson(path) {
   if (!API_BASE) {
     throw new Error("La conexion con la API no esta disponible. Reintenta en unos minutos.");
   }
+  const startedAt = performance.now();
   let response;
   try {
     response = await fetch(`${API_BASE}${path}`);
   } catch (_error) {
+    recordApiLatency(path, "GET", 0, startedAt);
     throw new Error("No se pudo conectar con la API. Reintenta en unos minutos.");
   }
+  recordApiLatency(path, "GET", response.status, startedAt);
   if (!response.ok) {
     throw new Error("No fue posible obtener los datos solicitados. Reintenta nuevamente.");
   }
@@ -986,12 +1050,15 @@ async function fetchJsonWithHeaders(path, headers) {
   if (!API_BASE) {
     throw new Error("La conexion con la API no esta disponible. Reintenta en unos minutos.");
   }
+  const startedAt = performance.now();
   let response;
   try {
     response = await fetch(`${API_BASE}${path}`, { headers });
   } catch (_error) {
+    recordApiLatency(path, "GET", 0, startedAt);
     throw new Error("No se pudo conectar con la API. Reintenta en unos minutos.");
   }
+  recordApiLatency(path, "GET", response.status, startedAt);
   if (!response.ok) {
     throw new Error("No fue posible obtener los datos solicitados. Reintenta nuevamente.");
   }
@@ -1006,6 +1073,7 @@ async function postJsonWithHeaders(path, payload, headers) {
   if (!API_BASE) {
     throw new Error("La conexion con la API no esta disponible. Reintenta en unos minutos.");
   }
+  const startedAt = performance.now();
   let response;
   try {
     response = await fetch(`${API_BASE}${path}`, {
@@ -1017,8 +1085,10 @@ async function postJsonWithHeaders(path, payload, headers) {
       body: JSON.stringify(payload),
     });
   } catch (_error) {
+    recordApiLatency(path, "POST", 0, startedAt);
     throw new Error("No se pudo conectar con la API. Reintenta en unos minutos.");
   }
+  recordApiLatency(path, "POST", response.status, startedAt);
 
   if (!response.ok) {
     throw new Error("No fue posible registrar la informacion. Revisa los datos e intenta nuevamente.");
@@ -1735,6 +1805,12 @@ async function submitInventoryReceipt(event) {
   event.preventDefault();
   const qty = Number(receiptQtyEl.value || "0");
   if (!(qty > 0)) {
+    window.BrasalandTelemetry?.track("inventory_validation_failed", {
+      country: receiptStoreIdEl.selectedOptions[0]?.dataset.country,
+      validation_code: "invalid_quantity",
+      operation: "receipt",
+      field_name: "received_qty",
+    });
     receiptStatusEl.textContent = "La cantidad recibida debe ser mayor a cero.";
     return;
   }
@@ -1765,6 +1841,15 @@ async function submitInventoryReceipt(event) {
       },
     );
 
+    window.BrasalandTelemetry?.track("inventory_receipt_created", {
+      receipt_id: String(result.receipt_id),
+      store_id: result.store_id,
+      country: result.recommendation_after.country,
+      sku: result.sku,
+      received_qty: result.received_qty,
+      unit: result.recommendation_after.unit,
+      currency: result.currency,
+    });
     receiptStatusEl.textContent = `Recepcion registrada. Stock ${result.previous_stock.toFixed(1)} -> ${result.current_stock.toFixed(1)}. Recomendacion ${String(result.recommendation_status).toUpperCase()}.`;
     await loadDashboard();
   } catch (error) {
@@ -2117,6 +2202,7 @@ function bootstrapDashboard() {
   }
 
   setDefaultDates();
+  instrumentSectionViews();
   setDefaultHrDates();
   setupAutoRefresh();
   connectRealtimeSocket();
