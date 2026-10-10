@@ -31,6 +31,7 @@ from .brasaland_api.auth import (
     Role,
     UserInDB,
 )
+from .brasaland_api.telemetry import telemetry_router
 
 load_dotenv(Path(__file__).resolve().parent.parent / ".env")
 
@@ -61,6 +62,7 @@ from .brasaland_api.auth import users_router, profiles_router
 app.include_router(auth_router)
 app.include_router(users_router)
 app.include_router(profiles_router)
+app.include_router(telemetry_router)
 
 
 @app.exception_handler(Exception)

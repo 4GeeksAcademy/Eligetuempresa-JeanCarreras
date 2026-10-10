@@ -147,10 +147,10 @@
             <label>
               Local
               <select id="receiptStoreId">
-                <option value="med-001">Brasaland Laureles</option>
-                <option value="med-002">Brasaland El Poblado</option>
-                <option value="mia-001">Brasaland Doral</option>
-                <option value="mia-002">Brasaland Kendall</option>
+                <option value="med-001" data-country="CO">Brasaland Laureles</option>
+                <option value="med-002" data-country="CO">Brasaland El Poblado</option>
+                <option value="mia-001" data-country="US">Brasaland Doral</option>
+                <option value="mia-002" data-country="US">Brasaland Kendall</option>
               </select>
             </label>
             <label>
@@ -431,6 +431,10 @@
       </section>
     </main>
 
+    <script>
+      window.NEXT_PUBLIC_TELEMETRY_ENDPOINT = window.NEXT_PUBLIC_TELEMETRY_ENDPOINT || "http://localhost:8000/telemetry/events";
+    </script>
+    <script src="telemetry.js"></script>
     <script src="app.js"></script>
   </body>
 </html>
