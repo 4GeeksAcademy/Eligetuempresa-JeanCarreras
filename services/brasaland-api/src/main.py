@@ -9,6 +9,7 @@ import json
 import logging
 import os
 import secrets
+import sys
 import urllib.request
 from contextlib import asynccontextmanager
 from pathlib import Path
@@ -23,6 +24,10 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, Response
 from pydantic import BaseModel
 
+REPOSITORY_ROOT = Path(__file__).resolve().parents[3]
+if str(REPOSITORY_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPOSITORY_ROOT))
+
 from .brasaland_api.auth import (
     auth_router,
     get_current_user,
@@ -31,6 +36,7 @@ from .brasaland_api.auth import (
     Role,
     UserInDB,
 )
+from services.reporting.api import create_reporting_router
 
 load_dotenv(Path(__file__).resolve().parent.parent / ".env")
 
@@ -61,6 +67,7 @@ from .brasaland_api.auth import users_router, profiles_router
 app.include_router(auth_router)
 app.include_router(users_router)
 app.include_router(profiles_router)
+app.include_router(create_reporting_router(require_roles, lambda: DB_PATH))
 
 
 @app.exception_handler(Exception)
