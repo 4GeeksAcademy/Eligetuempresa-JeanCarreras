@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Brasaland | Telemetría técnica</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=Fraunces:opsz,wght@9..144,600&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="styles.css" />
+    <link rel="stylesheet" href="telemetry.css" />
+  </head>
+  <body>
+    <div class="noise"></div>
+    <main class="layout telemetry-layout">
+      <header class="hero">
+        <p class="eyebrow">Brasaland Digital / Ingeniería</p>
+        <h1>Radar técnico</h1>
+        <p class="subtitle">Salud, rendimiento y actividad del sistema.</p>
+        <nav class="telemetry-nav" aria-label="Navegación principal">
+          <a href="index.html">Dashboard ejecutivo</a>
+        </nav>
+        <p class="status" id="reportStatus" role="status" aria-live="polite">Cargando reporte...</p>
+      </header>
+
+      <section class="telemetry-filters" aria-label="Período del reporte">
+        <label>Desde (UTC)<input id="startDate" type="date" /></label>
+        <label>Hasta, día incluido (UTC)<input id="endDate" type="date" /></label>
+        <button id="refreshReport" type="button" title="Actualizar reporte">Actualizar</button>
+      </section>
+      <p class="telemetry-period">Período consultado: <span id="reportPeriod">-</span></p>
+
+      <div class="telemetry-grid">
+        <section class="telemetry-panel" aria-labelledby="eventsHeading">
+          <h2 id="eventsHeading">Eventos por día y tipo</h2>
+          <div class="telemetry-table-wrap">
+            <table>
+              <thead><tr><th>Fecha UTC</th><th>Tipo</th><th>Eventos</th></tr></thead>
+              <tbody id="eventsRows"></tbody>
+            </table>
+          </div>
+        </section>
+
+        <section class="telemetry-panel" aria-labelledby="latencyHeading">
+          <h2 id="latencyHeading">Latencia API por día y ruta</h2>
+          <div class="telemetry-table-wrap">
+            <table>
+              <thead><tr><th>Fecha UTC</th><th>Ruta</th><th>Solicitudes</th><th>Media (ms)</th></tr></thead>
+              <tbody id="latencyRows"></tbody>
+            </table>
+          </div>
+        </section>
+
+        <section class="telemetry-panel" aria-labelledby="errorsHeading">
+          <h2 id="errorsHeading">Tasa de errores API por día y ruta</h2>
+          <div class="telemetry-table-wrap">
+            <table>
+              <thead><tr><th>Fecha UTC</th><th>Ruta</th><th>Errores</th><th>Solicitudes</th><th>Tasa</th></tr></thead>
+              <tbody id="errorRows"></tbody>
+            </table>
+          </div>
+        </section>
+
+        <section class="telemetry-panel" aria-labelledby="authHeading">
+          <h2 id="authHeading">Fallos de autenticación por día</h2>
+          <div class="telemetry-table-wrap">
+            <table>
+              <thead><tr><th>Fecha UTC</th><th>Fallos</th><th>Intentos</th><th>Tasa</th></tr></thead>
+              <tbody id="authRows"></tbody>
+            </table>
+          </div>
+        </section>
+
+        <section class="telemetry-panel telemetry-panel-wide" aria-labelledby="availabilityHeading">
+          <h2 id="availabilityHeading">Disponibilidad reportada por fuente</h2>
+          <div class="telemetry-table-wrap">
+            <table>
+              <thead><tr><th>Fecha UTC</th><th>Fuente</th><th>Eventos</th><th>En línea</th><th>Disponibilidad</th></tr></thead>
+              <tbody id="availabilityRows"></tbody>
+            </table>
+          </div>
+        </section>
+      </div>
+    </main>
+    <script src="telemetry-report.js"></script>
+  </body>
+</html>

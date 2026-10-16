@@ -2,8 +2,10 @@ import json
 import logging
 import math
 import os
-from datetime import datetime
+from contextlib import closing
+from datetime import datetime, timezone
 from pathlib import Path
+from sqlite3 import connect
 from typing import Any, Literal
 from uuid import UUID
 
@@ -105,7 +107,48 @@ class TelemetryBatch(BaseModel):
 
 
 @telemetry_router.post("/events", status_code=200)
-def receive_telemetry(batch: TelemetryBatch) -> dict[str, int]:
+def receive_telemetry(batch: TelemetryBatch, request: Request) -> dict[str, int]:
+    path_provider = getattr(request.app.state, "telemetry_db_path", None)
+    db_path = (
+        path_provider()
+        if path_provider is not None
+        else Path(__file__).resolve().parents[2] / "brasaland.db"
+    )
+    with closing(connect(db_path)) as connection:
+        with connection:
+            connection.execute(
+                """
+                CREATE TABLE IF NOT EXISTS telemetry_events (
+                    event_id TEXT PRIMARY KEY,
+                    timestamp TEXT NOT NULL,
+                    event_type TEXT NOT NULL,
+                    tags TEXT NOT NULL,
+                    request_id TEXT NOT NULL
+                )
+                """
+            )
+            connection.execute(
+                "CREATE INDEX IF NOT EXISTS idx_telemetry_events_timestamp_type "
+                "ON telemetry_events(timestamp, event_type)"
+            )
+            connection.executemany(
+                """
+                INSERT OR IGNORE INTO telemetry_events (
+                    event_id, timestamp, event_type, tags, request_id
+                ) VALUES (?, ?, ?, ?, ?)
+                """,
+                [
+                    (
+                        str(event.eventId),
+                        event.timestamp.astimezone(timezone.utc).isoformat(),
+                        event.event_type,
+                        json.dumps(event.properties, separators=(",", ":"), allow_nan=False),
+                        event.requestId,
+                    )
+                    for event in batch.events
+                ],
+            )
+
     logger.info("Received telemetry batch with %d events", len(batch.events))
     for event in batch.events:
         logger.info("Received telemetry event_type=%s", event.event_type)

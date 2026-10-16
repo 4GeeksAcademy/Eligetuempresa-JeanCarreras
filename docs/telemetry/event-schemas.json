@@ -375,13 +375,14 @@
       "delivery": {"mode": "stream", "cadence": "agregado por minuto; detalle batch", "reason": "SLO incumplido debe detectarse durante el incidente."},
       "pii": false,
       "privacy": "Excluir URL con parametros, IP, headers, cuerpos y query; ruta normalizada.",
-      "allowlist": ["route_template", "method", "status_code", "duration_ms", "service_version", "country"],
+      "allowlist": ["route_template", "method", "status_code", "duration_ms", "request_count", "service_version", "country"],
       "required": ["route_template", "method", "status_code", "duration_ms", "service_version"],
       "properties": {
         "route_template": {"type": "string", "required": true, "description": "Plantilla API sin IDs ni query.", "sensitive": false, "sanitization": "Lista de rutas registradas."},
         "method": {"type": "string", "enum": ["GET", "POST", "PUT", "PATCH", "DELETE", "OTHER"], "required": true, "description": "Metodo HTTP.", "sensitive": false, "sanitization": "Enum cerrado."},
         "status_code": {"type": "integer", "required": true, "description": "Codigo de respuesta.", "sensitive": false, "sanitization": "Rango 100-599."},
-        "duration_ms": {"type": "number", "required": true, "description": "Duracion monotonicamente medida.", "sensitive": false, "sanitization": "Numero finito >= 0."},
+        "duration_ms": {"type": "number", "required": true, "description": "Duracion media monotonicamente medida para las solicitudes agregadas.", "sensitive": false, "sanitization": "Numero finito >= 0."},
+        "request_count": {"type": "integer", "required": false, "description": "Cantidad de solicitudes representadas; se asume 1 para productores anteriores.", "sensitive": false, "sanitization": "Entero >= 1."},
         "service_version": {"type": "string", "required": true, "description": "Version desplegada.", "sensitive": false, "sanitization": "Identificador de release."},
         "country": {"type": "string", "enum": ["CO", "US"], "required": false, "description": "Pais del recurso si conocido.", "sensitive": false, "sanitization": "Enum cerrado."}
       }
