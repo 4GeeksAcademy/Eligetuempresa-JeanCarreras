@@ -13,6 +13,8 @@ import urllib.request
 from contextlib import asynccontextmanager
 from pathlib import Path
 from sqlite3 import Connection, Row, connect
+from threading import Lock
+from time import monotonic
 from typing import Literal
 from zoneinfo import ZoneInfo
 
@@ -30,6 +32,13 @@ from .brasaland_api.auth import (
     require_roles,
     Role,
     UserInDB,
+)
+from .brasaland_api.analysis import (
+    availability_by_day_and_source,
+    api_latency_by_day,
+    auth_failure_rate,
+    error_rate_by_type,
+    events_per_day,
 )
 from .brasaland_api.telemetry import telemetry_router
 
@@ -772,6 +781,10 @@ class ChangePasswordRequest(BaseModel):
 
 
 DB_PATH = Path(__file__).resolve().parent.parent / "brasaland.db"
+app.state.telemetry_db_path = lambda: DB_PATH
+TELEMETRY_REPORT_CACHE_TTL_SECONDS = 60
+_telemetry_report_cache: dict[tuple[str | None, str | None], tuple[float, dict]] = {}
+_telemetry_report_cache_lock = Lock()
 AUTH_SECRET = os.getenv("BRASALAND_AUTH_SECRET", "brasaland-local-auth-secret")
 RESET_TOKEN_TTL_MINUTES = int(os.getenv("RESET_TOKEN_TTL_MINUTES", "30"))
 FRONTEND_BASE_URL = os.getenv("FRONTEND_BASE_URL", "http://localhost:5500/uis/auth")
@@ -941,6 +954,64 @@ def get_db() -> Connection:
     connection = connect(DB_PATH)
     connection.row_factory = Row
     return connection
+
+
+@app.get("/telemetry/report")
+def get_telemetry_report(
+    start_date: datetime | None = Query(default=None),
+    end_date: datetime | None = Query(default=None),
+) -> dict:
+    if start_date is not None and start_date.tzinfo is None:
+        raise HTTPException(status_code=422, detail="start_date must include a timezone")
+    if end_date is not None and end_date.tzinfo is None:
+        raise HTTPException(status_code=422, detail="end_date must include a timezone")
+
+    normalized_start = start_date.astimezone(timezone.utc) if start_date else None
+    normalized_end = end_date.astimezone(timezone.utc) if end_date else None
+    cache_key = (
+        normalized_start.isoformat() if normalized_start else None,
+        normalized_end.isoformat() if normalized_end else None,
+    )
+
+    with _telemetry_report_cache_lock:
+        now_monotonic = monotonic()
+        active_cache_entries = {
+            key: value
+            for key, value in _telemetry_report_cache.items()
+            if now_monotonic - value[0] < TELEMETRY_REPORT_CACHE_TTL_SECONDS
+        }
+        _telemetry_report_cache.clear()
+        _telemetry_report_cache.update(active_cache_entries)
+        cached_report = _telemetry_report_cache.get(cache_key)
+        if cached_report is not None:
+            return cached_report[1]
+
+        now = datetime.now(timezone.utc)
+        resolved_start = normalized_start or now - timedelta(days=7)
+        resolved_end = normalized_end or now
+        if resolved_end <= resolved_start:
+            raise HTTPException(status_code=400, detail="end_date must be greater than start_date")
+
+        report = {
+            "period": {"from": resolved_start.isoformat(), "to": resolved_end.isoformat()},
+            "metrics": {
+                "events_per_day": events_per_day(resolved_start, resolved_end, DB_PATH),
+                "error_rate_by_type": error_rate_by_type(
+                    resolved_start, resolved_end, DB_PATH
+                ),
+                "api_latency_by_day": api_latency_by_day(
+                    resolved_start, resolved_end, DB_PATH
+                ),
+                "auth_failure_rate": auth_failure_rate(
+                    resolved_start, resolved_end, DB_PATH
+                ),
+                "availability_by_day_and_source": availability_by_day_and_source(
+                    resolved_start, resolved_end, DB_PATH
+                ),
+            },
+        }
+        _telemetry_report_cache[cache_key] = (monotonic(), report)
+        return report
 
 
 def hash_password(password: str) -> str:
@@ -1214,6 +1285,21 @@ def init_db() -> None:
                 FOREIGN KEY(store_id) REFERENCES stores(id)
             )
             """
+        )
+        db.execute(
+            """
+            CREATE TABLE IF NOT EXISTS telemetry_events (
+                event_id TEXT PRIMARY KEY,
+                timestamp TEXT NOT NULL,
+                event_type TEXT NOT NULL,
+                tags TEXT NOT NULL,
+                request_id TEXT NOT NULL
+            )
+            """
+        )
+        db.execute(
+            "CREATE INDEX IF NOT EXISTS idx_telemetry_events_timestamp_type "
+            "ON telemetry_events(timestamp, event_type)"
         )
         db.execute(
             """
