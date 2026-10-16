@@ -61,13 +61,35 @@ ORDER BY grantee, privilege_type;
 
 Comprueba que los eventos de negocio preservan sus IDs operacionales, local, pais, SKU y cantidades, y que los tecnicos respetan sus allowlists sin credenciales ni PII. `timestamp` es el instante del evento, no `received_at`.
 
-## Evidencia y limites de esta entrega
+## Evidencia real del 16 de octubre de 2026
 
-Las pruebas automatizadas usan respuestas HTTP simuladas de Supabase y verifican aceptacion parcial, una unica insercion por lote, mapeo de entradas/salidas/login fallido, duplicados y fallos de almacenamiento. No prueban que una tabla remota exista.
+Tras configurar las credenciales privadas y crear la tabla, se ejecuto el backoffice intacto contra la API local conectada a Supabase remoto. Se verificaron **27 filas**: 26 eventos validos emitidos por el frontend y una medicion real de `/health` enviada en el lote manual. La recepcion de desarrollo registrada desde el formulario corresponde a `receipt_id=9`, `med-001`, `CHICKEN`, `0.1 kg`, moneda `COP`; no se presenta como una compra de produccion del restaurante.
 
-No hay credenciales Supabase disponibles en el entorno de implementacion: queda pendiente ejecutar la migracion, verificar persistencia real y adjuntar una captura con al menos cinco filas reales (incluido evento tecnico y de negocio). No se deben presentar los datos de pruebas como movimientos reales.
+- [Captura de filas consultadas en Supabase](evidence/telemetry/supabase-events.png): ocho filas visibles, incluidas negocio y tecnico, con `event_type`, `timestamp`, `service` y `tags`. Es una vista generada desde una consulta REST real, **no una captura de Supabase Studio**.
+- [Captura del formulario tras registrar la recepcion](evidence/telemetry/backoffice-receipt.png).
+- [Respuesta observada del lote mixto](evidence/telemetry/mixed-batch-response.json): `{"received": 3, "stored": 1, "rejected": 2}`. El reintento devolvio `{"received": 3, "stored": 0, "rejected": 3}`.
+- [Filas leidas directamente de Supabase](evidence/telemetry/supabase-events.json) y [registro del recorrido](evidence/telemetry/verification.json). Se compararon tipo, instante y tags de cada evento valido observado en la red con su fila persistida.
+- [Permisos observados](evidence/telemetry/permissions.json): PATCH y DELETE rechazados con HTTP 403 / PostgreSQL 42501, usando un UUID inexistente previamente comprobado. Ninguna fila fue actualizada o eliminada. OpenAPI anunciaba ambos metodos, por lo que no se uso su mera presencia como prueba de permisos efectivos.
 
-El plan vigente documenta `inventory_outbound_order_submitted` como capacidad futura: no hay flujo de orden de salida implementado. Completar esa parte del E2E exige dicho flujo, fuera de este cambio de ingesta; no se modifica el frontend ni se inventa una salida. Registra entradas reales y un fallo de login en el backoffice disponible, comprueba su envio en Network y consulta la tabla. Si faltan productores, documenta la falta de cobertura sin equipararla a cero actividad.
+Las pruebas unitarias con respuestas simuladas siguen siendo independientes de esta evidencia remota. Las claves y la URL privada del proyecto no se incluyen en los artefactos.
+
+### Reproducir el E2E
+
+Instala Playwright en el entorno de verificacion (`python -m pip install playwright` y `python -m playwright install --with-deps chromium`). Con la API en `http://localhost:8000` y la carpeta `uis/` servida en `http://localhost:4173`, ejecuta desde este servicio:
+
+```bash
+python scripts/verify_telemetry_e2e.py --allow-local-receipt
+```
+
+La opcion confirma que se creara **una recepcion adicional de 0.1 kg** en la base local de desarrollo y que sus eventos se guardaran en Supabase. El script solo admite una API local para estas escrituras. El resto de lecturas y capturas no requiere cambios al frontend. No ejecutes pruebas sobre datos operacionales de produccion.
+
+### Limites y hallazgos preexistentes
+
+- El plan vigente documenta `inventory_outbound_order_submitted` como capacidad futura: no hay flujo de orden de salida implementado. Esa parte del E2E sigue pendiente; no se invento una salida ni se modifico el frontend.
+- `navigation_section_viewed` y `frontend_page_load_recorded` del frontend actual usan `client_platform=desktop`, pero el catalogo permite `web`, `mobile_web` o `desktop_app`. Esos eventos se rechazan correctamente por item y los demas del lote se guardan. El registro incluye estos rechazos; no se flexibilizo `TelemetryEvent` para ocultarlos.
+- El formulario de acceso actual envia JSON a `/auth/login`, cuyo handler espera form-data. El intento real devuelve 422 y el productor emite `auth_login_failed` con `failure_code=network_error`. Ese es el hecho tecnico persistido, no un 401 ficticio ni un login exitoso.
+- La captura adjunta muestra datos reales via REST. Si la evaluacion exige especificamente la interfaz de Supabase Studio, debe adjuntarse una captura desde la sesion autenticada del usuario en Table Editor. El verificador no tiene acceso a esa sesion.
+- La existencia exacta de los tres indices se confirma ejecutando la consulta `pg_indexes` anterior en SQL Editor; PostgREST no expone ese catalogo del sistema.
 
 ## Descripcion del PR
 
@@ -76,4 +98,4 @@ Titulo: `feat: telemetry event storage`
 - Sustituye el stub por validacion individual con `TelemetryEvent.model_validate` y bulk insert en Supabase.
 - Anade migracion append-only e indices de timestamp, tipo y tags.
 - Confirma expresamente: **el frontend no cambio ni una linea**; la URL y el contrato de envio permanecen iguales.
-- Adjunta el JSON observado de un lote mixto y la captura de al menos cinco eventos reales. Pendientes hasta verificar el entorno Supabase; no usar el resultado esperado anterior como evidencia observada.
+- Adjunta las capturas y el JSON observados enlazados arriba, identificando REST frente a Studio y los limites preexistentes sin presentarlos como requisitos completados.

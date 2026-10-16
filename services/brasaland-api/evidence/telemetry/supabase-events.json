@@ -1,0 +1,407 @@
+[
+  {
+    "event_id": "1b9e5b3b-2e27-4b4b-8acc-ec3b2668e1c3",
+    "event_type": "api_latency_recorded",
+    "timestamp": "2026-10-16T22:04:43.423+00:00",
+    "service": "brasaland-api",
+    "tags": {
+      "method": "GET",
+      "duration_ms": 129.10000000009313,
+      "status_code": 401,
+      "route_template": "/api/v1/sales/summary",
+      "service_version": "0.1.0"
+    },
+    "request_id": "86980a27-e798-4f77-9a60-d7713f838538",
+    "received_at": "2026-10-16T22:04:44.020034+00:00"
+  },
+  {
+    "event_id": "085a2028-33a8-4b07-8e85-9199602e699c",
+    "event_type": "api_latency_recorded",
+    "timestamp": "2026-10-16T22:04:43.463+00:00",
+    "service": "brasaland-api",
+    "tags": {
+      "method": "GET",
+      "duration_ms": 167.60000000009313,
+      "status_code": 401,
+      "route_template": "/api/v1/sales/by-store",
+      "service_version": "0.1.0"
+    },
+    "request_id": "3e8797ef-f57d-4025-b921-e5cf70817125",
+    "received_at": "2026-10-16T22:04:44.020034+00:00"
+  },
+  {
+    "event_id": "0a81ba56-cf5b-4bcb-8975-d047c087abe2",
+    "event_type": "api_latency_recorded",
+    "timestamp": "2026-10-16T22:04:43.463+00:00",
+    "service": "brasaland-api",
+    "tags": {
+      "method": "GET",
+      "duration_ms": 168.40000000037253,
+      "status_code": 401,
+      "route_template": "/api/v1/sales/daily-trend",
+      "service_version": "0.1.0"
+    },
+    "request_id": "17c2d3a8-bd4f-4517-b66d-e6990dedd3bf",
+    "received_at": "2026-10-16T22:04:44.020034+00:00"
+  },
+  {
+    "event_id": "9f31074b-f147-4455-a9b4-00d729b9b9fe",
+    "event_type": "api_latency_recorded",
+    "timestamp": "2026-10-16T22:04:43.464+00:00",
+    "service": "brasaland-api",
+    "tags": {
+      "method": "GET",
+      "duration_ms": 168.39999999990687,
+      "status_code": 401,
+      "route_template": "/api/v1/markets/summary",
+      "service_version": "0.1.0"
+    },
+    "request_id": "10bdfe98-bb68-493c-a48b-73330b75268a",
+    "received_at": "2026-10-16T22:04:44.020034+00:00"
+  },
+  {
+    "event_id": "f70bae70-e35a-4045-9e4a-c07775e7cf42",
+    "event_type": "api_latency_recorded",
+    "timestamp": "2026-10-16T22:04:43.469+00:00",
+    "service": "brasaland-api",
+    "tags": {
+      "method": "GET",
+      "duration_ms": 174,
+      "status_code": 200,
+      "route_template": "/api/v1/alerts/inactivity/sla",
+      "service_version": "0.1.0"
+    },
+    "request_id": "91a5bc0c-b04a-4b11-9f72-b618fb32a8a9",
+    "received_at": "2026-10-16T22:04:44.020034+00:00"
+  },
+  {
+    "event_id": "fe8f54f5-7332-48e2-89d8-6a4f85f40747",
+    "event_type": "api_latency_recorded",
+    "timestamp": "2026-10-16T22:04:43.469+00:00",
+    "service": "brasaland-api",
+    "tags": {
+      "method": "GET",
+      "duration_ms": 173.1999999997206,
+      "status_code": 200,
+      "route_template": "/api/v1/suppliers/prices",
+      "service_version": "0.1.0"
+    },
+    "request_id": "47b1872f-426b-4df6-b50a-a2edb159df43",
+    "received_at": "2026-10-16T22:04:44.020034+00:00"
+  },
+  {
+    "event_id": "554d7f25-3864-4bcf-9869-b33db77eaf75",
+    "event_type": "api_latency_recorded",
+    "timestamp": "2026-10-16T22:04:43.47+00:00",
+    "service": "brasaland-api",
+    "tags": {
+      "method": "GET",
+      "duration_ms": 173.89999999990687,
+      "status_code": 200,
+      "route_template": "/api/v1/inventory/receipts",
+      "service_version": "0.1.0"
+    },
+    "request_id": "971815d4-afd8-495c-99e1-805dc0650acb",
+    "received_at": "2026-10-16T22:04:44.020034+00:00"
+  },
+  {
+    "event_id": "ca28da54-43dd-4d0c-b009-268c116d8d2f",
+    "event_type": "api_latency_recorded",
+    "timestamp": "2026-10-16T22:04:43.479+00:00",
+    "service": "brasaland-api",
+    "tags": {
+      "method": "GET",
+      "duration_ms": 184.79999999981374,
+      "status_code": 200,
+      "route_template": "/api/v1/alerts/inactivity",
+      "service_version": "0.1.0"
+    },
+    "request_id": "7fc15651-d1a5-4525-8ffc-10e6a7f19d32",
+    "received_at": "2026-10-16T22:04:44.020034+00:00"
+  },
+  {
+    "event_id": "752f2736-371e-46fa-a3d3-864c49f574bb",
+    "event_type": "api_latency_recorded",
+    "timestamp": "2026-10-16T22:04:43.485+00:00",
+    "service": "brasaland-api",
+    "tags": {
+      "method": "GET",
+      "duration_ms": 190.10000000009313,
+      "status_code": 200,
+      "route_template": "/api/v1/finance/kpis",
+      "service_version": "0.1.0"
+    },
+    "request_id": "43bf5749-8bc9-4ac2-84df-217677d1038b",
+    "received_at": "2026-10-16T22:04:44.020034+00:00"
+  },
+  {
+    "event_id": "aef5aba8-3852-47ed-89c9-d6777a93c0c4",
+    "event_type": "api_latency_recorded",
+    "timestamp": "2026-10-16T22:04:43.64+00:00",
+    "service": "brasaland-api",
+    "tags": {
+      "method": "GET",
+      "duration_ms": 341.90000000037253,
+      "status_code": 200,
+      "route_template": "/api/v1/marketing/crm/customers",
+      "service_version": "0.1.0"
+    },
+    "request_id": "b891fc88-eb69-47d1-a597-85693aefd64f",
+    "received_at": "2026-10-16T22:04:44.020034+00:00"
+  },
+  {
+    "event_id": "3ee2acfe-cc15-4539-afef-cf46a0198143",
+    "event_type": "api_latency_recorded",
+    "timestamp": "2026-10-16T22:04:43.643+00:00",
+    "service": "brasaland-api",
+    "tags": {
+      "method": "GET",
+      "duration_ms": 344,
+      "status_code": 200,
+      "route_template": "/api/v1/hr/time-off/requests",
+      "service_version": "0.1.0"
+    },
+    "request_id": "6d8655bf-8011-4409-9dc6-ae0dbb9065e8",
+    "received_at": "2026-10-16T22:04:44.020034+00:00"
+  },
+  {
+    "event_id": "cef98256-9bb7-45c6-bca7-8f09edfd51f4",
+    "event_type": "api_latency_recorded",
+    "timestamp": "2026-10-16T22:04:43.643+00:00",
+    "service": "brasaland-api",
+    "tags": {
+      "method": "GET",
+      "duration_ms": 344.8000000002794,
+      "status_code": 200,
+      "route_template": "/api/v1/marketing/personalization/recommendations",
+      "service_version": "0.1.0"
+    },
+    "request_id": "8c495f0b-29b2-404f-b7ef-a0b43e8e3c4a",
+    "received_at": "2026-10-16T22:04:44.020034+00:00"
+  },
+  {
+    "event_id": "8c4ace1b-d386-49e0-a5e2-60c138de77df",
+    "event_type": "api_latency_recorded",
+    "timestamp": "2026-10-16T22:04:43.644+00:00",
+    "service": "brasaland-api",
+    "tags": {
+      "method": "GET",
+      "duration_ms": 348,
+      "status_code": 200,
+      "route_template": "/api/v1/suppliers/price-alerts",
+      "service_version": "0.1.0"
+    },
+    "request_id": "1789af41-b249-4626-a33f-ac7477f2b7c8",
+    "received_at": "2026-10-16T22:04:44.020034+00:00"
+  },
+  {
+    "event_id": "061fa858-d2b7-4ce9-ad21-b7247d4156a2",
+    "event_type": "api_latency_recorded",
+    "timestamp": "2026-10-16T22:04:43.645+00:00",
+    "service": "brasaland-api",
+    "tags": {
+      "method": "GET",
+      "duration_ms": 347.89999999990687,
+      "status_code": 200,
+      "route_template": "/api/v1/suppliers/purchases/consolidated",
+      "service_version": "0.1.0"
+    },
+    "request_id": "a1e41114-f451-4097-b367-5eafb09f9d08",
+    "received_at": "2026-10-16T22:04:44.020034+00:00"
+  },
+  {
+    "event_id": "39ca9898-c5f9-4a73-a1a5-e4acb3e21e3b",
+    "event_type": "api_latency_recorded",
+    "timestamp": "2026-10-16T22:04:43.648+00:00",
+    "service": "brasaland-api",
+    "tags": {
+      "method": "GET",
+      "duration_ms": 349.20000000018626,
+      "status_code": 200,
+      "route_template": "/api/v1/hr/kpis/overview",
+      "service_version": "0.1.0"
+    },
+    "request_id": "8521df69-dc05-4ee0-ae93-25047437520a",
+    "received_at": "2026-10-16T22:04:44.461456+00:00"
+  },
+  {
+    "event_id": "3438d58f-4129-4d49-80bb-00da544746b1",
+    "event_type": "api_latency_recorded",
+    "timestamp": "2026-10-16T22:04:43.648+00:00",
+    "service": "brasaland-api",
+    "tags": {
+      "method": "GET",
+      "duration_ms": 348.89999999990687,
+      "status_code": 200,
+      "route_template": "/api/v1/hr/employees",
+      "service_version": "0.1.0"
+    },
+    "request_id": "f9fbfae1-5c45-49e1-bdaa-684989064cc5",
+    "received_at": "2026-10-16T22:04:44.461456+00:00"
+  },
+  {
+    "event_id": "e8eec2c6-6dd3-4cb9-8286-2cb3239fc828",
+    "event_type": "api_latency_recorded",
+    "timestamp": "2026-10-16T22:04:43.648+00:00",
+    "service": "brasaland-api",
+    "tags": {
+      "method": "GET",
+      "duration_ms": 349.20000000018626,
+      "status_code": 200,
+      "route_template": "/api/v1/hr/onboarding/cases",
+      "service_version": "0.1.0"
+    },
+    "request_id": "dada8672-110d-47f5-a32d-9fc6c559ed35",
+    "received_at": "2026-10-16T22:04:44.461456+00:00"
+  },
+  {
+    "event_id": "bf9560a3-474f-41c3-b601-4041848b00b3",
+    "event_type": "api_latency_recorded",
+    "timestamp": "2026-10-16T22:04:43.648+00:00",
+    "service": "brasaland-api",
+    "tags": {
+      "method": "GET",
+      "duration_ms": 348.90000000037253,
+      "status_code": 200,
+      "route_template": "/api/v1/training/onboarding/itineraries",
+      "service_version": "0.1.0"
+    },
+    "request_id": "2a391a0b-d338-490d-9f06-3afb657881d6",
+    "received_at": "2026-10-16T22:04:44.461456+00:00"
+  },
+  {
+    "event_id": "4cb38bfe-2815-4d28-b801-319d11147673",
+    "event_type": "api_latency_recorded",
+    "timestamp": "2026-10-16T22:04:43.649+00:00",
+    "service": "brasaland-api",
+    "tags": {
+      "method": "GET",
+      "duration_ms": 353,
+      "status_code": 200,
+      "route_template": "/api/v1/orders/recommendations",
+      "service_version": "0.1.0"
+    },
+    "request_id": "703b500e-f769-4169-b79c-4463729edbc2",
+    "received_at": "2026-10-16T22:04:44.461456+00:00"
+  },
+  {
+    "event_id": "65715734-3078-4d19-9f2c-ee5bda579ab5",
+    "event_type": "api_latency_recorded",
+    "timestamp": "2026-10-16T22:04:43.649+00:00",
+    "service": "brasaland-api",
+    "tags": {
+      "method": "GET",
+      "duration_ms": 349.29999999981374,
+      "status_code": 200,
+      "route_template": "/api/v1/training/recipes/search",
+      "service_version": "0.1.0"
+    },
+    "request_id": "94c9adef-2b6f-42cd-94f5-f85e51bf88b8",
+    "received_at": "2026-10-16T22:04:44.461456+00:00"
+  },
+  {
+    "event_id": "969be6f4-8458-4bca-aec1-1a3ec6e882ba",
+    "event_type": "api_latency_recorded",
+    "timestamp": "2026-10-16T22:04:43.674+00:00",
+    "service": "brasaland-api",
+    "tags": {
+      "method": "GET",
+      "duration_ms": 374.39999999990687,
+      "status_code": 200,
+      "route_template": "/api/v1/training/recipes/updates",
+      "service_version": "0.1.0"
+    },
+    "request_id": "bfd5b05f-6422-47dd-941c-acf5079276e4",
+    "received_at": "2026-10-16T22:04:44.461456+00:00"
+  },
+  {
+    "event_id": "ea56ba38-fdd5-4a8b-83ac-0e2029f1038a",
+    "event_type": "api_latency_recorded",
+    "timestamp": "2026-10-16T22:04:43.676+00:00",
+    "service": "brasaland-api",
+    "tags": {
+      "method": "GET",
+      "duration_ms": 379.29999999981374,
+      "status_code": 200,
+      "route_template": "/api/v1/marketing/crm/overview",
+      "service_version": "0.1.0"
+    },
+    "request_id": "26416daa-3317-4ec8-b869-cfe2c0e1db50",
+    "received_at": "2026-10-16T22:04:44.461456+00:00"
+  },
+  {
+    "event_id": "540980fb-7211-4185-927b-ceb39c672546",
+    "event_type": "api_latency_recorded",
+    "timestamp": "2026-10-16T22:04:43.677+00:00",
+    "service": "brasaland-api",
+    "tags": {
+      "method": "GET",
+      "duration_ms": 370.70000000018626,
+      "status_code": 200,
+      "route_template": "/api/v1/executive/weekly-report",
+      "service_version": "0.1.0"
+    },
+    "request_id": "a8f427b3-7d3a-42ba-a8e0-57231628ba8d",
+    "received_at": "2026-10-16T22:04:44.461456+00:00"
+  },
+  {
+    "event_id": "848f26d3-6f08-4883-823b-5b23e6b21a0c",
+    "event_type": "api_latency_recorded",
+    "timestamp": "2026-10-16T22:04:44.028+00:00",
+    "service": "brasaland-api",
+    "tags": {
+      "method": "POST",
+      "duration_ms": 22.199999999720603,
+      "status_code": 201,
+      "route_template": "/api/v1/inventory/receipts",
+      "service_version": "0.1.0"
+    },
+    "request_id": "a475f07d-f7e7-4660-9926-32098137f393",
+    "received_at": "2026-10-16T22:04:44.461456+00:00"
+  },
+  {
+    "event_id": "b4759ca8-0fad-4cfa-9f0f-f408b0c47002",
+    "event_type": "inventory_receipt_created",
+    "timestamp": "2026-10-16T22:04:44.029+00:00",
+    "service": "brasaland-api",
+    "tags": {
+      "sku": "CHICKEN",
+      "unit": "kg",
+      "country": "CO",
+      "currency": "COP",
+      "store_id": "med-001",
+      "receipt_id": "9",
+      "received_qty": 0.1
+    },
+    "request_id": "28ee05a0-9f57-465f-ae5a-672001635795",
+    "received_at": "2026-10-16T22:04:44.461456+00:00"
+  },
+  {
+    "event_id": "cf7520a0-37a3-4f7c-94ec-e3d11ff4d27b",
+    "event_type": "auth_login_failed",
+    "timestamp": "2026-10-16T22:04:45.247+00:00",
+    "service": "brasaland-api",
+    "tags": {
+      "auth_method": "password",
+      "failure_code": "network_error",
+      "source_class": "web"
+    },
+    "request_id": "e2ae6dad-0a09-4783-b964-4b43551ef7a2",
+    "received_at": "2026-10-16T22:04:55.02429+00:00"
+  },
+  {
+    "event_id": "0135e6cc-378a-4312-a813-2c12b90b763d",
+    "event_type": "api_latency_recorded",
+    "timestamp": "2026-10-16T22:04:55.144904+00:00",
+    "service": "brasaland-api",
+    "tags": {
+      "method": "GET",
+      "duration_ms": 4.65161000010994,
+      "status_code": 200,
+      "route_template": "/health",
+      "service_version": "0.1.0"
+    },
+    "request_id": "e2e-manual-53e0c4d5-f829-4a24-a114-b7ed33cb06fe",
+    "received_at": "2026-10-16T22:04:55.384426+00:00"
+  }
+]

@@ -1,0 +1,78 @@
+{
+  "run_id": "53e0c4d5-f829-4a24-a114-b7ed33cb06fe",
+  "started_at": "2026-10-16T22:04:42.520938+00:00",
+  "completed_at": "2026-10-16T22:04:55.944659+00:00",
+  "source": "Unmodified local backoffice and real remote Supabase REST API",
+  "frontend_events_stored": 26,
+  "verified_rows": 27,
+  "frontend_acknowledgements": [
+    {
+      "received": 20,
+      "stored": 14,
+      "rejected": 6
+    },
+    {
+      "received": 12,
+      "stored": 11,
+      "rejected": 1
+    },
+    {
+      "received": 2,
+      "stored": 1,
+      "rejected": 1
+    }
+  ],
+  "frontend_contract_rejections": [
+    {
+      "event_type": "navigation_section_viewed",
+      "reason": "contract_validation_failed"
+    },
+    {
+      "event_type": "navigation_section_viewed",
+      "reason": "contract_validation_failed"
+    },
+    {
+      "event_type": "navigation_section_viewed",
+      "reason": "contract_validation_failed"
+    },
+    {
+      "event_type": "navigation_section_viewed",
+      "reason": "contract_validation_failed"
+    },
+    {
+      "event_type": "navigation_section_viewed",
+      "reason": "contract_validation_failed"
+    },
+    {
+      "event_type": "frontend_page_load_recorded",
+      "reason": "contract_validation_failed"
+    },
+    {
+      "event_type": "navigation_section_viewed",
+      "reason": "contract_validation_failed"
+    },
+    {
+      "event_type": "frontend_page_load_recorded",
+      "reason": "contract_validation_failed"
+    }
+  ],
+  "login_http_status": 422,
+  "local_receipt": {
+    "receipt_id": 9,
+    "store_id": "med-001",
+    "sku": "CHICKEN",
+    "received_qty": 0.1
+  },
+  "mixed_batch": {
+    "received": 3,
+    "stored": 1,
+    "rejected": 2
+  },
+  "duplicate_retry": {
+    "received": 3,
+    "stored": 0,
+    "rejected": 3
+  },
+  "outbound_order": "Not implemented in existing backend or backoffice; not fabricated",
+  "screenshot_source": "Live Supabase REST query rendered as an evidence view, not Supabase Studio"
+}

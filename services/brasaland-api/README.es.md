@@ -110,7 +110,7 @@ Antes de iniciar, aplica `migrations/001_telemetry_events.sql` en Supabase y con
 
 La tabla permite INSERT/SELECT al rol de servicio, sin permisos UPDATE/DELETE/TRUNCATE ni acceso anonimo. Los reintentos se deduplican por `event_id` sin actualizar hechos existentes; los duplicados se incluyen en `rejected`, por lo que `received = stored + rejected`. Los fallos de almacenamiento devuelven 503 para permitir reintentos; un sobre sin arreglo `events` devuelve 422. Un lote vacio o completamente invalido no consulta Supabase.
 
-Consulta [TELEMETRY-STORAGE.es.md](TELEMETRY-STORAGE.es.md) para despliegue, prueba manual y evidencia pendiente de Supabase.
+Consulta [TELEMETRY-STORAGE.es.md](TELEMETRY-STORAGE.es.md) para despliegue, prueba manual, capturas de la verificacion real en Supabase y limitaciones pendientes del backoffice.
 
 ## Endpoints MVP
 

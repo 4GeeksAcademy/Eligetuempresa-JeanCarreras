@@ -89,7 +89,7 @@ curl http://localhost:8000/api/v1/finance/kpis \
 
 Apply `migrations/001_telemetry_events.sql` in Supabase first. Set backend-only `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY`; optionally set `TELEMETRY_SERVICE` (default `brasaland-api`, the receiving service). Never expose the service key to the frontend. Validated `properties` map directly to JSONB `tags`, preserving country/store dimensions. The service role has INSERT/SELECT only; client roles have no access. Duplicate event IDs are ignored, never updated, and counted as rejected. Storage failures return 503, malformed envelopes return 422, and empty/all-invalid batches skip storage.
 
-See [TELEMETRY-STORAGE.es.md](TELEMETRY-STORAGE.es.md) for deployment and pending live verification.
+See [TELEMETRY-STORAGE.es.md](TELEMETRY-STORAGE.es.md) for deployment, live Supabase verification evidence, screenshots and remaining backoffice limitations.
 
 ## MVP endpoints
 
