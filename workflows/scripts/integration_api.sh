@@ -157,6 +157,7 @@ finance_bad_status="$(curl -sS -o /dev/null -w "%{http_code}" \
 assert_status "finance token invalido" "401" "$finance_bad_status"
 
 # 10) inactivity alerts with executive role (allowed)
+alerts_reference_at="$(date -u -d '+3 hours' +'%Y-%m-%dT%H:%M:%SZ')"
 alerts_exec_status="$(curl -sS -o /dev/null -w "%{http_code}" \
   -H "X-API-Role: executive" \
   -H "X-API-Token: $EXEC_TOKEN" \
@@ -166,7 +167,7 @@ assert_status "alerts inactivity con executive" "200" "$alerts_exec_status"
 alerts_exec_body="$(curl -fsS \
   -H "X-API-Role: executive" \
   -H "X-API-Token: $EXEC_TOKEN" \
-  "$API_BASE/api/v1/alerts/inactivity?window_minutes=60")"
+  "$API_BASE/api/v1/alerts/inactivity?window_minutes=60&opening_hours_only=false&reference_at=$alerts_reference_at")"
 assert_contains "alerts inactivity payload" '"severity"' "$alerts_exec_body"
 assert_contains "alerts inactivity accion" '"recommended_action"' "$alerts_exec_body"
 assert_contains "alerts inactivity timezone" '"store_timezone"' "$alerts_exec_body"
@@ -188,7 +189,7 @@ assert_status "create alert action operations" "201" "$alert_action_status"
 alerts_ops_body="$(curl -fsS \
   -H "X-API-Role: operations" \
   -H "X-API-Token: $OPS_TOKEN" \
-  "$API_BASE/api/v1/alerts/inactivity?window_minutes=15")"
+  "$API_BASE/api/v1/alerts/inactivity?window_minutes=15&opening_hours_only=false&reference_at=$alerts_reference_at")"
 assert_contains "alerts inactivity refleja estado" '"alert_status":"acknowledged"' "$alerts_ops_body"
 
 # 12) create alert action with executive role (forbidden)
