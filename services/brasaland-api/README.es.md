@@ -102,6 +102,12 @@ Variables de entorno (ver `.env.example`):
 
 Los tokens de recuperacion se almacenan hasheados en SQLite, expiran y se marcan como usados tras un reset exitoso. `POST /auth/forgot-password` siempre responde 200 con un mensaje neutro para evitar enumeracion de cuentas.
 
+## Captura de telemetria
+
+`POST /telemetry/events` recibe lotes con el envelope `TelemetryEvent`, valida cada `event_type` y su allowlist desde `docs/telemetry/event-schemas.json`, registra los tipos recibidos y responde `{"received": N}`. Es un stub de verificacion: no persiste eventos.
+
+Configura `TELEMETRY_ENDPOINT=http://localhost:8000/telemetry/events` en `services/brasaland-api/.env`. La API lee esta variable al iniciar; la URL queda declarada para sustituir el stub por la ingesta persistente sin cambiar la configuracion del servicio.
+
 ## Endpoints MVP
 
 - GET /health
