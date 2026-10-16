@@ -7,11 +7,12 @@ from pathlib import Path
 from typing import Any, Literal
 from uuid import UUID
 
+import httpx
 from dotenv import load_dotenv
 from fastapi import APIRouter, HTTPException, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.routing import APIRoute
-from pydantic import AwareDatetime, BaseModel, ConfigDict, Field, StrictStr, model_validator
+from pydantic import AwareDatetime, BaseModel, ConfigDict, Field, StrictStr, ValidationError, model_validator
 
 
 logger = logging.getLogger(__name__)
@@ -101,12 +102,60 @@ class TelemetryEvent(BaseModel):
 class TelemetryBatch(BaseModel):
     model_config = ConfigDict(extra="forbid", strict=True)
 
-    events: list[TelemetryEvent]
+    events: list[Any]
+
+
+def store_telemetry(rows: list[dict[str, Any]]) -> int:
+    url = os.getenv("SUPABASE_URL", "").rstrip("/")
+    key = os.getenv("SUPABASE_SERVICE_ROLE_KEY", "")
+    if not url or not key:
+        raise HTTPException(status_code=503, detail="Telemetry storage unavailable")
+
+    try:
+        response = httpx.post(
+            f"{url}/rest/v1/telemetry_events",
+            params={"on_conflict": "event_id", "select": "event_id"},
+            headers={
+                "apikey": key,
+                "Authorization": f"Bearer {key}",
+                "Prefer": "resolution=ignore-duplicates,return=representation",
+            },
+            json=rows,
+            timeout=10.0,
+        )
+        response.raise_for_status()
+        stored_rows = response.json()
+        if not isinstance(stored_rows, list) or len(stored_rows) > len(rows):
+            raise ValueError("Invalid storage response")
+    except (httpx.HTTPError, ValueError) as error:
+        logger.warning("Telemetry bulk insert failed")
+        raise HTTPException(status_code=503, detail="Telemetry storage unavailable") from error
+    return len(stored_rows)
 
 
 @telemetry_router.post("/events", status_code=200)
 def receive_telemetry(batch: TelemetryBatch) -> dict[str, int]:
-    logger.info("Received telemetry batch with %d events", len(batch.events))
-    for event in batch.events:
-        logger.info("Received telemetry event_type=%s", event.event_type)
-    return {"received": len(batch.events)}
+    rows = []
+    for raw in batch.events:
+        try:
+            event = TelemetryEvent.model_validate(raw)
+        except ValidationError:
+            continue
+        payload = event.model_dump(mode="json")
+        rows.append({
+            "event_id": payload["eventId"],
+            "timestamp": payload["timestamp"],
+            "event_type": payload["event_type"],
+            "service": os.getenv("TELEMETRY_SERVICE", "brasaland-api"),
+            "session_id": payload["sessionId"],
+            "user_id": payload["userId"],
+            "schema_version": payload["schemaVersion"],
+            "request_id": payload["requestId"],
+            "tags": payload["properties"],
+        })
+
+    received = len(batch.events)
+    stored = store_telemetry(rows) if rows else 0
+    rejected = received - stored
+    logger.info("Telemetry batch received=%d stored=%d rejected=%d", received, stored, rejected)
+    return {"received": received, "stored": stored, "rejected": rejected}

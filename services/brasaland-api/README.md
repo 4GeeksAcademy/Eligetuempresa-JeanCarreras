@@ -83,6 +83,14 @@ curl http://localhost:8000/api/v1/finance/kpis \
 - `GET /api/v1/profiles/me` — Get current user profile (requires auth)
 - `PUT /api/v1/profiles/me` — Update current user profile (requires auth)
 
+## Telemetry storage
+
+`POST /telemetry/events` keeps the existing `{"events": [...]}` envelope and frontend URL. Each item is validated with the unchanged `TelemetryEvent` model; valid items are inserted into Supabase in one bulk request. HTTP 200 returns `{"received": N, "stored": M, "rejected": R}`. Invalid items do not cancel valid siblings.
+
+Apply `migrations/001_telemetry_events.sql` in Supabase first. Set backend-only `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY`; optionally set `TELEMETRY_SERVICE` (default `brasaland-api`, the receiving service). Never expose the service key to the frontend. Validated `properties` map directly to JSONB `tags`, preserving country/store dimensions. The service role has INSERT/SELECT only; client roles have no access. Duplicate event IDs are ignored, never updated, and counted as rejected. Storage failures return 503, malformed envelopes return 422, and empty/all-invalid batches skip storage.
+
+See [TELEMETRY-STORAGE.es.md](TELEMETRY-STORAGE.es.md) for deployment and pending live verification.
+
 ## MVP endpoints
 
 - GET /health

@@ -104,9 +104,13 @@ Los tokens de recuperacion se almacenan hasheados en SQLite, expiran y se marcan
 
 ## Captura de telemetria
 
-`POST /telemetry/events` recibe lotes con el envelope `TelemetryEvent`, valida cada `event_type` y su allowlist desde `docs/telemetry/event-schemas.json`, registra los tipos recibidos y responde `{"received": N}`. Es un stub de verificacion: no persiste eventos.
+`POST /telemetry/events` recibe el mismo envelope `{"events": [...]}`. Valida cada elemento con el modelo `TelemetryEvent` existente y persiste los validos en Supabase mediante una unica operacion bulk. Responde HTTP 200 con `{"received": N, "stored": M, "rejected": R}`; un evento invalido no cancela el lote. `properties` se conserva como `tags` JSONB, sujeto a la allowlist del catalogo.
 
-Configura `TELEMETRY_ENDPOINT=http://localhost:8000/telemetry/events` en `services/brasaland-api/.env`. La API lee esta variable al iniciar; la URL queda declarada para sustituir el stub por la ingesta persistente sin cambiar la configuracion del servicio.
+Antes de iniciar, aplica `migrations/001_telemetry_events.sql` en Supabase y configura `SUPABASE_URL` y `SUPABASE_SERVICE_ROLE_KEY` solo en el backend. `TELEMETRY_SERVICE` identifica al servicio receptor (por defecto `brasaland-api`). La URL `TELEMETRY_ENDPOINT=http://localhost:8000/telemetry/events` y `NEXT_PUBLIC_TELEMETRY_ENDPOINT` no cambian. Nunca publiques la clave de servicio en el frontend.
+
+La tabla permite INSERT/SELECT al rol de servicio, sin permisos UPDATE/DELETE/TRUNCATE ni acceso anonimo. Los reintentos se deduplican por `event_id` sin actualizar hechos existentes; los duplicados se incluyen en `rejected`, por lo que `received = stored + rejected`. Los fallos de almacenamiento devuelven 503 para permitir reintentos; un sobre sin arreglo `events` devuelve 422. Un lote vacio o completamente invalido no consulta Supabase.
+
+Consulta [TELEMETRY-STORAGE.es.md](TELEMETRY-STORAGE.es.md) para despliegue, prueba manual y evidencia pendiente de Supabase.
 
 ## Endpoints MVP
 
