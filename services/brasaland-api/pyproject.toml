@@ -8,6 +8,7 @@ authors = [
 requires-python = ">=3.12"
 dependencies = [
     "fastapi==0.116.1",
+    "httpx==0.28.1",
     "libpass[bcrypt]>=1.9.3",
     "pydantic==2.11.7",
     "python-dotenv>=1.0.0",
