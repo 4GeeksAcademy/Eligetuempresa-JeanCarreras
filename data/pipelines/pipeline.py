@@ -286,6 +286,41 @@ def record_failed_run(
         connection.close()
 
 
+@flow(name="extract-telemetry-subflow")
+def extract_telemetry_subflow(source_db_path: str | None = None) -> list[dict[str, Any]]:
+    """Subflow encargado de la fase de extracción."""
+    return extract_telemetry_events(str(source_db_path or SOURCE_DB_PATH))
+
+
+@flow(name="transform-telemetry-subflow")
+def transform_telemetry_subflow(events: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Subflow encargado de la fase de transformación y validación."""
+    kpis = transform_telemetry_events(events)
+    validation_state: State = validate_reporting_rows(kpis, return_state=True)
+    if validation_state.is_failed():
+        validation_state.result(raise_on_failure=True)
+    return kpis
+
+
+@flow(name="load-telemetry-subflow")
+def load_telemetry_subflow(
+    kpis: list[dict[str, Any]],
+    *,
+    run_id: str,
+    started_at: str,
+    records_processed: int,
+    reporting_db_path: str,
+) -> dict[str, Any]:
+    """Subflow encargado de la fase de carga a la base de datos de reporting."""
+    return load_reporting_rows(
+        kpis,
+        run_id=run_id,
+        started_at=started_at,
+        records_processed=records_processed,
+        reporting_db_path=reporting_db_path,
+    )
+
+
 @flow(name="brasaland-business-performance-pipeline")
 def run_business_performance_pipeline(
     source_db_path: str | None = None,
@@ -296,13 +331,10 @@ def run_business_performance_pipeline(
     destination = str(reporting_db_path or get_reporting_db_path())
     records_processed = 0
     try:
-        events = extract_telemetry_events(str(source_db_path or SOURCE_DB_PATH))
+        events = extract_telemetry_subflow(source_db_path)
         records_processed = len(events)
-        kpis = transform_telemetry_events(events)
-        validation_state: State = validate_reporting_rows(kpis, return_state=True)
-        if validation_state.is_failed():
-            validation_state.result(raise_on_failure=True)
-        result = load_reporting_rows(
+        kpis = transform_telemetry_subflow(events)
+        result = load_telemetry_subflow(
             kpis,
             run_id=run_id,
             started_at=started_at,
