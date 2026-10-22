@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Brasaland | Informe de negocio</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=Fraunces:opsz,wght@9..144,600&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="styles.css" />
+    <script type="module" src="app.mjs"></script>
+  </head>
+  <body>
+    <header class="topbar">
+      <a class="brand" href="../../executive-dashboard/">Brasaland <span>Digital</span></a>
+      <a id="login" href="../../auth/">Mi cuenta</a>
+    </header>
+    <main>
+      <header class="heading">
+        <p class="eyebrow">Direccion y operaciones</p>
+        <h1>Informe de negocio</h1>
+        <p id="period">Periodo pendiente de consulta</p>
+      </header>
+      <form id="filters" class="filters" aria-label="Periodo y mercado">
+        <label>Desde <input type="date" name="startDate" required /></label>
+        <label>Hasta <input type="date" name="endDate" required /></label>
+        <label>Pais
+          <select name="country">
+            <option value="">Todos los paises</option>
+            <option value="CO">Colombia</option>
+            <option value="US">Estados Unidos</option>
+          </select>
+        </label>
+        <label>Local <input type="text" name="storeId" autocomplete="off" /></label>
+        <button type="submit">Consultar informe</button>
+      </form>
+      <p id="status" class="status" role="status" aria-live="polite">Consultando informe...</p>
+      <p id="warning" class="warning" role="alert" hidden>El informe alcanzo el limite de 500 registros y puede estar incompleto. Reduce el periodo o selecciona un pais.</p>
+      <div id="results" aria-busy="true"></div>
+      <footer>Fuente: informe diario de Brasaland <span id="updated"></span></footer>
+    </main>
+  </body>
+</html>
