@@ -1,0 +1,6 @@
+# Ticket DEV-53 - nightly telemetry export (OS crontab, outside the FastAPI process).
+# Install: crontab scripts/nightly_export.crontab   (adjust REPO path first)
+# Runs every day at 02:15 UTC, after the UTC day "yesterday" is fully closed.
+CRON_TZ=UTC
+REPO=/workspaces/Eligetuempresa-JeanCarreras
+15 2 * * * cd $REPO && /usr/bin/env python3 scripts/nightly_export.py >> $REPO/data/raw/nightly_export.log 2>&1

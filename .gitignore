@@ -14,3 +14,4 @@ services/brasaland-api/brasaland_db.json
 
 # Generated report outputs
 workflows/output/
+data/process/reporting.db

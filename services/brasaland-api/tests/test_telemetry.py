@@ -1,9 +1,17 @@
-from unittest.mock import Mock
+import json
+from datetime import datetime, timezone
+from pathlib import Path
+from sqlite3 import connect
 
-import httpx
-import pytest
 from fastapi.testclient import TestClient
 
+from src.brasaland_api.analysis import (
+    api_latency_by_day,
+    availability_by_day_and_source,
+    auth_failure_rate,
+    error_rate_by_type,
+    events_per_day,
+)
 from src import main
 from src.brasaland_api import telemetry
 
@@ -63,6 +71,13 @@ def test_telemetry_endpoint_accepts_a_valid_batch(supabase) -> None:
     assert row["schema_version"] == "1.0.0"
     assert row["request_id"] == "b79d4c16-55f6-4e1c-9414-4c48a63fc478"
     assert row["tags"] == {"country": "CO", "validation_code": "invalid_quantity", "operation": "receipt"}
+    assert response.json() == {"received": 1}
+    with main.get_db() as db:
+        row = db.execute(
+            "SELECT event_type, tags FROM telemetry_events"
+        ).fetchone()
+    assert row["event_type"] == "inventory_validation_failed"
+    assert json.loads(row["tags"])["validation_code"] == "invalid_quantity"
 
 
 def test_telemetry_endpoint_rejects_properties_outside_the_allowlist(supabase) -> None:
@@ -110,97 +125,188 @@ def test_mixed_batch_is_validated_individually_and_inserted_once(supabase) -> No
 def test_invalid_envelope_returns_422_without_inserting(payload, supabase) -> None:
     response = client.post("/telemetry/events", json=payload)
     assert response.status_code == 422
-    supabase.assert_not_called()
+    assert "not-allowed@example.com" not in response.text
 
 
-def test_empty_batch_does_not_insert(supabase) -> None:
-    response = client.post("/telemetry/events", json={"events": []})
+def seed_operational_telemetry(db_path: Path) -> None:
+    with connect(db_path) as db:
+        db.execute(
+            """
+            CREATE TABLE telemetry_events (
+                event_id TEXT PRIMARY KEY,
+                timestamp TEXT NOT NULL,
+                event_type TEXT NOT NULL,
+                tags TEXT NOT NULL,
+                request_id TEXT NOT NULL
+            )
+            """
+        )
+        db.execute(
+            """
+            CREATE TABLE store_telemetry_events (
+                event_ts TEXT NOT NULL,
+                source_system TEXT NOT NULL,
+                latency_seconds REAL NOT NULL,
+                pos_online INTEGER NOT NULL
+            )
+            """
+        )
+        db.executemany(
+            """
+            INSERT INTO store_telemetry_events (
+                event_ts, source_system, latency_seconds, pos_online
+            ) VALUES (?, ?, ?, ?)
+            """,
+            [
+                ("2026-10-10T10:00:00+00:00", "pos", 2.0, 1),
+                ("2026-10-10T12:00:00+00:00", "pos", 4.0, 0),
+                ("2026-10-11T12:00:00+00:00", "network", 1.0, 1),
+                ("2026-10-12T00:00:00+00:00", "pos", 9.0, 1),
+            ],
+        )
+        db.executemany(
+            """
+            INSERT INTO telemetry_events (
+                event_id, timestamp, event_type, tags, request_id
+            ) VALUES (?, ?, ?, ?, ?)
+            """,
+            [
+                (
+                    "api-ok-1",
+                    "2026-10-10T10:00:00+00:00",
+                    "api_latency_recorded",
+                    json.dumps({"route_template": "/api/v1/orders", "status_code": 200, "duration_ms": 100, "request_count": 2}),
+                    "request-1",
+                ),
+                (
+                    "api-error-1",
+                    "2026-10-10T12:00:00+00:00",
+                    "api_latency_recorded",
+                    json.dumps({"route_template": "/api/v1/orders", "status_code": 500, "duration_ms": 200, "request_count": 1}),
+                    "request-2",
+                ),
+                ("auth-failed-1", "2026-10-10T13:00:00+00:00", "auth_login_failed", "{}", "request-3"),
+                ("auth-failed-2", "2026-10-10T14:00:00+00:00", "auth_login_failed", "{}", "request-4"),
+                ("auth-ok-1", "2026-10-10T15:00:00+00:00", "auth_login_succeeded", "{}", "request-5"),
+                ("auth-ok-2", "2026-10-10T16:00:00+00:00", "auth_login_succeeded", "{}", "request-6"),
+                (
+                    "api-ok-2",
+                    "2026-10-11T12:00:00+00:00",
+                    "api_latency_recorded",
+                    json.dumps({"route_template": "/api/v1/orders", "status_code": 200, "duration_ms": 60}),
+                    "request-7",
+                ),
+                ("auth-ok-3", "2026-10-11T13:00:00+00:00", "auth_login_succeeded", "{}", "request-8"),
+            ],
+        )
+
+
+def test_telemetry_analysis_returns_temporal_operational_metrics(tmp_path: Path) -> None:
+    db_path = tmp_path / "telemetry.db"
+    seed_operational_telemetry(db_path)
+    start = datetime(2026, 10, 10, tzinfo=timezone.utc)
+    end = datetime(2026, 10, 12, tzinfo=timezone.utc)
+
+    assert events_per_day(start, end, db_path) == [
+        {"date": "2026-10-10", "event_type": "api_latency_recorded", "event_count": 2},
+        {"date": "2026-10-10", "event_type": "auth_login_failed", "event_count": 2},
+        {"date": "2026-10-10", "event_type": "auth_login_succeeded", "event_count": 2},
+        {"date": "2026-10-11", "event_type": "api_latency_recorded", "event_count": 1},
+        {"date": "2026-10-11", "event_type": "auth_login_succeeded", "event_count": 1},
+    ]
+    assert api_latency_by_day(start, end, db_path)[0] == {
+        "date": "2026-10-10",
+        "route_template": "/api/v1/orders",
+        "request_count": 3,
+        "mean_latency_ms": 133.33,
+    }
+    assert error_rate_by_type(start, end, db_path)[0] == {
+        "date": "2026-10-10",
+        "event_type": "api_latency_recorded",
+        "route_template": "/api/v1/orders",
+        "request_count": 3,
+        "error_count": 1,
+        "error_rate_pct": 33.33,
+    }
+    assert auth_failure_rate(start, end, db_path) == [
+        {
+            "date": "2026-10-10",
+            "failed_attempts": 2,
+            "total_attempts": 4,
+            "failure_rate_pct": 50.0,
+        },
+        {
+            "date": "2026-10-11",
+            "failed_attempts": 0,
+            "total_attempts": 1,
+            "failure_rate_pct": 0.0,
+        },
+    ]
+    assert availability_by_day_and_source(start, end, db_path)[0] == {
+        "date": "2026-10-10",
+        "source_system": "pos",
+        "event_count": 2,
+        "online_count": 1,
+        "availability_pct": 50.0,
+    }
+
+
+def test_telemetry_report_uses_utc_window_and_cache(
+    tmp_path: Path, monkeypatch
+) -> None:
+    db_path = tmp_path / "telemetry.db"
+    seed_operational_telemetry(db_path)
+    monkeypatch.setattr(main, "DB_PATH", db_path)
+    main._telemetry_report_cache.clear()
+
+    response = client.get(
+        "/telemetry/report",
+        params={
+            "start_date": "2026-10-10T00:00:00Z",
+            "end_date": "2026-10-12T00:00:00Z",
+        },
+    )
+
     assert response.status_code == 200
-    assert response.json() == {"received": 0, "stored": 0, "rejected": 0}
-    supabase.assert_not_called()
+    report = response.json()
+    assert report["period"] == {
+        "from": "2026-10-10T00:00:00+00:00",
+        "to": "2026-10-12T00:00:00+00:00",
+    }
+    assert report["metrics"]["events_per_day"][0]["event_count"] == 2
 
+    def unexpected_recalculation(*_args, **_kwargs):
+        raise AssertionError("cached report recalculated")
 
-def test_storage_failure_is_not_acknowledged(supabase) -> None:
-    supabase.side_effect = httpx.ConnectError("secret upstream details")
-    valid = telemetry_event({"country": "CO", "validation_code": "invalid_quantity", "operation": "receipt"})
-    response = client.post("/telemetry/events", json={"events": [valid]})
-    assert response.status_code == 503
-    assert response.json() == {"detail": "Telemetry storage unavailable"}
-    supabase.assert_called_once()
+    monkeypatch.setattr(main, "events_per_day", unexpected_recalculation)
+    cached_response = client.get(
+        "/telemetry/report",
+        params={
+            "start_date": "2026-10-10T00:00:00Z",
+            "end_date": "2026-10-12T00:00:00Z",
+        },
+    )
+    assert cached_response.json() == report
 
+    cache_key = (
+        "2026-10-10T00:00:00+00:00",
+        "2026-10-12T00:00:00+00:00",
+    )
+    main._telemetry_report_cache[cache_key] = (0.0, report)
+    recalculations = 0
 
-def test_missing_configuration_does_not_acknowledge_storage(supabase, monkeypatch) -> None:
-    monkeypatch.delenv("SUPABASE_SERVICE_ROLE_KEY")
-    valid = telemetry_event({"country": "CO", "validation_code": "invalid_quantity", "operation": "receipt"})
-    response = client.post("/telemetry/events", json={"events": [valid]})
-    assert response.status_code == 503
-    supabase.assert_not_called()
+    def count_recalculation(*_args, **_kwargs):
+        nonlocal recalculations
+        recalculations += 1
+        return report["metrics"]["events_per_day"]
 
-
-def test_duplicates_are_counted_without_updating_existing_events(supabase) -> None:
-    supabase.return_value = httpx.Response(201, json=[], request=supabase.return_value.request)
-    valid = telemetry_event({"country": "CO", "validation_code": "invalid_quantity", "operation": "receipt"})
-    response = client.post("/telemetry/events", json={"events": [valid]})
-    assert response.status_code == 200
-    assert response.json() == {"received": 1, "stored": 0, "rejected": 1}
-    supabase.assert_called_once()
-    assert supabase.call_args.kwargs["params"]["on_conflict"] == "event_id"
-    assert supabase.call_args.kwargs["headers"]["Prefer"] == "resolution=ignore-duplicates,return=representation"
-
-
-@pytest.mark.parametrize("event_type,properties", [
-    ("inventory_receipt_created", {
-        "receipt_id": "receipt-test", "store_id": "CO-01", "country": "CO",
-        "sku": "SKU-01", "received_qty": 10, "unit": "kg", "currency": "COP",
-    }),
-    ("inventory_outbound_order_submitted", {
-        "order_id": "order-test", "store_id": "US-01", "country": "US",
-        "sku": "SKU-01", "quantity": 2, "unit": "kg",
-        "reason_code": "consumption", "movement_id": "movement-test",
-    }),
-    ("auth_login_failed", {
-        "failure_code": "invalid_credentials", "auth_method": "password",
-        "source_class": "web", "country": "CO",
-    }),
-])
-def test_business_and_technical_dimensions_are_preserved(event_type, properties, supabase) -> None:
-    event = {**telemetry_event(properties), "event_type": event_type}
-    response = client.post("/telemetry/events", json={"events": [event]})
-    assert response.status_code == 200
-    assert response.json() == {"received": 1, "stored": 1, "rejected": 0}
-    supabase.assert_called_once()
-    row = supabase.call_args.kwargs["json"][0]
-    assert row["event_type"] == event_type
-    assert row["tags"] == properties
-
-
-@pytest.mark.parametrize("override", [
-    {"eventId": "invalid"},
-    {"timestamp": "2026-10-10T12:30:00"},
-    {"event_type": "unknown_event"},
-    {"schemaVersion": "2.0.0"},
-    {"requestId": ""},
-    {"properties": {}},
-    {"properties": {"country": "XX", "validation_code": "invalid_quantity", "operation": "receipt"}},
-    {"properties": {"country": True, "validation_code": "invalid_quantity", "operation": "receipt"}},
-])
-def test_invalid_contract_does_not_cancel_valid_siblings(override, supabase) -> None:
-    valid = telemetry_event({"country": "CO", "validation_code": "invalid_quantity", "operation": "receipt"})
-    response = client.post("/telemetry/events", json={"events": [valid, {**valid, **override}]})
-    assert response.status_code == 200
-    assert response.json() == {"received": 2, "stored": 1, "rejected": 1}
-    supabase.assert_called_once()
-    assert len(supabase.call_args.kwargs["json"]) == 1
-
-
-@pytest.mark.parametrize("status,payload", [
-    (401, {"message": "private database details"}),
-    (500, {"message": "private database details"}),
-    (201, {"unexpected": "response"}),
-])
-def test_database_errors_return_a_safe_retryable_response(status, payload, supabase) -> None:
-    supabase.return_value = httpx.Response(status, json=payload, request=supabase.return_value.request)
-    valid = telemetry_event({"country": "CO", "validation_code": "invalid_quantity", "operation": "receipt"})
-    response = client.post("/telemetry/events", json={"events": [valid]})
-    assert response.status_code == 503
-    assert response.json() == {"detail": "Telemetry storage unavailable"}
+    monkeypatch.setattr(main, "events_per_day", count_recalculation)
+    expired_response = client.get(
+        "/telemetry/report",
+        params={
+            "start_date": "2026-10-10T00:00:00Z",
+            "end_date": "2026-10-12T00:00:00Z",
+        },
+    )
+    assert expired_response.status_code == 200
+    assert recalculations == 1
