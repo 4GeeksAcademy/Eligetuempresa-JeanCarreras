@@ -104,6 +104,7 @@ version = "0.1.0"
 source = { editable = "." }
 dependencies = [
     { name = "fastapi" },
+    { name = "httpx" },
     { name = "libpass", extra = ["bcrypt"] },
     { name = "pandas" },
     { name = "pydantic" },
@@ -124,6 +125,7 @@ dev = [
 [package.metadata]
 requires-dist = [
     { name = "fastapi", specifier = "==0.116.1" },
+    { name = "httpx", specifier = "==0.28.1" },
     { name = "libpass", extras = ["bcrypt"], specifier = ">=1.9.3" },
     { name = "pandas", specifier = ">=2.2,<4" },
     { name = "pydantic", specifier = "==2.11.7" },

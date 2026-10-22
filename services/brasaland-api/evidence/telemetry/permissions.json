@@ -1,0 +1,11 @@
+{
+  "verified_at_date": "2026-10-16",
+  "target": "public.telemetry_events",
+  "credential_scope": "Backend Supabase service role",
+  "probe": "PATCH and DELETE filtered by the same random UUID, verified absent immediately before the requests",
+  "patch": {"http_status": 403, "postgres_error_code": "42501"},
+  "delete": {"http_status": 403, "postgres_error_code": "42501"},
+  "rows_updated": 0,
+  "rows_deleted": 0,
+  "note": "Effective permissions were checked without touching existing rows; OpenAPI method listings alone do not prove granted privileges. TRUNCATE and index metadata are not exposed by PostgREST."
+}

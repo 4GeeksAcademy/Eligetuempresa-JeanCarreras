@@ -9,11 +9,12 @@ from sqlite3 import connect
 from typing import Any, Literal
 from uuid import UUID
 
+import httpx
 from dotenv import load_dotenv
 from fastapi import APIRouter, HTTPException, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.routing import APIRoute
-from pydantic import AwareDatetime, BaseModel, ConfigDict, Field, StrictStr, model_validator
+from pydantic import AwareDatetime, BaseModel, ConfigDict, Field, StrictStr, ValidationError, model_validator
 
 
 logger = logging.getLogger(__name__)
@@ -103,7 +104,35 @@ class TelemetryEvent(BaseModel):
 class TelemetryBatch(BaseModel):
     model_config = ConfigDict(extra="forbid", strict=True)
 
-    events: list[TelemetryEvent]
+    events: list[Any]
+
+
+def store_telemetry(rows: list[dict[str, Any]]) -> int:
+    url = os.getenv("SUPABASE_URL", "").rstrip("/")
+    key = os.getenv("SUPABASE_SERVICE_ROLE_KEY", "")
+    if not url or not key:
+        raise HTTPException(status_code=503, detail="Telemetry storage unavailable")
+
+    try:
+        response = httpx.post(
+            f"{url}/rest/v1/telemetry_events",
+            params={"on_conflict": "event_id", "select": "event_id"},
+            headers={
+                "apikey": key,
+                "Authorization": f"Bearer {key}",
+                "Prefer": "resolution=ignore-duplicates,return=representation",
+            },
+            json=rows,
+            timeout=10.0,
+        )
+        response.raise_for_status()
+        stored_rows = response.json()
+        if not isinstance(stored_rows, list) or len(stored_rows) > len(rows):
+            raise ValueError("Invalid storage response")
+    except (httpx.HTTPError, ValueError) as error:
+        logger.warning("Telemetry bulk insert failed")
+        raise HTTPException(status_code=503, detail="Telemetry storage unavailable") from error
+    return len(stored_rows)
 
 
 @telemetry_router.post("/events", status_code=200)
