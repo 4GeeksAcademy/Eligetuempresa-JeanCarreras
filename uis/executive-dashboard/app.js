@@ -142,22 +142,42 @@ function recordApiLatency(path, method, statusCode, startedAt) {
     .replace(/\/\d+(?=\/|$)/g, "/:id");
   const minute = Math.floor(Date.now() / 60000);
   const key = `${routeTemplate}:${method}:${statusCode}:${minute}`;
-  if (apiLatencyWindows.has(key)) {
-    return;
+  if (!apiLatencyWindows.has(key) && apiLatencyWindows.size >= 120) {
+    flushApiLatencyWindows();
   }
-  apiLatencyWindows.set(key, true);
-  if (apiLatencyWindows.size > 120) {
-    apiLatencyWindows.delete(apiLatencyWindows.keys().next().value);
-  }
-
-  window.BrasalandTelemetry?.track("api_latency_recorded", {
-    route_template: routeTemplate,
+  const bucket = apiLatencyWindows.get(key) || {
+    routeTemplate,
     method,
-    status_code: statusCode,
-    duration_ms: Math.max(0, performance.now() - startedAt),
-    service_version: "0.1.0",
-  });
+    statusCode,
+    requestCount: 0,
+    totalDurationMs: 0,
+  };
+  bucket.requestCount += 1;
+  bucket.totalDurationMs += Math.max(0, performance.now() - startedAt);
+  apiLatencyWindows.set(key, bucket);
 }
+
+function flushApiLatencyWindows() {
+  for (const bucket of apiLatencyWindows.values()) {
+    window.BrasalandTelemetry?.track("api_latency_recorded", {
+      route_template: bucket.routeTemplate,
+      method: bucket.method,
+      status_code: bucket.statusCode,
+      duration_ms: bucket.totalDurationMs / bucket.requestCount,
+      request_count: bucket.requestCount,
+      service_version: "0.1.0",
+    });
+  }
+  apiLatencyWindows.clear();
+}
+
+window.setInterval(flushApiLatencyWindows, 60000);
+document.addEventListener("visibilitychange", () => {
+  if (document.visibilityState === "hidden") {
+    flushApiLatencyWindows();
+    void window.BrasalandTelemetry?.flush();
+  }
+});
 
 function instrumentSectionViews() {
   if (typeof IntersectionObserver !== "function") {
@@ -1032,7 +1052,7 @@ async function fetchJson(path) {
   try {
     response = await fetch(`${API_BASE}${path}`);
   } catch (_error) {
-    recordApiLatency(path, "GET", 0, startedAt);
+    recordApiLatency(path, "GET", 599, startedAt);
     throw new Error("No se pudo conectar con la API. Reintenta en unos minutos.");
   }
   recordApiLatency(path, "GET", response.status, startedAt);
@@ -1055,7 +1075,7 @@ async function fetchJsonWithHeaders(path, headers) {
   try {
     response = await fetch(`${API_BASE}${path}`, { headers });
   } catch (_error) {
-    recordApiLatency(path, "GET", 0, startedAt);
+    recordApiLatency(path, "GET", 599, startedAt);
     throw new Error("No se pudo conectar con la API. Reintenta en unos minutos.");
   }
   recordApiLatency(path, "GET", response.status, startedAt);
@@ -1085,7 +1105,7 @@ async function postJsonWithHeaders(path, payload, headers) {
       body: JSON.stringify(payload),
     });
   } catch (_error) {
-    recordApiLatency(path, "POST", 0, startedAt);
+    recordApiLatency(path, "POST", 599, startedAt);
     throw new Error("No se pudo conectar con la API. Reintenta en unos minutos.");
   }
   recordApiLatency(path, "POST", response.status, startedAt);

@@ -142,7 +142,7 @@
     return window.matchMedia("(max-width: 767px)").matches ? "mobile" : "desktop";
   }
 
-  window.BrasalandTelemetry = Object.freeze({ track });
+  window.BrasalandTelemetry = Object.freeze({ track, flush });
   window.setInterval(() => void flush(), FLUSH_INTERVAL_MS);
   document.addEventListener("visibilitychange", () => {
     if (document.visibilityState === "hidden") {
