@@ -1,0 +1,42 @@
+[
+  {
+    "question": "¿Cuántos puntos necesito para alcanzar el nivel Oro?",
+    "expected_source_document": "loyalty-program",
+    "expected_chunk_text": "Oro (50+ puntos)"
+  },
+  {
+    "question": "¿Desde cuántos puntos puedo redimir y cuánto vale cada bloque?",
+    "expected_source_document": "loyalty-program",
+    "expected_chunk_text": "Cada 5 puntos redimidos equivalen a 20.000 COP (20 USD) de descuento"
+  },
+  {
+    "question": "¿Cuándo hay que añadir una nota por desperdicio de proteína?",
+    "expected_source_document": "waste-protocol",
+    "expected_chunk_text": "Todo desperdicio superior a 2 kg de proteína cárnica en un solo turno requiere una nota explicativa obligatoria."
+  },
+  {
+    "question": "¿Qué activa una alerta de merma no explicada?",
+    "expected_source_document": "waste-protocol",
+    "expected_chunk_text": "La merma no explicada superior al 3% del inventario semanal de un ingrediente activa una alerta automática al supervisor de operaciones."
+  },
+  {
+    "question": "¿Qué alérgenos pueden tener las Costillas BBQ Brasaland?",
+    "expected_source_document": "menu-allergens",
+    "expected_chunk_text": "Costillas BBQ Brasaland: contiene soya (salsa) y puede contener trazas de maní"
+  },
+  {
+    "question": "¿Se garantiza cero riesgo de contaminación cruzada ante una alergia?",
+    "expected_source_document": "menu-allergens",
+    "expected_chunk_text": "Nunca se garantiza \"cero riesgo de contaminación cruzada\""
+  },
+  {
+    "question": "¿Qué días se piden vegetales y cuál es su plazo de entrega?",
+    "expected_source_document": "supplier-ordering",
+    "expected_chunk_text": "Vegetales y frutas: pedido dos veces por semana (lunes y jueves), entrega en 24 horas."
+  },
+  {
+    "question": "¿Quién aprueba un pedido de emergencia superior a 500 USD?",
+    "expected_source_document": "supplier-ordering",
+    "expected_chunk_text": "Un pedido de emergencia requiere aprobación de Lucía Fernández (Gerente de Compras) si supera 500 USD"
+  }
+]

@@ -46,6 +46,7 @@ from .brasaland_api.analysis import (
     events_per_day,
 )
 from .brasaland_api.telemetry import telemetry_router
+from .brasaland_api.knowledge import knowledge_router
 from services.reporting.api import create_reporting_router
 
 load_dotenv(Path(__file__).resolve().parent.parent / ".env")
@@ -78,6 +79,7 @@ app.include_router(auth_router)
 app.include_router(users_router)
 app.include_router(profiles_router)
 app.include_router(telemetry_router)
+app.include_router(knowledge_router)
 app.include_router(create_reporting_router(require_roles, lambda: DB_PATH))
 
 
