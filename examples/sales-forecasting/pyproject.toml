@@ -1,0 +1,20 @@
+[project]
+name = "brasaland-sales-practice"
+version = "0.1.0"
+description = "Reproducible sales regression experiment on explicitly synthetic data"
+requires-python = ">=3.12"
+dependencies = [
+    "matplotlib>=3.11.2",
+    "pandas>=3.1.0",
+    "scikit-learn>=1.9.1",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["../../tests/pipelines"]
+pythonpath = ["."]
+addopts = "--strict-markers"
+
+[dependency-groups]
+dev = [
+    "pytest>=9.1.1",
+]
