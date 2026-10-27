@@ -1,0 +1,170 @@
+{
+  "provenance": "Modelo nuevo; no se encontro un artefacto del proyecto anterior.",
+  "target": "revenue_usd",
+  "market": "consolidated",
+  "features": [
+    "lag_1",
+    "lag_3",
+    "lag_12",
+    "rolling_mean_3",
+    "rolling_mean_12",
+    "month_sin",
+    "month_cos",
+    "trend_month"
+  ],
+  "forecast_protocol": "Recursivo: no usa ventas reales del bloque de validacion.",
+  "training_period": [
+    "2016-01-01",
+    "2023-12-01"
+  ],
+  "holdout_period": [
+    "2024-01-01",
+    "2025-12-01"
+  ],
+  "parameters": {
+    "max_depth": null,
+    "min_samples_leaf": 1
+  },
+  "search_results": [
+    {
+      "parameters": {
+        "max_depth": 3,
+        "min_samples_leaf": 3
+      },
+      "folds": [
+        {
+          "mse_usd2": 2994801211.9090056,
+          "rmse_usd": 54724.77694709231,
+          "mae_usd": 46147.65298985015,
+          "mape_pct": 7.53
+        },
+        {
+          "mse_usd2": 1932825921.9380348,
+          "rmse_usd": 43963.91613514468,
+          "mae_usd": 31945.915554964533,
+          "mape_pct": 5.05
+        },
+        {
+          "mse_usd2": 2448926284.4504375,
+          "rmse_usd": 49486.62732951638,
+          "mae_usd": 38710.311807484344,
+          "mape_pct": 5.73
+        },
+        {
+          "mse_usd2": 2272477942.83001,
+          "rmse_usd": 47670.514396532475,
+          "mae_usd": 38257.38716398716,
+          "mape_pct": 5.58
+        },
+        {
+          "mse_usd2": 4369293300.381014,
+          "rmse_usd": 66100.63010577898,
+          "mae_usd": 55314.45258301526,
+          "mape_pct": 7.31
+        }
+      ],
+      "mae_mean_usd": 42075.14401986029,
+      "mae_std_usd": 8949.347086004935
+    },
+    {
+      "parameters": {
+        "max_depth": 5,
+        "min_samples_leaf": 2
+      },
+      "folds": [
+        {
+          "mse_usd2": 2326505313.2748914,
+          "rmse_usd": 48233.860650738825,
+          "mae_usd": 40394.963980899636,
+          "mape_pct": 6.61
+        },
+        {
+          "mse_usd2": 1973934139.4946797,
+          "rmse_usd": 44428.97860062371,
+          "mae_usd": 34891.03843615576,
+          "mape_pct": 5.61
+        },
+        {
+          "mse_usd2": 2204481403.5566144,
+          "rmse_usd": 46951.90521753739,
+          "mae_usd": 37545.810658013936,
+          "mape_pct": 5.59
+        },
+        {
+          "mse_usd2": 1934281589.7094738,
+          "rmse_usd": 43980.46827524093,
+          "mae_usd": 37867.072396458905,
+          "mape_pct": 5.57
+        },
+        {
+          "mse_usd2": 4226872308.457386,
+          "rmse_usd": 65014.40077749995,
+          "mae_usd": 55702.1429430667,
+          "mape_pct": 7.41
+        }
+      ],
+      "mae_mean_usd": 41280.20568291899,
+      "mae_std_usd": 8294.464575048234
+    },
+    {
+      "parameters": {
+        "max_depth": null,
+        "min_samples_leaf": 1
+      },
+      "folds": [
+        {
+          "mse_usd2": 1608734597.1644695,
+          "rmse_usd": 40109.033859773655,
+          "mae_usd": 35043.27637916692,
+          "mape_pct": 5.8
+        },
+        {
+          "mse_usd2": 1719133167.5769932,
+          "rmse_usd": 41462.430796770626,
+          "mae_usd": 34527.50537916652,
+          "mape_pct": 5.66
+        },
+        {
+          "mse_usd2": 1604255909.1952991,
+          "rmse_usd": 40053.16353542251,
+          "mae_usd": 32278.756133333154,
+          "mape_pct": 4.83
+        },
+        {
+          "mse_usd2": 1903576589.776983,
+          "rmse_usd": 43629.99644484266,
+          "mae_usd": 37447.07570000031,
+          "mape_pct": 5.6
+        },
+        {
+          "mse_usd2": 3441153077.913193,
+          "rmse_usd": 58661.342278481774,
+          "mae_usd": 51191.83112083393,
+          "mape_pct": 6.86
+        }
+      ],
+      "mae_mean_usd": 38097.68894250017,
+      "mae_std_usd": 7546.778829379483
+    }
+  ],
+  "training_metrics": {
+    "mse_usd2": 128394329.2687867,
+    "rmse_usd": 11331.122153996343,
+    "mae_usd": 9165.320894047802,
+    "mape_pct": 1.47
+  },
+  "holdout_metrics": {
+    "mse_usd2": 4791579838.029537,
+    "rmse_usd": 69221.23834510284,
+    "mae_usd": 60489.93373958309,
+    "mape_pct": 7.79,
+    "mse_translated_pct_err": 7.79,
+    "gini": 0.03660657701770087,
+    "psi": 9.74839122085676,
+    "k2_score": 0.626736111111111
+  },
+  "train_residuals_std_usd": 11398.170426602017,
+  "psi_interpretation": "ATENCION: PSI > 0.25 indica un cambio estructural significativo entre entrenamiento y prueba. Se recomienda reentrenar el modelo con los datos mas recientes.",
+  "gini_interpretation": "Bajo (<0.3): el modelo no discrimina bien meses buenos de malos.",
+  "warning": "Los folds usados para seleccionar parametros no son una evaluacion independiente."
+}
