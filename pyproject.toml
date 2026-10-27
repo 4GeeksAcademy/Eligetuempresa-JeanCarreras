@@ -15,6 +15,9 @@ dependencies = [
 [tool.uv]
 package = false
 
+[tool.pytest.ini_options]
+pythonpath = ["examples/sales-forecasting"]
+
 [dependency-groups]
 dev = [
     "pytest>=8,<10",
