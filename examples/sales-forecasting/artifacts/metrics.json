@@ -1,0 +1,63 @@
+{
+  "synthetic": true,
+  "seed": 42,
+  "input_sha256": "f08c5b2d0b97f6db6aa59e3b549f9a2e52afea64633c3418dd90c1b27d79175e",
+  "train_period": [
+    "2016-01",
+    "2023-12"
+  ],
+  "test_period": [
+    "2024-01",
+    "2025-12"
+  ],
+  "k2_note": "K2 is undefined in the assignment; R2 is a provisional interpretation, not an established equivalence.",
+  "interval_note": "Approximate pointwise 90% rolling-origin residual band; no guaranteed time-series coverage.",
+  "markets": {
+    "CO": {
+      "mse": 1.4809741599395958e+16,
+      "mae": 101312772.25463562,
+      "r2": 0.6658905654829648,
+      "k2_score_assumed_r2": 0.6658905654829648,
+      "normalized_gini": 0.8367621395677356,
+      "currency": "COP",
+      "train_rows": 96,
+      "test_rows": 24,
+      "calibration_rows": 24,
+      "prediction_psi_train_vs_test": 2.0097389074813314,
+      "interval_nominal_coverage": 0.9,
+      "interval_test_coverage": 0.875,
+      "interval_mean_width": 364621379.542346,
+      "seasonal_baseline": {
+        "mse": 2.6262707386984064e+16,
+        "mae": 120123512.0208333,
+        "r2": 0.4075103704503866,
+        "k2_score_assumed_r2": 0.4075103704503866,
+        "normalized_gini": 0.7971666471260245
+      },
+      "mae_improvement_vs_baseline_percent": 15.659498669115912
+    },
+    "US": {
+      "mse": 351757580.0745729,
+      "mae": 13981.556465346095,
+      "r2": 0.5041573727582904,
+      "k2_score_assumed_r2": 0.5041573727582904,
+      "normalized_gini": 0.8659481857523642,
+      "currency": "USD",
+      "train_rows": 96,
+      "test_rows": 24,
+      "calibration_rows": 24,
+      "prediction_psi_train_vs_test": 1.8013237662854984,
+      "interval_nominal_coverage": 0.9,
+      "interval_test_coverage": 0.8333333333333334,
+      "interval_mean_width": 57880.93754940692,
+      "seasonal_baseline": {
+        "mse": 851612766.2249376,
+        "mae": 21720.83375,
+        "r2": -0.20044580505708565,
+        "k2_score_assumed_r2": -0.20044580505708565,
+        "normalized_gini": 0.709766845405354
+      },
+      "mae_improvement_vs_baseline_percent": 35.63066396866053
+    }
+  }
+}
