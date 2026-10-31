@@ -5,8 +5,10 @@ pytest==8.4.1
 httpx==0.28.1
 python-dotenv==1.1.1
 libpass[bcrypt]>=1.9.3
+markitdown[pdf]>=0.1.3
 openai>=1.68,<3
 pandas>=2.2,<4
+py-readability-metrics>=1.4.5
 python-jose[cryptography]>=3.5.0
 python-multipart>=0.0.32
 prefect>=3
