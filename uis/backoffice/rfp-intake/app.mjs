@@ -45,7 +45,16 @@ async function api(path, options = {}) {
 }
 
 function statusLabel(status) {
-  return ({ analizando: "Analizando", analisis_completo: "Analisis completo", descartado: "Descartado" })[status] || status;
+  return ({
+    analizando: "Analizando",
+    analisis_completo: "Analisis completo",
+    descartado: "Descartado",
+    generando_borrador: "Generando borrador",
+    en_evaluacion: "En evaluacion",
+    needs_human_review: "Requiere revision humana",
+    esperando_aprobacion: "Esperando aprobacion",
+    terminado: "Terminado",
+  })[status] || status;
 }
 
 function renderTicketList(tickets) {
@@ -160,6 +169,13 @@ function renderTicket(ticket) {
   }
   if (ticket.status === "analisis_completo" || ticket.status === "descartado") {
     content.append(renderSections(ticket.department_sections));
+  }
+  // Part 2/3: Response status and approval UI
+  if (["generando_borrador", "en_evaluacion", "needs_human_review", "esperando_aprobacion", "terminado"].includes(ticket.status)) {
+    content.append(renderResponseStatus(ticket.id));
+  }
+  if (["esperando_aprobacion", "terminado"].includes(ticket.status)) {
+    content.append(renderApprovalUI(ticket.id));
   }
   detail.replaceChildren(content);
   detail.setAttribute("aria-busy", ticket.status === "analizando" && !ticket.processing_error ? "true" : "false");

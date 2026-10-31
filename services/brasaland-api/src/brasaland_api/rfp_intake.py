@@ -2,13 +2,23 @@ import logging
 import os
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any
+from typing import Any, Optional
 from uuid import UUID, uuid4
 
 import httpx
 from dotenv import load_dotenv
 from fastapi import APIRouter, BackgroundTasks, Depends, File, HTTPException, Query, UploadFile
 
+from data.pipelines.rfp_approval import (
+    ARBITER,
+    DEPARTMENT_APPROVERS,
+    detect_conflicts,
+    get_approval_state,
+    get_trace,
+    resolve_conflicts,
+    resume_approval,
+    ticket_thread_id,
+)
 from data.pipelines.rfp_intake import process_rfp_ticket
 from .auth import UserInDB, get_current_user
 
@@ -159,6 +169,7 @@ class SupabaseRfpRepository:
     def update_ticket_status(self, ticket_id: str, status: str) -> None:
         valid_statuses = {
             "generando_borrador", "en_evaluacion", "needs_human_review",
+            "esperando_aprobacion", "terminado",
         }
         if status not in valid_statuses:
             raise ValueError(f"Estado no valido: {status}")
@@ -269,6 +280,126 @@ class SupabaseRfpRepository:
             },
         )
         return result if isinstance(result, list) else []
+
+    # ------------------------------------------------------------------
+    # Part 3: Approval & closure methods
+    # ------------------------------------------------------------------
+
+    def save_approval_status(
+        self, ticket_id: str, department: str, status: str,
+        approver: str = "", comment: str = "",
+    ) -> None:
+        """Upsert the approval status for a department."""
+        now = datetime.now(timezone.utc).isoformat()
+        body = {
+            "ticket_id": ticket_id,
+            "department": department,
+            "status": status,
+            "approver": approver,
+            "comment": comment,
+            "updated_at": now,
+        }
+        if status == "approved":
+            body["approved_at"] = now
+        elif status == "rejected":
+            body["rejected_at"] = now
+        self._request(
+            "POST",
+            "rfp_approval_status",
+            params={"on_conflict": "ticket_id,department"},
+            body=body,
+            prefer="resolution=merge-duplicates,return=minimal",
+        )
+
+    def get_approval_status_list(self, ticket_id: str) -> list[dict[str, Any]]:
+        """Get all approval status rows for a ticket."""
+        result = self._request(
+            "GET",
+            "rfp_approval_status",
+            params={"ticket_id": f"eq.{ticket_id}"},
+        )
+        return result if isinstance(result, list) else []
+
+    def save_final_document(self, ticket_id: str, content: dict[str, Any], rendered: str) -> None:
+        """Persist the final consolidated document."""
+        self._request(
+            "POST",
+            "rfp_final_document",
+            params={"on_conflict": "ticket_id"},
+            body={
+                "ticket_id": ticket_id,
+                "content": content,
+                "rendered": rendered,
+                "generated_at": datetime.now(timezone.utc).isoformat(),
+            },
+            prefer="resolution=merge-duplicates,return=minimal",
+        )
+
+    def get_final_document(self, ticket_id: str) -> dict[str, Any] | None:
+        """Get the final document for a ticket."""
+        result = self._request(
+            "GET",
+            "rfp_final_document",
+            params={"ticket_id": f"eq.{ticket_id}", "limit": "1"},
+        )
+        if isinstance(result, list) and result:
+            return result[0]
+        return None
+
+    def save_trace_entry(
+        self,
+        ticket_id: str,
+        node_name: str,
+        agent: str,
+        input_preview: str,
+        output_preview: str,
+        full_input: dict[str, Any] | None = None,
+        full_output: dict[str, Any] | None = None,
+        run_id: str = "",
+        department: str | None = None,
+    ) -> None:
+        """Persist a trace entry for audit."""
+        self._request(
+            "POST",
+            "rfp_tracing_log",
+            body={
+                "ticket_id": ticket_id,
+                "department": department,
+                "node_name": node_name,
+                "agent": agent,
+                "input_preview": input_preview[:500],
+                "output_preview": output_preview[:500],
+                "full_input": full_input or {},
+                "full_output": full_output or {},
+                "run_id": run_id,
+            },
+            prefer="return=minimal",
+        )
+
+    def save_arbitration_record(
+        self,
+        ticket_id: str,
+        conflict_id: str,
+        departments_involved: list[str],
+        description: str,
+        resolution: str,
+        resolved_by: str = "Mariana Restrepo",
+    ) -> None:
+        """Persist an arbitration record."""
+        self._request(
+            "POST",
+            "rfp_arbitration_records",
+            body={
+                "ticket_id": ticket_id,
+                "conflict_id": conflict_id,
+                "departments_involved": "{" + ",".join(departments_involved) + "}",
+                "description": description,
+                "resolution": resolution,
+                "resolved_by": resolved_by,
+                "timestamp": datetime.now(timezone.utc).isoformat(),
+            },
+            prefer="return=minimal",
+        )
 
     def get_ticket(self, ticket_id: str) -> dict[str, Any] | None:
         rows = self._request(
@@ -420,4 +551,259 @@ def get_rfp_response(
         "response_handoff": response_handoff.get("handoff") if response_handoff else None,
         "drafts": drafts,
         "evaluation_results": evaluations,
+    }
+
+
+# ------------------------------------------------------------------
+# Part 3: Repository methods for approval & closure
+# ------------------------------------------------------------------
+
+# (methods added in SupabaseRfpRepository class above)
+
+
+def _check_ticket_exists(repository: SupabaseRfpRepository, ticket_id: str) -> dict[str, Any]:
+    """Helper: fetch ticket or raise 404."""
+    ticket = repository.get_ticket(ticket_id)
+    if ticket is None:
+        raise HTTPException(status_code=404, detail="No existe ese ticket RFP")
+    return ticket
+
+
+@rfp_intake_router.post("/tickets/{ticket_id}/approve-department", status_code=200)
+def approve_department(
+    ticket_id: UUID,
+    body: dict[str, Any],
+    _: UserInDB = Depends(get_current_user),
+) -> dict[str, Any]:
+    """Approve a department's section in the RFP response.
+
+    Body:
+      - department: str (required)
+      - comment: str (optional)
+    """
+    repository = SupabaseRfpRepository()
+    _check_ticket_exists(repository, str(ticket_id))
+
+    department = body.get("department", "")
+    if not department:
+        raise HTTPException(status_code=400, detail="El campo 'department' es obligatorio")
+
+    comment = body.get("comment", "")
+
+    result = resume_approval(
+        ticket_id=str(ticket_id),
+        department=department,
+        decision="approved",
+        comment=comment,
+        repository=repository,
+    )
+
+    # Persist approval status
+    try:
+        repository.save_approval_status(
+            str(ticket_id), department, "approved",
+            DEPARTMENT_APPROVERS.get(department, ""),
+            comment,
+        )
+    except Exception as exc:
+        logger.warning("No se pudo persistir status de aprobacion: %s", exc)
+
+    return result
+
+
+@rfp_intake_router.post("/tickets/{ticket_id}/reject-department", status_code=200)
+def reject_department(
+    ticket_id: UUID,
+    body: dict[str, Any],
+    _: UserInDB = Depends(get_current_user),
+) -> dict[str, Any]:
+    """Reject a department's section and send back to generator.
+
+    Body:
+      - department: str (required)
+      - comment: str (required — must explain rejection reason)
+    """
+    repository = SupabaseRfpRepository()
+    _check_ticket_exists(repository, str(ticket_id))
+
+    department = body.get("department", "")
+    if not department:
+        raise HTTPException(status_code=400, detail="El campo 'department' es obligatorio")
+
+    comment = body.get("comment", "Rechazado sin comentario")
+
+    result = resume_approval(
+        ticket_id=str(ticket_id),
+        department=department,
+        decision="rejected",
+        comment=comment,
+        repository=repository,
+    )
+
+    try:
+        repository.save_approval_status(
+            str(ticket_id), department, "rejected", "", comment,
+        )
+    except Exception as exc:
+        logger.warning("No se pudo persistir status de rechazo: %s", exc)
+
+    return result
+
+
+@rfp_intake_router.post("/tickets/{ticket_id}/request-changes-department", status_code=200)
+def request_changes_department(
+    ticket_id: UUID,
+    body: dict[str, Any],
+    _: UserInDB = Depends(get_current_user),
+) -> dict[str, Any]:
+    """Request changes to a department's section.
+
+    Body:
+      - department: str (required)
+      - comment: str (required — describes needed changes)
+    """
+    repository = SupabaseRfpRepository()
+    _check_ticket_exists(repository, str(ticket_id))
+
+    department = body.get("department", "")
+    if not department:
+        raise HTTPException(status_code=400, detail="El campo 'department' es obligatorio")
+
+    comment = body.get("comment", "Cambios solicitados")
+
+    result = resume_approval(
+        ticket_id=str(ticket_id),
+        department=department,
+        decision="changes_requested",
+        comment=comment,
+        repository=repository,
+    )
+
+    try:
+        repository.save_approval_status(
+            str(ticket_id), department, "changes_requested", "", comment,
+        )
+    except Exception as exc:
+        logger.warning("No se pudo persistir status de cambios: %s", exc)
+
+    return result
+
+
+@rfp_intake_router.get("/tickets/{ticket_id}/approval-status")
+def get_approval_status(
+    ticket_id: UUID,
+    _: UserInDB = Depends(get_current_user),
+) -> dict[str, Any]:
+    """Get the current approval state for all departments."""
+    state = get_approval_state(str(ticket_id))
+    if state is None:
+        raise HTTPException(status_code=404, detail="No hay estado de aprobacion para este ticket")
+
+    # Enrich with persisted data
+    repository = SupabaseRfpRepository()
+    try:
+        approval_rows = repository.get_approval_status_list(str(ticket_id))
+        final_doc = repository.get_final_document(str(ticket_id))
+    except Exception:
+        approval_rows = []
+        final_doc = None
+
+    return {
+        "ticket_id": str(ticket_id),
+        "state": state,
+        "persisted_approvals": approval_rows,
+        "final_document": final_doc,
+    }
+
+
+@rfp_intake_router.get("/tickets/{ticket_id}/final-document")
+def get_final_document_endpoint(
+    ticket_id: UUID,
+    _: UserInDB = Depends(get_current_user),
+) -> dict[str, Any]:
+    """Get the final consolidated RFP document."""
+    repository = SupabaseRfpRepository()
+    doc = repository.get_final_document(str(ticket_id))
+    if doc is None:
+        raise HTTPException(status_code=404, detail="Aun no se ha generado el documento final")
+
+    return doc
+
+
+@rfp_intake_router.get("/tickets/{ticket_id}/trace")
+def get_trace_endpoint(
+    ticket_id: UUID,
+    run_id: str | None = Query(default=None),
+    _: UserInDB = Depends(get_current_user),
+) -> list[dict[str, Any]]:
+    """Get the full execution trace for a ticket."""
+    try:
+        trace = get_trace(str(ticket_id), run_id)
+    except Exception as exc:
+        logger.exception("No se pudo obtener la traza: %s", exc)
+        raise HTTPException(status_code=503, detail="No se pudo obtener la traza de ejecucion")
+
+    return trace
+
+
+@rfp_intake_router.post("/tickets/{ticket_id}/arbitrate", status_code=200)
+def arbitrate_ticket(
+    ticket_id: UUID,
+    body: dict[str, Any],
+    _: UserInDB = Depends(get_current_user),
+) -> dict[str, Any]:
+    """Trigger arbitration for a ticket (CEO resolution).
+
+    Body:
+      - conflict_id: str (optional — if omitted, scans for conflicts)
+      - departments: list[str] (optional — departments involved)
+    """
+    repository = SupabaseRfpRepository()
+    _check_ticket_exists(repository, str(ticket_id))
+
+    from uuid import uuid4
+
+    thread_id = ticket_thread_id(str(ticket_id))
+    state = get_approval_state(str(ticket_id))
+
+    if state is None:
+        raise HTTPException(status_code=404, detail="No hay estado de aprobacion para este ticket")
+
+    # Get approved drafts for conflict detection
+    approved_drafts = {}
+    for dept_name, dd in state.get("departments", {}).items():
+        if dd.get("status") == "approved":
+            approved_drafts[dept_name] = {"content": dd.get("content", "")}
+
+    if not approved_drafts:
+        raise HTTPException(status_code=400, detail="No hay borradores aprobados para arbitrar")
+
+    run_id = str(uuid4())
+    conflicts = detect_conflicts(approved_drafts)
+
+    if not conflicts:
+        return {
+            "ticket_id": str(ticket_id),
+            "message": "No se detectaron conflictos. No se requiere arbitraje.",
+            "conflicts": [],
+        }
+
+    resolutions = resolve_conflicts(conflicts, run_id, thread_id)
+
+    # Persist to repository
+    for rec in resolutions:
+        try:
+            repository.save_arbitration_record(
+                str(ticket_id), rec.conflict_id,
+                rec.departments_involved, rec.description,
+                rec.resolution, rec.resolved_by,
+            )
+        except Exception as exc:
+            logger.warning("No se pudo persistir arbitraje: %s", exc)
+
+    return {
+        "ticket_id": str(ticket_id),
+        "arbiter": ARBITER,
+        "conflicts": [c for c in conflicts],
+        "resolutions": [r.to_dict() for r in resolutions],
     }
