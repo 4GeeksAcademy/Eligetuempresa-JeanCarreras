@@ -27,6 +27,7 @@ Prepara entorno local de la API de Brasaland en un comando.
 
 - Crea venv en `services/brasaland-api/.venv` (o `VENV_DIR` si se define).
 - Instala/actualiza dependencias desde `services/brasaland-api/requirements.txt`.
+- Descarga el recurso NLTK `punkt_tab`, requerido por `py-readability-metrics`.
 
 Ejemplo:
 
