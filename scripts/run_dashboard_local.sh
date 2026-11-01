@@ -4,9 +4,9 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 DASHBOARD_DIR="$ROOT_DIR/uis/executive-dashboard"
 
-API_HOST="${API_HOST:-0.0.0.0}"
+API_HOST="${API_HOST:-127.0.0.1}"
 API_PORT="${API_PORT:-8000}"
-DASHBOARD_HOST="${DASHBOARD_HOST:-0.0.0.0}"
+DASHBOARD_HOST="${DASHBOARD_HOST:-127.0.0.1}"
 DASHBOARD_PORT="${DASHBOARD_PORT:-4173}"
 
 API_LOG_FILE="${API_LOG_FILE:-/tmp/brasaland-api.log}"

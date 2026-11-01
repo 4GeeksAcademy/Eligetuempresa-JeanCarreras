@@ -1,9 +1,13 @@
+import os
+import secrets
 import sys
 from pathlib import Path
 
 import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+os.environ.setdefault("BRASALAND_JWT_SECRET", secrets.token_hex(32))
+os.environ.setdefault("BRASALAND_AUTH_SECRET", secrets.token_hex(32))
 
 from src import main
 from src.brasaland_api import auth
@@ -53,6 +57,8 @@ def registered_user():
 
 @pytest.fixture
 def isolated_user_store(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
+    monkeypatch.setenv("BRASALAND_ADMIN_TOKEN", "test-admin-" + "0" * 64)
+    monkeypatch.setenv("BRASALAND_USER_TOKEN", "test-user-" + "0" * 64)
     if auth._db_instance is not None:
         auth._db_instance.close()
     monkeypatch.setattr(auth, "_db_instance", None)

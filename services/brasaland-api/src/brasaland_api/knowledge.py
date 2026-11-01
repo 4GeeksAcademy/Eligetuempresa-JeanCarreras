@@ -1,15 +1,22 @@
 """HTTP interface for Brasaland's internal knowledge assistant."""
 
 import logging
+from threading import BoundedSemaphore
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from data.pipelines.rag import query
+from .auth import require_roles
 
 
 logger = logging.getLogger(__name__)
-knowledge_router = APIRouter(prefix="/knowledge", tags=["knowledge"])
+_query_slots = BoundedSemaphore(2)
+knowledge_router = APIRouter(
+    prefix="/knowledge",
+    tags=["knowledge"],
+    dependencies=[Depends(require_roles({"admin", "manager", "operations", "executive"}))],
+)
 
 
 class KnowledgeQuery(BaseModel):
@@ -32,11 +39,15 @@ class KnowledgeAnswer(BaseModel):
 
 @knowledge_router.post("/query", response_model=KnowledgeAnswer)
 def query_knowledge(request: KnowledgeQuery) -> KnowledgeAnswer:
+    if not _query_slots.acquire(blocking=False):
+        raise HTTPException(status_code=503, detail="El asistente esta ocupado. Intenta mas tarde.")
     try:
         return KnowledgeAnswer(answer=query(request.question))
     except Exception as error:
-        logger.exception("Knowledge query failed")
+        logger.warning("Knowledge query failed: %s", type(error).__name__)
         raise HTTPException(
             status_code=503,
             detail="El asistente de conocimiento no esta disponible.",
         ) from error
+    finally:
+        _query_slots.release()

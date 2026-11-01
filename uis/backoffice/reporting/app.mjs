@@ -94,8 +94,8 @@ async function loadReport(event) {
   status.textContent = "Consultando informe...";
   form.querySelector("button").disabled = true;
   try {
-    let token;
-    try { token = localStorage.getItem("brasaland_token"); } catch {}
+    window.BrasalandSecurity.trustedApi(apiBase);
+    const token = window.BrasalandSecurity.getToken();
     const report = await fetchReportingKpis(apiBase, filters, { token, signal: controller.signal });
     if (activeRequest !== controller) return;
     const metricCount = renderMetricTables(report.rows, periodLabel);
