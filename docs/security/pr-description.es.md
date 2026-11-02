@@ -42,6 +42,10 @@ No se ejecuto la suite completa. Persisten 16 avisos moderados de desarrollo.
   usuario operativo, permisos, firewall real ni TLS/proxy.
 - Pipeline RAG bloqueado a lectura: no certificar prompt injection, egress,
   herramientas internas, procedencia de documentos ni API keys.
-- GitHub impide crear el fork personal: HTTP 403, recurso no accesible para
-  la integracion. Publicacion del PR pendiente de permisos/destino correcto.
 - No se declara aprobacion ni se realiza merge automatico.
+
+## Destino autorizado
+
+El usuario confirmo `4GeeksAcademy/Eligetuempresa-JeanCarreras` como su repositorio
+asignado. El PR se dirige de `feature/owasp-top10-audit` a `main` en ese mismo
+repositorio, sin crear otro fork ni trasladar el trabajo a otro workspace.

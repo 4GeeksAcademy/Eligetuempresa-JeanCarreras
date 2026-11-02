@@ -161,7 +161,8 @@ clasifica como segura ni como `no aplica`.
 - Cada hallazgo critico con escenario anterior, correccion y comando/evidencia
   posterior reproducible. No publicar secretos ni datos reales en la evidencia.
 - Informe de dependencias y limitaciones de las comprobaciones realizadas.
-- Commit y push de la entrega; PR al fork correcto con enlaces a por lo menos
+- Commit y push de la entrega; PR al repositorio asignado y confirmado por el
+  usuario, con enlaces a por lo menos
   dos correcciones criticas reales, si se identifican. No inventar hallazgos
   para cumplir una cuota; justificarlo si se identifican menos de dos.
 - Merge solo despues de aprobacion del PR. No desplegar antes del sign-off.
@@ -358,9 +359,7 @@ que una plantilla fuese un firewall activo.
 5. Se mantienen dos mecanismos de identidad historicos (JWT y HMAC); hace falta
   unificacion y politica completa de revocacion/recuperacion. Las pruebas aqui
   no certifican el flujo completo de todas las interfaces en produccion.
-6. GitHub devuelve 403 al crear el fork personal; no se puede publicar hacia un
-  fork inexistente. No hacer PR al repositorio de la academia por sustitucion.
-  No hacer merge hasta aprobar el PR y cerrar los bloqueos operativos.
+6. No hacer merge hasta aprobar el PR y cerrar los bloqueos operativos.
 
 ## Entrega
 
@@ -369,6 +368,12 @@ esta en `docs/security/pr-description.es.md`; enlaza evidencia de SEC-01,
 SEC-02 y SEC-03, ademas de la actualizacion de Next. Los valores de estado
 anteriores se refieren a esta revision local; el resultado del commit/push/PR
 se comunica por separado y nunca se infiere de que exista la rama.
+
+El usuario confirmo el 2026-11-02 que el repositorio asignado de entrega es
+`4GeeksAcademy/Eligetuempresa-JeanCarreras`, el remoto `origin` de este workspace.
+El destino autorizado es un PR de esta rama a `main` dentro de ese repositorio;
+no hace falta crear otro fork. El error 403 previo al intentar crear un fork
+personal no bloquea la publicacion en el destino confirmado.
 
 ## Acceso al servidor objetivo
 
