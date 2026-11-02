@@ -203,6 +203,6 @@ No exportar tokens administrativos al entorno del modelo o a un servidor MCP.
 
 - Completado localmente: actualizacion Git, rama exacta, mapa previo de entradas, inventario y responsables propuestos, seis funciones NIST, mitigaciones de codigo y 85 pruebas satisfactorias.
 - Pendientes P0 de despliegue: anexo regulatorio aprobado, revision autorizada de archivos excluidos/indexador e historial, rotacion/revocacion de secretos y aceptacion de propietarios. El informe no inventa hitos ausentes ni una validacion juridica.
-- Publicacion bloqueada: la cuenta `jeancarreras` no tiene un fork visible con este nombre y `gh repo fork --clone=false --remote=false` devolvio **HTTP 403: Resource not accessible by integration**. Se necesita crear/habilitar el fork con permisos adecuados; no se sustituye por un PR a la organizacion.
-- La rama local se entrega con commit. Push y PR quedan pendientes del permiso externo; no afirmar que existen.
+- Destino de publicacion autorizado por el usuario: `4GeeksAcademy/Eligetuempresa-JeanCarreras`, el repositorio de este entorno. No se crea un fork.
+- Entrega en la rama `feature/nist-security-practices`, mediante push al remoto `origin` y PR hacia `main`; la publicacion no constituye aprobacion para produccion.
 - Referencia del marco: [NIST CSF 2.0](https://www.nist.gov/cyberframework). No aprobado para produccion por los riesgos residuales documentados.
