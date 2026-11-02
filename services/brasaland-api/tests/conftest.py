@@ -1,9 +1,16 @@
 import sys
+import os
+import secrets
 from pathlib import Path
 
 import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+
+for name in ("BRASALAND_AUTH_SECRET", "BRASALAND_JWT_SECRET"):
+    os.environ[name] = secrets.token_urlsafe(48)
+for role in ("ADMIN", "EXECUTIVE", "OPERATIONS", "FINANCE", "MANAGER", "USER"):
+    os.environ[f"BRASALAND_{role}_TOKEN"] = secrets.token_urlsafe(48)
 
 from src import main
 from src.brasaland_api import auth

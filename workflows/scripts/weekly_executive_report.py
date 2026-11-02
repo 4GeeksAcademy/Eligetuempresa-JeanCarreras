@@ -32,7 +32,9 @@ def fetch_json(url: str, headers: dict[str, str] | None = None) -> dict | list:
 
 
 def build_report(api_base: str, currency: str) -> str:
-    exec_token = os.getenv("BRASALAND_EXECUTIVE_TOKEN", "brasaland-executive-token")
+    exec_token = os.getenv("BRASALAND_EXECUTIVE_TOKEN", "").strip()
+    if not exec_token:
+        raise ReportGenerationError("BRASALAND_EXECUTIVE_TOKEN must be configured")
     headers = {
         "X-API-Role": "executive",
         "X-API-Token": exec_token,

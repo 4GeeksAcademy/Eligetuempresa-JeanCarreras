@@ -47,6 +47,7 @@ from .brasaland_api.analysis import (
 )
 from .brasaland_api.telemetry import telemetry_router
 from .brasaland_api.knowledge import knowledge_router
+from .brasaland_api.security import ConfirmationMiddleware, required_secret
 from services.reporting.api import create_reporting_router
 
 load_dotenv(Path(__file__).resolve().parent.parent / ".env")
@@ -72,6 +73,7 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+app.add_middleware(ConfirmationMiddleware, authenticate=get_current_user)
 
 # Registrar routers de autenticación, usuarios y perfiles
 from .brasaland_api.auth import users_router, profiles_router
@@ -794,19 +796,12 @@ app.state.telemetry_db_path = lambda: DB_PATH
 TELEMETRY_REPORT_CACHE_TTL_SECONDS = 60
 _telemetry_report_cache: dict[tuple[str | None, str | None], tuple[float, dict]] = {}
 _telemetry_report_cache_lock = Lock()
-AUTH_SECRET = os.getenv("BRASALAND_AUTH_SECRET", "brasaland-local-auth-secret")
+AUTH_SECRET = required_secret("BRASALAND_AUTH_SECRET")
 RESET_TOKEN_TTL_MINUTES = int(os.getenv("RESET_TOKEN_TTL_MINUTES", "30"))
 FRONTEND_BASE_URL = os.getenv("FRONTEND_BASE_URL", "http://localhost:5500/uis/auth")
 FX_COP_PER_USD = 3950.0
-JWT_SECRET = os.getenv("BRASALAND_JWT_SECRET", "brasaland-local-development-secret")
+JWT_SECRET = required_secret("BRASALAND_JWT_SECRET")
 JWT_EXPIRATION_HOURS = 8
-DEFAULT_API_TOKEN = "brasaland-dev-token"
-DEFAULT_ROLE_TOKENS: dict[str, str] = {
-    "admin": "brasaland-admin-token",
-    "executive": "brasaland-executive-token",
-    "operations": "brasaland-operations-token",
-    "finance": "brasaland-finance-token",
-}
 ESTIMATED_COGS_RATIO_BY_COUNTRY: dict[str, float] = {
     "CO": 0.56,
     "US": 0.49,
@@ -1128,8 +1123,11 @@ def period_start(period: str) -> datetime:
 
 
 def require_api_token(x_api_token: str | None = Header(default=None)) -> None:
-    configured_token = os.getenv("BRASALAND_API_TOKEN", DEFAULT_API_TOKEN)
-    if x_api_token != configured_token:
+    try:
+        configured_token = required_secret("BRASALAND_API_TOKEN")
+    except RuntimeError:
+        raise HTTPException(status_code=503, detail="API token not configured") from None
+    if not x_api_token or not secrets.compare_digest(x_api_token, configured_token):
         raise HTTPException(status_code=401, detail="Invalid or missing X-API-Token")
 
 

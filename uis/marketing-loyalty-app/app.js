@@ -21,9 +21,9 @@ function resolveApiBase() {
 
 const API_BASE = resolveApiBase();
 const EXEC_ROLE = "executive";
-const EXEC_TOKEN = "brasaland-executive-token";
+const EXEC_TOKEN = window.localStorage.getItem("brasaland_token") || "";
 const OPS_ROLE = "operations";
-const OPS_TOKEN = "brasaland-operations-token";
+const OPS_TOKEN = window.localStorage.getItem("brasaland_token") || "";
 
 const statusText = document.getElementById("statusText");
 const retryAppButton = document.getElementById("retryApp");
@@ -45,13 +45,31 @@ const historyRows = document.getElementById("historyRows");
 
 let cachedCustomers = [];
 
+function authenticatedHeaders(headers = {}) {
+  const target = new URL(API_BASE, window.location.href);
+  const local = ["localhost", "127.0.0.1"].includes(window.location.hostname)
+    && target.hostname === window.location.hostname && target.port === "8000"
+    && target.protocol === window.location.protocol;
+  if (!(target.origin === window.location.origin || local)) {
+    throw new Error("Origen de API no autorizado para enviar credenciales.");
+  }
+  const token = window.localStorage.getItem("brasaland_token");
+  if (!token) throw new Error("Inicia sesion antes de consultar datos internos.");
+  const filtered = Object.fromEntries(Object.entries(headers).filter(
+    ([name]) => !/^x-api-(role|token)$/i.test(name),
+  ));
+  return { ...filtered, Authorization: `Bearer ${token}` };
+}
+
 async function fetchJson(path, headers = {}) {
   if (!API_BASE) {
     throw new Error("La conexion con la API no esta disponible. Reintenta en unos minutos.");
   }
   let response;
   try {
-    response = await fetch(`${API_BASE}${path}`, { headers });
+    response = await fetch(`${API_BASE}${path}`, {
+      headers: authenticatedHeaders(headers),
+    });
   } catch (_error) {
     throw new Error("No se pudo conectar con la API. Reintenta en unos minutos.");
   }
@@ -75,7 +93,7 @@ async function postJson(path, payload, headers = {}) {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        ...headers,
+        ...authenticatedHeaders(headers),
       },
       body: JSON.stringify(payload),
     });

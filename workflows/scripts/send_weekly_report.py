@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import os
 import smtplib
@@ -11,6 +12,9 @@ import sys
 from email.message import EmailMessage
 from pathlib import Path
 from urllib import request
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "services" / "brasaland-api"))
+from src.brasaland_api.security import consume_approval
 
 
 def send_to_slack(webhook_url: str, report_text: str, title: str) -> None:
@@ -54,6 +58,7 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Enviar reporte semanal Brasaland")
     parser.add_argument("--report-path", required=True, help="Ruta al archivo markdown del reporte")
     parser.add_argument("--title", default="Brasaland - Reporte Ejecutivo Semanal", help="Titulo del envio")
+    parser.add_argument("--approval-manifest", action="store_true", help="Mostrar payload para aprobacion sin enviar")
     return parser.parse_args()
 
 
@@ -70,9 +75,37 @@ def main() -> int:
         print("Error: no se pudo leer el archivo de reporte.", file=sys.stderr)
         return 1
 
-    delivery_failed = False
-
     slack_webhook = os.getenv("SLACK_WEBHOOK_URL", "").strip()
+    smtp_host = os.getenv("SMTP_HOST", "").strip()
+    smtp_user = os.getenv("SMTP_USER", "").strip()
+    smtp_password = os.getenv("SMTP_PASSWORD", "").strip()
+    sender = os.getenv("SMTP_SENDER", smtp_user).strip()
+    recipient_raw = os.getenv("REPORT_RECIPIENTS", "").strip()
+    recipients = [item.strip() for item in recipient_raw.split(",") if item.strip()]
+    try:
+        smtp_port = int(os.getenv("SMTP_PORT", "587"))
+        manifest = {
+            "report_sha256": hashlib.sha256(report_text.encode("utf-8")).hexdigest(),
+            "title": args.title,
+            "slack_destination_sha256": hashlib.sha256(slack_webhook.encode()).hexdigest() if slack_webhook else None,
+            "smtp_host": smtp_host, "smtp_port": smtp_port,
+            "sender": sender, "recipients": recipients,
+        }
+        if args.approval_manifest:
+            print(json.dumps(manifest, sort_keys=True))
+            return 0
+        if not slack_webhook and not (smtp_host and smtp_user and smtp_password and recipients):
+            print("Error: no hay destinos de envio configurados.", file=sys.stderr)
+            return 1
+        consume_approval(
+            os.getenv("REPORT_APPROVAL_TOKEN"), os.getenv("REPORT_APPROVER_ID", ""),
+            "POST", "workflow:weekly-report", manifest,
+        )
+    except (PermissionError, ValueError, RuntimeError, OSError):
+        print("Error: se requiere aprobacion humana vigente para este reporte y sus destinos.", file=sys.stderr)
+        return 1
+
+    delivery_failed = False
     if slack_webhook:
         try:
             send_to_slack(slack_webhook, report_text, args.title)
@@ -81,17 +114,9 @@ def main() -> int:
             print("Error: no se pudo enviar el reporte a Slack.", file=sys.stderr)
             delivery_failed = True
 
-    smtp_host = os.getenv("SMTP_HOST", "").strip()
-    smtp_user = os.getenv("SMTP_USER", "").strip()
-    smtp_password = os.getenv("SMTP_PASSWORD", "").strip()
-    sender = os.getenv("SMTP_SENDER", smtp_user).strip()
-    recipient_raw = os.getenv("REPORT_RECIPIENTS", "").strip()
-
     if smtp_host and smtp_user and smtp_password and recipient_raw:
-        recipients = [item.strip() for item in recipient_raw.split(",") if item.strip()]
         if recipients:
             try:
-                smtp_port = int(os.getenv("SMTP_PORT", "587"))
                 send_email(
                     smtp_host=smtp_host,
                     smtp_port=smtp_port,

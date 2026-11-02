@@ -11,17 +11,20 @@ Proporciona:
 """
 
 import os
+import secrets
+import sqlite3
 from datetime import datetime, timedelta, timezone
 from enum import Enum
-from typing import Optional
+from typing import Literal, Optional
 
 from dotenv import load_dotenv
 from fastapi import APIRouter, Depends, Header, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from jose import JWTError, jwt
 from passlib.hash import bcrypt as bcrypt_hasher
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, ConfigDict, EmailStr
 from tinydb import TinyDB, Query
+from .security import APPROVAL_TTL_SECONDS, issue_approval, required_secret
 
 load_dotenv()
 
@@ -29,7 +32,7 @@ load_dotenv()
 # Configuración desde variables de entorno
 # ---------------------------------------------------------------------------
 
-SECRET_KEY = os.getenv("BRASALAND_JWT_SECRET", "brasaland-jwt-secret-dev")
+SECRET_KEY = required_secret("BRASALAND_JWT_SECRET")
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("BRASALAND_JWT_EXPIRE_MINUTES", "480"))
 DB_PATH = os.getenv("BRASALAND_DB_PATH", "brasaland_db.json")
@@ -224,6 +227,8 @@ async def get_current_user(token: str = Depends(oauth2_scheme)) -> UserInDB:
             headers={"WWW-Authenticate": "Bearer"},
         )
 
+    if not user.is_active:
+        raise HTTPException(status_code=403, detail="Usuario inactivo")
     return user
 
 
@@ -326,6 +331,8 @@ def get_all_users() -> list[UserInDB]:
 
 def authenticate_user(email: str, password: str) -> UserInDB | None:
     """Autentica un usuario por email + password. Retorna el usuario o None."""
+    if email.lower() in {"admin@brasaland.com", "manager@brasaland.com", "user@brasaland.com"} and len(password) < 16:
+        return None
     user = get_user_by_email(email)
     if user is None:
         return None
@@ -495,28 +502,25 @@ def update_profile_in_db(user_id: str, update_data: ProfileUpdate) -> Profile:
 # Seed de usuarios por defecto
 # ---------------------------------------------------------------------------
 
-DEFAULT_SEED_USERS = [
-    {"email": "admin@brasaland.com", "password": "brasaland-admin", "role": Role.admin, "name": "Admin Brasaland"},
-    {"email": "manager@brasaland.com", "password": "brasaland-manager", "role": Role.manager, "name": "Manager Brasaland"},
-    {"email": "user@brasaland.com", "password": "brasaland-user", "role": Role.user, "name": "Usuario Brasaland"},
-]
-
-
 def init_seed_users():
-    """Inicializa los usuarios por defecto si la tabla está vacía."""
+    """Crea un administrador inicial solo con credenciales explicitas."""
+    email = os.getenv("BRASALAND_BOOTSTRAP_ADMIN_EMAIL", "").strip()
+    password = os.getenv("BRASALAND_BOOTSTRAP_ADMIN_PASSWORD", "")
+    if not email and not password:
+        return
+    if not email or len(password) < 16:
+        raise RuntimeError("Bootstrap admin requires an email and a password of at least 16 characters")
     users_table = get_users_table()
     if len(users_table) > 0:
         return
-
-    for seed in DEFAULT_SEED_USERS:
-        doc_id = users_table.insert({
-            "email": seed["email"],
-            "hashed_password": hash_password(seed["password"]),
-            "is_active": True,
-            "role": seed["role"].value,
-            "created_at": datetime.now(timezone.utc).isoformat(),
-        })
-        create_profile_for_user(str(doc_id), name=seed.get("name", ""))
+    doc_id = users_table.insert({
+        "email": email,
+        "hashed_password": hash_password(password),
+        "is_active": True,
+        "role": Role.admin.value,
+        "created_at": datetime.now(timezone.utc).isoformat(),
+    })
+    create_profile_for_user(str(doc_id), name="Bootstrap administrator")
 
 
 # ---------------------------------------------------------------------------
@@ -524,6 +528,30 @@ def init_seed_users():
 # ---------------------------------------------------------------------------
 
 auth_router = APIRouter(prefix="/auth", tags=["auth"])
+
+
+class ApprovalRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    method: Literal["POST", "PUT", "PATCH", "DELETE"]
+    target: str
+    payload: dict
+    confirmed: Literal[True]
+
+
+@auth_router.post("/approvals")
+def approve_action(payload: ApprovalRequest, current_user: UserInDB = Depends(get_current_user)):
+    if not current_user.is_active or current_user.role != Role.admin:
+        raise HTTPException(status_code=403, detail="An active administrator must explicitly approve")
+    if len(payload.target) > 500 or not (
+        payload.target.startswith("/") or payload.target == "workflow:weekly-report"
+    ):
+        raise HTTPException(status_code=422, detail="Invalid approval target")
+    try:
+        token = issue_approval(current_user.id, payload.method, payload.target, payload.payload)
+    except (RuntimeError, ValueError, OSError, sqlite3.Error):
+        raise HTTPException(status_code=503, detail="Approval service unavailable") from None
+    return {"approval_token": token, "expires_in": APPROVAL_TTL_SECONDS}
 
 
 @auth_router.post(
@@ -679,18 +707,14 @@ def update_my_profile(payload: ProfileUpdate, current_user: UserInDB = Depends(g
 # la verificación de X-API-Role + X-API-Token si no hay bearer token.
 
 LEGACY_ROLE_TOKENS: dict[str, str] = {
-    "admin": os.getenv("BRASALAND_ADMIN_TOKEN", "brasaland-admin-token"),
-    "executive": os.getenv("BRASALAND_EXECUTIVE_TOKEN", "brasaland-executive-token"),
-    "operations": os.getenv("BRASALAND_OPERATIONS_TOKEN", "brasaland-operations-token"),
-    "finance": os.getenv("BRASALAND_FINANCE_TOKEN", "brasaland-finance-token"),
-    # Nuevos roles del proyecto
-    "manager": os.getenv("BRASALAND_MANAGER_TOKEN", "brasaland-manager-token"),
-    "user": os.getenv("BRASALAND_USER_TOKEN", "brasaland-user-token"),
+    role: required_secret(f"BRASALAND_{role.upper()}_TOKEN")
+    for role in ("admin", "executive", "operations", "finance", "manager", "user")
+    if os.getenv(f"BRASALAND_{role.upper()}_TOKEN")
 }
 
 
 def _resolve_role_tokens() -> dict[str, str]:
-    """Resuelve tokens por rol desde variables de entorno o defaults."""
+    """Resuelve exclusivamente los tokens configurados por el operador."""
     return dict(LEGACY_ROLE_TOKENS)
 
 
@@ -721,7 +745,7 @@ def require_roles(allowed_roles: set[str]):
                 email = payload.get("sub")
                 if email:
                     user = get_user_by_email(email)
-                    if user and user.role.value in allowed_roles:
+                    if user and user.is_active and user.role.value in allowed_roles:
                         return user.role.value
             except HTTPException:
                 pass  # Fall through to legacy check
@@ -730,7 +754,7 @@ def require_roles(allowed_roles: set[str]):
         if x_api_role is not None:
             role_tokens = _resolve_role_tokens()
             expected_token = role_tokens.get(x_api_role)
-            if expected_token is not None and x_api_token == expected_token:
+            if expected_token is not None and x_api_token and secrets.compare_digest(x_api_token, expected_token):
                 if x_api_role in allowed_roles:
                     return x_api_role
                 # Rol válido pero no permitido en este endpoint

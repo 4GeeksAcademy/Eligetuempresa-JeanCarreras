@@ -248,7 +248,10 @@
       try {
         const response = await fetch(`${apiUrl}/knowledge/query`, {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${window.localStorage.getItem("brasaland_token") || ""}`,
+          },
           body: JSON.stringify({ question }),
         });
         if (!response.ok) throw new Error("request_failed");

@@ -6,6 +6,36 @@ import pytest
 from fastapi import HTTPException
 
 from src.brasaland_api import auth
+from src.brasaland_api.security import required_secret
+
+
+def test_secret_configuration_fails_closed(monkeypatch):
+    monkeypatch.delenv("SECURITY_TEST_SECRET", raising=False)
+    with pytest.raises(RuntimeError, match="explicitly configured"):
+        required_secret("SECURITY_TEST_SECRET")
+    monkeypatch.setenv("SECURITY_TEST_SECRET", "a" * 64)
+    with pytest.raises(RuntimeError):
+        required_secret("SECURITY_TEST_SECRET")
+
+
+def test_no_seed_accounts_without_operator_configuration(monkeypatch, isolated_user_store):
+    monkeypatch.delenv("BRASALAND_BOOTSTRAP_ADMIN_EMAIL", raising=False)
+    monkeypatch.delenv("BRASALAND_BOOTSTRAP_ADMIN_PASSWORD", raising=False)
+    auth.init_seed_users()
+    assert len(auth.get_users_table()) == 0
+
+
+def test_legacy_seed_account_requires_password_rotation(isolated_user_store):
+    auth.create_user_in_db(auth.UserCreate(email="admin@brasaland.com", password="short-synthetic"))
+    assert auth.authenticate_user("admin@brasaland.com", "short-synthetic") is None
+
+
+def test_disabled_user_cannot_use_jwt(monkeypatch):
+    monkeypatch.setattr(auth, "decode_access_token", lambda _: {"sub": "disabled@example.com"})
+    monkeypatch.setattr(auth, "get_user_by_email", lambda _: SimpleNamespace(is_active=False))
+    with pytest.raises(HTTPException) as error:
+        asyncio.run(auth.get_current_user("synthetic-token"))
+    assert error.value.status_code == 403
 
 
 def create_user(email: str = "user@example.com") -> auth.UserInDB:
