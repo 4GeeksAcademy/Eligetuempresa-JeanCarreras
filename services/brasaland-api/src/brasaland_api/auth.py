@@ -515,6 +515,9 @@ def update_profile_in_db(user_id: str, update_data: ProfileUpdate) -> Profile:
 # Seed de usuarios por defecto
 # ---------------------------------------------------------------------------
 
+# Lista de cuentas demo a revocar al iniciar. Vacía por defecto tras la auditoría de seguridad.
+DEFAULT_SEED_USERS: list[dict] = []
+
 def init_seed_users():
     """Revoca cuentas de demostracion y permite bootstrap explicito en una base vacia."""
     users_table = get_users_table()
