@@ -1,5 +1,17 @@
 # Informes de negocio
 
+## Recepcion de RFP
+
+La bandeja de intake está disponible en `/uis/backoffice/rfp-intake/`. Requiere
+una sesión iniciada y consulta el router `/rfp-intake` del mismo backend. Acepta
+PDF de hasta 25 MB, crea un ticket `analizando` y refresca su estado hasta
+`analisis_completo` o `descartado`. El resultado muestra metadatos, métricas,
+aspectos por departamento, responsables y el handoff de Ventas.
+
+Antes de usarla, aplicar `services/brasaland-api/migrations/002_rfp_intake.sql`
+en Supabase y configurar las variables del API. El detalle del pipeline y su
+proceso de reproceso están en `services/brasaland-api/RFP_INTAKE.es.md`.
+
 Vista disponible en `/uis/backoffice/reporting/`, para direccion y operaciones.
 Consume exclusivamente `GET /api/v1/reporting/kpis` de la Parte 2. No contiene
 datos de demostracion, no consulta tablas operativas ni ejecuta el pipeline.
