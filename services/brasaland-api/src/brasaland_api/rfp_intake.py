@@ -152,6 +152,112 @@ class SupabaseRfpRepository:
         except Exception:
             logger.exception("No se pudo registrar el error del ticket RFP %s", ticket_id)
 
+    # ------------------------------------------------------------------
+    # Part 2: Response generation methods
+    # ------------------------------------------------------------------
+
+    def update_ticket_status(self, ticket_id: str, status: str) -> None:
+        valid_statuses = {
+            "generando_borrador", "en_evaluacion", "needs_human_review",
+        }
+        if status not in valid_statuses:
+            raise ValueError(f"Estado no valido: {status}")
+        self._request(
+            "PATCH",
+            "rfp_tickets",
+            params={"id": f"eq.{ticket_id}"},
+            body={
+                "status": status,
+                "updated_at": datetime.now(timezone.utc).isoformat(),
+            },
+            prefer="return=minimal",
+        )
+
+    def save_response_draft(
+        self, ticket_id: str, department: str, iteration: int, content: str
+    ) -> None:
+        self._request(
+            "POST",
+            "rfp_response_drafts",
+            params={
+                "on_conflict": "ticket_id,department,iteration",
+            },
+            body={
+                "ticket_id": ticket_id,
+                "department": department,
+                "iteration": iteration,
+                "content": content,
+            },
+            prefer="resolution=merge-duplicates,return=minimal",
+        )
+
+    def save_evaluation_result(
+        self, ticket_id: str, department: str, iteration: int, evaluation: dict[str, Any]
+    ) -> None:
+        self._request(
+            "POST",
+            "rfp_evaluation_results",
+            params={
+                "on_conflict": "ticket_id,department,iteration",
+            },
+            body={
+                "ticket_id": ticket_id,
+                "department": department,
+                "iteration": iteration,
+                "overall_pass": evaluation.get("overall_pass", False),
+                "readability": evaluation.get("readability", {}),
+                "relevance": evaluation.get("relevance", {}),
+                "compliance": evaluation.get("compliance", {}),
+                "feedback_for_generator": evaluation.get("feedback_for_generator", ""),
+            },
+            prefer="resolution=merge-duplicates,return=minimal",
+        )
+
+    def save_response_handoff(self, ticket_id: str, handoff: dict[str, Any]) -> None:
+        self._request(
+            "POST",
+            "rfp_response_handoff",
+            params={"on_conflict": "ticket_id"},
+            body={
+                "ticket_id": ticket_id,
+                "handoff": handoff,
+                "updated_at": datetime.now(timezone.utc).isoformat(),
+            },
+            prefer="resolution=merge-duplicates,return=minimal",
+        )
+
+    def get_response_handoff(self, ticket_id: str) -> dict[str, Any] | None:
+        rows = self._request(
+            "GET",
+            "rfp_response_handoff",
+            params={"ticket_id": f"eq.{ticket_id}", "limit": "1"},
+        )
+        if isinstance(rows, list) and rows:
+            return rows[0]
+        return None
+
+    def get_response_drafts(self, ticket_id: str) -> list[dict[str, Any]]:
+        rows = self._request(
+            "GET",
+            "rfp_response_drafts",
+            params={
+                "ticket_id": f"eq.{ticket_id}",
+                "order": "department.asc,iteration.desc",
+            },
+        )
+        return rows if isinstance(rows, list) else []
+
+    def get_evaluation_results(self, ticket_id: str) -> list[dict[str, Any]]:
+        rows = self._request(
+            "GET",
+            "rfp_evaluation_results",
+            params={
+                "ticket_id": f"eq.{ticket_id}",
+                "order": "department.asc,iteration.desc",
+            },
+        )
+        return rows if isinstance(rows, list) else []
+
     def list_tickets(self, limit: int) -> list[dict[str, Any]]:
         result = self._request(
             "GET",
@@ -247,3 +353,71 @@ def get_rfp_ticket(
     if ticket.get("document"):
         ticket["document"].pop("markdown_path", None)
     return ticket
+
+
+# ------------------------------------------------------------------
+# Part 2: Response generation & evaluation endpoints
+# ------------------------------------------------------------------
+
+
+@rfp_intake_router.post("/tickets/{ticket_id}/generate-response", status_code=202)
+async def trigger_response_generation(
+    ticket_id: UUID,
+    background_tasks: BackgroundTasks,
+    _: UserInDB = Depends(get_current_user),
+) -> dict[str, str]:
+    """Trigger Part 2 response generation for a completed analysis ticket.
+
+    Consumes the handoff from Part 1 and runs generator-evaluator loop per department.
+    """
+    repository = SupabaseRfpRepository()
+    ticket = repository.get_ticket(str(ticket_id))
+    if ticket is None:
+        raise HTTPException(status_code=404, detail="No existe ese ticket RFP")
+
+    if ticket["status"] != "analisis_completo":
+        raise HTTPException(
+            status_code=409,
+            detail=f"El ticket debe estar en estado 'analisis_completo' para generar respuesta. Estado actual: {ticket['status']}",
+        )
+
+    handoff = ticket.get("handoff")
+    if not handoff:
+        raise HTTPException(
+            status_code=400,
+            detail="El ticket no tiene handoff de la Parte 1. No se puede generar respuesta.",
+        )
+
+    from data.pipelines.rfp_response import process_rfp_response
+
+    background_tasks.add_task(
+        process_rfp_response,
+        str(ticket_id),
+        handoff,
+        SupabaseRfpRepository(),
+    )
+    return {"ticket_id": str(ticket_id), "status": "generando_borrador"}
+
+
+@rfp_intake_router.get("/tickets/{ticket_id}/response")
+def get_rfp_response(
+    ticket_id: UUID,
+    _: UserInDB = Depends(get_current_user),
+) -> dict[str, Any]:
+    """Get the full response generation result for a ticket (Part 2 handoff)."""
+    repository = SupabaseRfpRepository()
+    ticket = repository.get_ticket(str(ticket_id))
+    if ticket is None:
+        raise HTTPException(status_code=404, detail="No existe ese ticket RFP")
+
+    response_handoff = repository.get_response_handoff(str(ticket_id))
+    drafts = repository.get_response_drafts(str(ticket_id))
+    evaluations = repository.get_evaluation_results(str(ticket_id))
+
+    return {
+        "ticket_id": str(ticket_id),
+        "status": ticket.get("status"),
+        "response_handoff": response_handoff.get("handoff") if response_handoff else None,
+        "drafts": drafts,
+        "evaluation_results": evaluations,
+    }
