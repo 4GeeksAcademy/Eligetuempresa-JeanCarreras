@@ -2,7 +2,7 @@
 Módulo de autenticación JWT para Brasaland API.
 
 Proporciona:
-- Creación y verificación de tokens JWT (python-jose[cryptography])
+- Creación y verificación de tokens JWT (PyJWT)
 - Hash y verificación de contraseñas (libpass[bcrypt])
 - Dependencia get_current_user con OAuth2PasswordBearer
 - Endpoints /auth/login y /auth/me
@@ -10,6 +10,7 @@ Proporciona:
 - CRUD de perfiles (/profiles)
 """
 
+import hmac
 import os
 import secrets
 import sqlite3
@@ -20,7 +21,8 @@ from typing import Literal, Optional
 from dotenv import load_dotenv
 from fastapi import APIRouter, Depends, Header, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
-from jose import JWTError, jwt
+import jwt
+from jwt import PyJWTError as JWTError
 from passlib.hash import bcrypt as bcrypt_hasher
 from pydantic import BaseModel, ConfigDict, EmailStr
 from tinydb import TinyDB, Query
@@ -32,7 +34,14 @@ load_dotenv()
 # Configuración desde variables de entorno
 # ---------------------------------------------------------------------------
 
-SECRET_KEY = required_secret("BRASALAND_JWT_SECRET")
+def require_secret(name: str) -> str:
+    value = os.getenv(name, "")
+    if len(value.encode()) < 32 or value.lower().startswith(("brasaland-", "change", "replace")):
+        raise RuntimeError(f"{name} must be provisioned with a random secret of at least 32 bytes")
+    return value
+
+
+SECRET_KEY = require_secret("BRASALAND_JWT_SECRET")
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("BRASALAND_JWT_EXPIRE_MINUTES", "480"))
 DB_PATH = os.getenv("BRASALAND_DB_PATH", "brasaland_db.json")
@@ -168,7 +177,10 @@ def create_access_token(email: str, role: str, expires_delta: Optional[timedelta
 
 def decode_access_token(token: str) -> dict:
     try:
-        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM], issuer="brasaland-api")
+        payload = jwt.decode(
+            token, SECRET_KEY, algorithms=[ALGORITHM], issuer="brasaland-api",
+            options={"require": ["exp"]},
+        )
         email: str | None = payload.get("sub")
         role: str | None = payload.get("role")
 
@@ -228,7 +240,8 @@ async def get_current_user(token: str = Depends(oauth2_scheme)) -> UserInDB:
         )
 
     if not user.is_active:
-        raise HTTPException(status_code=403, detail="Usuario inactivo")
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Usuario inactivo")
+
     return user
 
 
@@ -503,16 +516,22 @@ def update_profile_in_db(user_id: str, update_data: ProfileUpdate) -> Profile:
 # ---------------------------------------------------------------------------
 
 def init_seed_users():
-    """Crea un administrador inicial solo con credenciales explicitas."""
-    email = os.getenv("BRASALAND_BOOTSTRAP_ADMIN_EMAIL", "").strip()
-    password = os.getenv("BRASALAND_BOOTSTRAP_ADMIN_PASSWORD", "")
+    """Revoca cuentas de demostracion y permite bootstrap explicito en una base vacia."""
+    users_table = get_users_table()
+    for seed in DEFAULT_SEED_USERS:
+        user = get_user_by_email(seed["email"])
+        if user and user.is_active and verify_password(seed["password"], user.hashed_password):
+            users_table.update({"is_active": False}, doc_ids=[int(user.id)])
+
+    email = os.getenv("BRASALAND_BOOTSTRAP_ADMIN_EMAIL")
+    password = os.getenv("BRASALAND_BOOTSTRAP_ADMIN_PASSWORD")
     if not email and not password:
         return
-    if not email or len(password) < 16:
-        raise RuntimeError("Bootstrap admin requires an email and a password of at least 16 characters")
-    users_table = get_users_table()
+    if not email or not password or len(password) < 16 or password in {seed["password"] for seed in DEFAULT_SEED_USERS}:
+        raise RuntimeError("Bootstrap requires an email and a unique password of at least 16 characters")
     if len(users_table) > 0:
         return
+
     doc_id = users_table.insert({
         "email": email,
         "hashed_password": hash_password(password),
@@ -520,7 +539,7 @@ def init_seed_users():
         "role": Role.admin.value,
         "created_at": datetime.now(timezone.utc).isoformat(),
     })
-    create_profile_for_user(str(doc_id), name="Bootstrap administrator")
+    create_profile_for_user(str(doc_id), name="Admin Brasaland")
 
 
 # ---------------------------------------------------------------------------
@@ -706,16 +725,13 @@ def update_my_profile(payload: ProfileUpdate, current_user: UserInDB = Depends(g
 # Ahora require_roles se basa en get_current_user (JWT) y también acepta
 # la verificación de X-API-Role + X-API-Token si no hay bearer token.
 
-LEGACY_ROLE_TOKENS: dict[str, str] = {
-    role: required_secret(f"BRASALAND_{role.upper()}_TOKEN")
-    for role in ("admin", "executive", "operations", "finance", "manager", "user")
-    if os.getenv(f"BRASALAND_{role.upper()}_TOKEN")
-}
-
-
 def _resolve_role_tokens() -> dict[str, str]:
-    """Resuelve exclusivamente los tokens configurados por el operador."""
-    return dict(LEGACY_ROLE_TOKENS)
+    """Solo habilita credenciales de servicio provisionadas explicitamente."""
+    return {
+        role: require_secret(f"BRASALAND_{role.upper()}_TOKEN")
+        for role in ("admin", "executive", "operations", "finance", "manager", "user")
+        if os.getenv(f"BRASALAND_{role.upper()}_TOKEN")
+    }
 
 
 def require_roles(allowed_roles: set[str]):
@@ -737,24 +753,19 @@ def require_roles(allowed_roles: set[str]):
         x_api_role: str | None = Header(default=None, alias="X-API-Role"),
         x_api_token: str | None = Header(default=None, alias="X-API-Token"),
     ) -> str:
-        # 1. Intentar con JWT Bearer token
-        if authorization and authorization.startswith("Bearer "):
-            token = authorization[7:]
-            try:
-                payload = decode_access_token(token)
-                email = payload.get("sub")
-                if email:
-                    user = get_user_by_email(email)
-                    if user and user.is_active and user.role.value in allowed_roles:
-                        return user.role.value
-            except HTTPException:
-                pass  # Fall through to legacy check
+        if authorization:
+            if not authorization.startswith("Bearer "):
+                raise HTTPException(status_code=401, detail="Se requiere Bearer token")
+            user = await get_current_user(authorization[7:])
+            if user.role.value not in allowed_roles:
+                raise HTTPException(status_code=403, detail="Rol no permitido")
+            return user.role.value
 
         # 2. Fallback legacy: X-API-Role + X-API-Token
         if x_api_role is not None:
             role_tokens = _resolve_role_tokens()
             expected_token = role_tokens.get(x_api_role)
-            if expected_token is not None and x_api_token and secrets.compare_digest(x_api_token, expected_token):
+            if expected_token is not None and isinstance(x_api_token, str) and hmac.compare_digest(x_api_token, expected_token):
                 if x_api_role in allowed_roles:
                     return x_api_role
                 # Rol válido pero no permitido en este endpoint

@@ -104,7 +104,7 @@ class TelemetryEvent(BaseModel):
 class TelemetryBatch(BaseModel):
     model_config = ConfigDict(extra="forbid", strict=True)
 
-    events: list[Any]
+    events: list[TelemetryEvent] = Field(max_length=100)
 
 
 def store_telemetry(rows: list[dict[str, Any]]) -> int:

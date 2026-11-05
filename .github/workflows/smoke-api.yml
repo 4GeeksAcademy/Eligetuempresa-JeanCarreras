@@ -25,6 +25,15 @@ jobs:
       - name: Install API dependencies
         run: pip install -r services/brasaland-api/requirements.txt
 
+      - name: Provision ephemeral CI secrets
+        shell: bash
+        run: |
+          for name in BRASALAND_JWT_SECRET BRASALAND_AUTH_SECRET BRASALAND_ADMIN_TOKEN BRASALAND_EXECUTIVE_TOKEN BRASALAND_OPERATIONS_TOKEN BRASALAND_FINANCE_TOKEN; do
+            value="$(openssl rand -hex 32)"
+            echo "::add-mask::$value"
+            echo "$name=$value" >> "$GITHUB_ENV"
+          done
+
       - name: Start API
         run: |
           python -m uvicorn src.main:app --host 0.0.0.0 --port 8000 > /tmp/uvicorn.log 2>&1 &

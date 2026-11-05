@@ -1,0 +1,13 @@
+[Unit]
+Description=Brasaland host ingress policy
+After=network-pre.target
+Before=ssh.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/sbin/nft -f /etc/brasaland/host-firewall.nft
+ExecReload=/usr/sbin/nft -f /etc/brasaland/host-firewall.nft
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target

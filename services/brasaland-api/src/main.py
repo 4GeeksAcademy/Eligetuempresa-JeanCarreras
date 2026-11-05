@@ -35,6 +35,7 @@ from .brasaland_api.auth import (
     get_current_user,
     init_seed_users,
     require_roles,
+    require_secret,
     Role,
     UserInDB,
 )
@@ -47,7 +48,7 @@ from .brasaland_api.analysis import (
 )
 from .brasaland_api.telemetry import telemetry_router
 from .brasaland_api.knowledge import knowledge_router
-from .brasaland_api.security import ConfirmationMiddleware, required_secret
+from .brasaland_api.rfp_intake import rfp_intake_router
 from services.reporting.api import create_reporting_router
 
 load_dotenv(Path(__file__).resolve().parent.parent / ".env")
@@ -66,14 +67,39 @@ app = FastAPI(
 )
 logger = logging.getLogger(__name__)
 
+CORS_ORIGINS = [
+    origin.strip()
+    for origin in os.getenv("BRASALAND_CORS_ORIGINS", "http://localhost:3000,http://localhost:4173,http://localhost:5500,http://localhost:5173").split(",")
+    if origin.strip()
+]
+if "*" in CORS_ORIGINS:
+    raise RuntimeError("BRASALAND_CORS_ORIGINS must contain explicit trusted origins")
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_origins=CORS_ORIGINS,
+    allow_credentials=False,
+    allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allow_headers=["Authorization", "Content-Type", "X-API-Role", "X-API-Token"],
 )
 app.add_middleware(ConfirmationMiddleware, authenticate=get_current_user)
+
+
+@app.middleware("http")
+async def security_headers(request: Request, call_next):
+    response = await call_next(request)
+    if response.status_code in {401, 403}:
+        logger.warning(json.dumps({
+            "event": "security_access_denied",
+            "method": request.method,
+            "path": request.url.path[:200],
+            "status": response.status_code,
+        }))
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["X-Frame-Options"] = "DENY"
+    response.headers["Referrer-Policy"] = "no-referrer"
+    response.headers["Cache-Control"] = "no-store"
+    return response
 
 # Registrar routers de autenticación, usuarios y perfiles
 from .brasaland_api.auth import users_router, profiles_router
@@ -82,6 +108,7 @@ app.include_router(users_router)
 app.include_router(profiles_router)
 app.include_router(telemetry_router)
 app.include_router(knowledge_router)
+app.include_router(rfp_intake_router)
 app.include_router(create_reporting_router(require_roles, lambda: DB_PATH))
 
 
@@ -791,16 +818,16 @@ class ChangePasswordRequest(BaseModel):
     new_password: str
 
 
-DB_PATH = Path(__file__).resolve().parent.parent / "brasaland.db"
+DB_PATH = Path(os.getenv("BRASALAND_SQLITE_PATH", str(Path(__file__).resolve().parent.parent / "brasaland.db")))
 app.state.telemetry_db_path = lambda: DB_PATH
 TELEMETRY_REPORT_CACHE_TTL_SECONDS = 60
 _telemetry_report_cache: dict[tuple[str | None, str | None], tuple[float, dict]] = {}
 _telemetry_report_cache_lock = Lock()
-AUTH_SECRET = required_secret("BRASALAND_AUTH_SECRET")
+AUTH_SECRET = require_secret("BRASALAND_AUTH_SECRET")
 RESET_TOKEN_TTL_MINUTES = int(os.getenv("RESET_TOKEN_TTL_MINUTES", "30"))
 FRONTEND_BASE_URL = os.getenv("FRONTEND_BASE_URL", "http://localhost:5500/uis/auth")
 FX_COP_PER_USD = 3950.0
-JWT_SECRET = required_secret("BRASALAND_JWT_SECRET")
+JWT_SECRET = require_secret("BRASALAND_JWT_SECRET")
 JWT_EXPIRATION_HOURS = 8
 ESTIMATED_COGS_RATIO_BY_COUNTRY: dict[str, float] = {
     "CO": 0.56,
@@ -964,6 +991,7 @@ def get_db() -> Connection:
 def get_telemetry_report(
     start_date: datetime | None = Query(default=None),
     end_date: datetime | None = Query(default=None),
+    role: str = Depends(require_roles({"admin", "executive", "operations"})),
 ) -> dict:
     if start_date is not None and start_date.tzinfo is None:
         raise HTTPException(status_code=422, detail="start_date must include a timezone")
@@ -1123,11 +1151,8 @@ def period_start(period: str) -> datetime:
 
 
 def require_api_token(x_api_token: str | None = Header(default=None)) -> None:
-    try:
-        configured_token = required_secret("BRASALAND_API_TOKEN")
-    except RuntimeError:
-        raise HTTPException(status_code=503, detail="API token not configured") from None
-    if not x_api_token or not secrets.compare_digest(x_api_token, configured_token):
+    configured_token = os.getenv("BRASALAND_API_TOKEN")
+    if not configured_token or not isinstance(x_api_token, str) or not hmac.compare_digest(x_api_token, require_secret("BRASALAND_API_TOKEN")):
         raise HTTPException(status_code=401, detail="Invalid or missing X-API-Token")
 
 
@@ -1135,7 +1160,7 @@ def validate_role_token_for_ws(role: str | None, token: str | None, allowed_role
     if role is None or role not in allowed_roles:
         raise HTTPException(status_code=403, detail="Role not allowed")
 
-    from brasaland_api.auth import _resolve_role_tokens
+    from .brasaland_api.auth import _resolve_role_tokens
     role_tokens = _resolve_role_tokens()
     expected_token = role_tokens.get(role)
     if expected_token is None or token != expected_token:
@@ -2510,16 +2535,29 @@ def change_password(payload: ChangePasswordRequest, user: Row = Depends(get_auth
 
 @app.websocket("/ws/realtime")
 async def realtime_updates_socket(websocket: WebSocket) -> None:
-    role = websocket.query_params.get("role")
-    token = websocket.query_params.get("token")
+    protocols = [value.strip() for value in websocket.headers.get("sec-websocket-protocol", "").split(",")]
+    authorization = websocket.headers.get("authorization")
+    token = authorization[7:] if authorization and authorization.startswith("Bearer ") else None
+    if "brasaland" in protocols and len(protocols) == 2:
+        token = protocols[1]
 
     try:
-        validated_role = validate_role_token_for_ws(role, token, {"executive", "operations", "admin"})
+        if token:
+            user = await get_current_user(token)
+            if user.role.value not in {"executive", "operations", "admin"}:
+                raise HTTPException(status_code=403, detail="Role not allowed")
+            validated_role = user.role.value
+        else:
+            validated_role = validate_role_token_for_ws(
+                websocket.headers.get("x-api-role"),
+                websocket.headers.get("x-api-token"),
+                {"executive", "operations", "admin"},
+            )
     except HTTPException:
         await websocket.close(code=4403)
         return
 
-    await websocket.accept()
+    await websocket.accept(subprotocol="brasaland" if "brasaland" in protocols else None)
 
     try:
         digest = build_realtime_digest()

@@ -173,7 +173,7 @@ def test_role_validator_accepts_jwt_and_legacy_token(isolated_user_store) -> Non
         validator(
             authorization=None,
             x_api_role="user",
-            x_api_token=auth.LEGACY_ROLE_TOKENS["user"],
+            x_api_token="test-user-" + "0" * 64,
         )
     )
 
@@ -186,7 +186,7 @@ def test_role_validator_accepts_jwt_and_legacy_token(isolated_user_store) -> Non
     [
         (None, None, 401),
         ("admin", "wrong-token", 401),
-        ("admin", auth.LEGACY_ROLE_TOKENS["admin"], 403),
+        ("admin", "test-admin-" + "0" * 64, 403),
     ],
 )
 def test_role_validator_rejects_missing_invalid_or_forbidden_legacy_auth(

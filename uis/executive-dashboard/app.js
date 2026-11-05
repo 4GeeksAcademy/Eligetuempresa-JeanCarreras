@@ -32,14 +32,14 @@ function resolveApiBase() {
 
 const API_BASE = resolveApiBase();
 const DEFAULT_CURRENCY = "USD";
-const FINANCE_ROLE = "executive";
-const FINANCE_TOKEN = window.localStorage.getItem("brasaland_token") || "";
-const ALERTS_ROLE = "executive";
-const ALERTS_TOKEN = window.localStorage.getItem("brasaland_token") || "";
-const ALERT_ACTION_ROLE = "operations";
-const ALERT_ACTION_TOKEN = window.localStorage.getItem("brasaland_token") || "";
-const RECEIPTS_ROLE = "operations";
-const RECEIPTS_TOKEN = window.localStorage.getItem("brasaland_token") || "";
+
+
+
+
+
+
+
+
 
 const statusText = document.getElementById("statusText");
 const retryDashboardButton = document.getElementById("retryDashboard");
@@ -292,10 +292,7 @@ async function submitExecutiveAsk(event) {
     const selectedCurrency = currencyFilterEl?.value || DEFAULT_CURRENCY;
     const payload = await fetchJsonWithHeaders(
       `/api/v1/executive/ask?question=${encodeURIComponent(question)}&currency=${selectedCurrency}`,
-      {
-        "X-API-Role": ALERTS_ROLE,
-        "X-API-Token": ALERTS_TOKEN,
-      },
+      {},
     );
 
     executiveAskAnswerEl.textContent = payload.answer || "Sin respuesta";
@@ -320,10 +317,7 @@ async function refreshWeeklyReportPreview() {
     const selectedCurrency = currencyFilterEl?.value || DEFAULT_CURRENCY;
     const weeklyReport = await fetchJsonWithHeaders(
       `/api/v1/executive/weekly-report?currency=${selectedCurrency}`,
-      {
-        "X-API-Role": ALERTS_ROLE,
-        "X-API-Token": ALERTS_TOKEN,
-      },
+      {},
     );
     renderWeeklyReportPreview(weeklyReport);
   } catch (error) {
@@ -357,7 +351,7 @@ function populateHrEmployeeOptions(employees) {
 
   if (hrRequestEmployeeIdEl) {
     const previous = hrRequestEmployeeIdEl.value;
-    hrRequestEmployeeIdEl.innerHTML = options;
+    hrRequestEmployeeIdEl.innerHTML = window.BrasalandSecurity.sanitizeHTML(options);
     if (previous && employees.some((employee) => employee.id === previous)) {
       hrRequestEmployeeIdEl.value = previous;
     }
@@ -365,7 +359,7 @@ function populateHrEmployeeOptions(employees) {
 
   if (hrOnboardingEmployeeIdEl) {
     const previous = hrOnboardingEmployeeIdEl.value;
-    hrOnboardingEmployeeIdEl.innerHTML = options;
+    hrOnboardingEmployeeIdEl.innerHTML = window.BrasalandSecurity.sanitizeHTML(options);
     if (previous && employees.some((employee) => employee.id === previous)) {
       hrOnboardingEmployeeIdEl.value = previous;
     }
@@ -378,7 +372,7 @@ function renderHrKpis(summary) {
   }
 
   if (!summary || !Array.isArray(summary.by_country)) {
-    hrKpisRowsEl.innerHTML = '<p class="alerts-empty">Sin KPIs de RRHH para este filtro.</p>';
+    hrKpisRowsEl.innerHTML = window.BrasalandSecurity.sanitizeHTML('<p class="alerts-empty">Sin KPIs de RRHH para este filtro.</p>');
     return;
   }
 
@@ -395,7 +389,7 @@ function renderHrKpis(summary) {
     )
     .join("");
 
-  hrKpisRowsEl.innerHTML = `
+  hrKpisRowsEl.innerHTML = window.BrasalandSecurity.sanitizeHTML(`
     <article class="supplier-row">
       <p class="alert-store">Cadena (${summary.period_days} dias)</p>
       <p class="alert-meta">Headcount activo ${summary.total_active_headcount} · bajas ${summary.total_terminations}</p>
@@ -403,7 +397,7 @@ function renderHrKpis(summary) {
       <p class="alert-meta">Cobertura vacantes ${Number(summary.overall_avg_time_to_fill_days || 0).toFixed(1)} dias</p>
     </article>
     ${countriesRows}
-  `;
+  `);
 }
 
 function renderHrRequests(rows) {
@@ -412,11 +406,11 @@ function renderHrRequests(rows) {
   }
 
   if (!rows || !rows.length) {
-    hrRequestsRowsEl.innerHTML = '<p class="alerts-empty">Sin solicitudes pendientes.</p>';
+    hrRequestsRowsEl.innerHTML = window.BrasalandSecurity.sanitizeHTML('<p class="alerts-empty">Sin solicitudes pendientes.</p>');
     return;
   }
 
-  hrRequestsRowsEl.innerHTML = rows
+  hrRequestsRowsEl.innerHTML = window.BrasalandSecurity.sanitizeHTML(rows
     .map((item) => {
       const dateRange = `${String(item.start_date || "").slice(0, 10)} a ${String(item.end_date || "").slice(0, 10)}`;
       const statusLabel = String(item.status || "pending").toUpperCase();
@@ -434,7 +428,7 @@ function renderHrRequests(rows) {
         </article>
       `;
     })
-    .join("");
+    .join(""));
 }
 
 function renderHrOnboarding(rows) {
@@ -443,11 +437,11 @@ function renderHrOnboarding(rows) {
   }
 
   if (!rows || !rows.length) {
-    hrOnboardingRowsEl.innerHTML = '<p class="alerts-empty">Sin onboarding activo para este filtro.</p>';
+    hrOnboardingRowsEl.innerHTML = window.BrasalandSecurity.sanitizeHTML('<p class="alerts-empty">Sin onboarding activo para este filtro.</p>');
     return;
   }
 
-  hrOnboardingRowsEl.innerHTML = rows
+  hrOnboardingRowsEl.innerHTML = window.BrasalandSecurity.sanitizeHTML(rows
     .map((item) => {
       const completed = Number(item.completed_steps || 0);
       const total = Number(item.total_steps || 0);
@@ -464,7 +458,7 @@ function renderHrOnboarding(rows) {
         </article>
       `;
     })
-    .join("");
+    .join(""));
 }
 
 async function submitHrRequest(event) {
@@ -491,10 +485,7 @@ async function submitHrRequest(event) {
         end_date: hrRequestEndDateEl.value,
         reason,
       },
-      {
-        "X-API-Role": ALERT_ACTION_ROLE,
-        "X-API-Token": ALERT_ACTION_TOKEN,
-      },
+      {},
     );
     hrRequestStatusEl.textContent = "Solicitud creada correctamente.";
     await loadDashboard();
@@ -521,10 +512,7 @@ async function submitOnboardingCase(event) {
         position_title: (hrOnboardingPositionEl.value || "").trim() || "Kitchen Operator",
         mentor_name: (hrOnboardingMentorEl.value || "").trim() || "Ashley Turner",
       },
-      {
-        "X-API-Role": ALERT_ACTION_ROLE,
-        "X-API-Token": ALERT_ACTION_TOKEN,
-      },
+      {},
     );
     hrOnboardingStatusEl.textContent = "Onboarding iniciado.";
     await loadDashboard();
@@ -556,10 +544,7 @@ async function onHrRequestActionClick(event) {
         status,
         note: status === "approved" ? "Aprobada desde portal RRHH" : "Rechazada desde portal RRHH",
       },
-      {
-        "X-API-Role": ALERT_ACTION_ROLE,
-        "X-API-Token": ALERT_ACTION_TOKEN,
-      },
+      {},
     );
     await loadDashboard();
     statusText.textContent = `Solicitud ${requestId} ${status === "approved" ? "aprobada" : "rechazada"}.`;
@@ -589,10 +574,7 @@ async function onHrOnboardingAdvanceClick(event) {
         step_key: "station_training",
         note: "Avance registrado desde dashboard RRHH",
       },
-      {
-        "X-API-Role": ALERT_ACTION_ROLE,
-        "X-API-Token": ALERT_ACTION_TOKEN,
-      },
+      {},
     );
     await loadDashboard();
     statusText.textContent = `Onboarding ${caseId} actualizado.`;
@@ -615,7 +597,7 @@ function populateTrainingResourceOptions(resources) {
   }
 
   const previous = trainingUpdateResourceIdEl.value;
-  trainingUpdateResourceIdEl.innerHTML = options;
+  trainingUpdateResourceIdEl.innerHTML = window.BrasalandSecurity.sanitizeHTML(options);
   if (previous && resources.some((resource) => resource.id === previous)) {
     trainingUpdateResourceIdEl.value = previous;
   }
@@ -627,11 +609,11 @@ function renderTrainingCatalog(items) {
   }
 
   if (!items || !items.length) {
-    trainingCatalogRowsEl.innerHTML = '<p class="alerts-empty">Sin recetas para este criterio de busqueda.</p>';
+    trainingCatalogRowsEl.innerHTML = window.BrasalandSecurity.sanitizeHTML('<p class="alerts-empty">Sin recetas para este criterio de busqueda.</p>');
     return;
   }
 
-  trainingCatalogRowsEl.innerHTML = items
+  trainingCatalogRowsEl.innerHTML = window.BrasalandSecurity.sanitizeHTML(items
     .slice(0, 8)
     .map((item) => {
       const tags = (item.tags || []).join(", ") || "sin tags";
@@ -647,7 +629,7 @@ function renderTrainingCatalog(items) {
         </article>
       `;
     })
-    .join("");
+    .join(""));
 }
 
 function renderTrainingItineraries(items) {
@@ -656,11 +638,11 @@ function renderTrainingItineraries(items) {
   }
 
   if (!items || !items.length) {
-    trainingItinerariesRowsEl.innerHTML = '<p class="alerts-empty">Sin itinerarios activos.</p>';
+    trainingItinerariesRowsEl.innerHTML = window.BrasalandSecurity.sanitizeHTML('<p class="alerts-empty">Sin itinerarios activos.</p>');
     return;
   }
 
-  trainingItinerariesRowsEl.innerHTML = items
+  trainingItinerariesRowsEl.innerHTML = window.BrasalandSecurity.sanitizeHTML(items
     .slice(0, 6)
     .map((item) => `
       <article class="supplier-row">
@@ -669,7 +651,7 @@ function renderTrainingItineraries(items) {
         <p class="alert-action">${item.steps_count} pasos · version ${item.version}</p>
       </article>
     `)
-    .join("");
+    .join(""));
 }
 
 function renderTrainingUpdates(items) {
@@ -678,11 +660,11 @@ function renderTrainingUpdates(items) {
   }
 
   if (!items || !items.length) {
-    trainingUpdatesRowsEl.innerHTML = '<p class="alerts-empty">Sin actualizaciones de receta recientes.</p>';
+    trainingUpdatesRowsEl.innerHTML = window.BrasalandSecurity.sanitizeHTML('<p class="alerts-empty">Sin actualizaciones de receta recientes.</p>');
     return;
   }
 
-  trainingUpdatesRowsEl.innerHTML = items
+  trainingUpdatesRowsEl.innerHTML = window.BrasalandSecurity.sanitizeHTML(items
     .slice(0, 6)
     .map((item) => `
       <article class="supplier-row">
@@ -692,7 +674,7 @@ function renderTrainingUpdates(items) {
         <p class="alert-meta">Entregado ${item.delivered_stores} · ACK ${item.acknowledged_stores} · Pendiente ${item.pending_stores}</p>
       </article>
     `)
-    .join("");
+    .join(""));
 }
 
 async function submitTrainingSearch(event) {
@@ -709,10 +691,7 @@ async function submitTrainingSearch(event) {
   try {
     const result = await fetchJsonWithHeaders(
       `/api/v1/training/recipes/search?q=${query}${localeParam}&limit=20`,
-      {
-        "X-API-Role": ALERTS_ROLE,
-        "X-API-Token": ALERTS_TOKEN,
-      },
+      {},
     );
     renderTrainingCatalog(result.resources || []);
     populateTrainingResourceOptions(result.resources || []);
@@ -747,10 +726,7 @@ async function submitTrainingUpdate(event) {
         locale: (trainingUpdateLocaleEl?.value || "") || null,
         mandatory: true,
       },
-      {
-        "X-API-Role": ALERT_ACTION_ROLE,
-        "X-API-Token": ALERT_ACTION_TOKEN,
-      },
+      {},
     );
     const update = result.update;
     window.BrasalandTelemetry?.track("training_recipe_update_published", {
@@ -780,7 +756,7 @@ function getFormatter(currency) {
 
 function renderStores(stores, currency) {
   const formatter = getFormatter(currency);
-  storeRowsEl.innerHTML = stores
+  storeRowsEl.innerHTML = window.BrasalandSecurity.sanitizeHTML(stores
     .map(
       (store) => `
         <tr>
@@ -792,7 +768,7 @@ function renderStores(stores, currency) {
         </tr>
       `,
     )
-    .join("");
+    .join(""));
 }
 
 function populateReceiptStoreOptions(stores) {
@@ -810,7 +786,7 @@ function populateReceiptStoreOptions(stores) {
   }
 
   const previousValue = receiptStoreIdEl.value;
-  receiptStoreIdEl.innerHTML = options;
+  receiptStoreIdEl.innerHTML = window.BrasalandSecurity.sanitizeHTML(options);
   if (previousValue && stores.some((store) => store.store_id === previousValue)) {
     receiptStoreIdEl.value = previousValue;
   }
@@ -829,11 +805,11 @@ function renderDashboard(summary, alerts, stores) {
 
 function renderInactivity(alertRows) {
   if (!alertRows.length) {
-    inactivityRowsEl.innerHTML = "<p class=\"alerts-empty\">Sin alertas de inactividad en este rango.</p>";
+    inactivityRowsEl.innerHTML = window.BrasalandSecurity.sanitizeHTML("<p class=\"alerts-empty\">Sin alertas de inactividad en este rango.</p>");
     return;
   }
 
-  inactivityRowsEl.innerHTML = alertRows
+  inactivityRowsEl.innerHTML = window.BrasalandSecurity.sanitizeHTML(alertRows
     .map((item) => {
       const severityClass = item.severity === "critical" ? "critical" : "warning";
       const severityLabel = item.severity === "critical" ? "Critica" : "Advertencia";
@@ -866,7 +842,7 @@ function renderInactivity(alertRows) {
         </article>
       `;
     })
-    .join("");
+    .join(""));
 }
 
 async function registerAlertAction(storeId, status) {
@@ -882,10 +858,7 @@ async function registerAlertAction(storeId, status) {
       owner: "dashboard-ops",
       note,
     },
-    {
-      "X-API-Role": ALERT_ACTION_ROLE,
-      "X-API-Token": ALERT_ACTION_TOKEN,
-    },
+    {},
   );
 }
 
@@ -917,12 +890,12 @@ async function onAlertActionClick(event) {
 
 function renderSmartOrders(rows, currency) {
   if (!rows.length) {
-    reorderRowsEl.innerHTML = "<p class=\"alerts-empty\">Sin pedidos urgentes en el rango actual.</p>";
+    reorderRowsEl.innerHTML = window.BrasalandSecurity.sanitizeHTML("<p class=\"alerts-empty\">Sin pedidos urgentes en el rango actual.</p>");
     return;
   }
 
   const formatter = getFormatter(currency);
-  reorderRowsEl.innerHTML = rows
+  reorderRowsEl.innerHTML = window.BrasalandSecurity.sanitizeHTML(rows
     .map((item) => {
       const riskClass = item.risk_level === "critical" ? "critical" : item.risk_level === "warning" ? "warning" : "ok";
       const costLabel = item.estimated_order_cost != null
@@ -938,12 +911,12 @@ function renderSmartOrders(rows, currency) {
         </article>
       `;
     })
-    .join("");
+    .join(""));
 }
 
 function renderReceipts(rows, append = false) {
   if (!rows.length && !append) {
-    receiptRowsEl.innerHTML = "<tr><td colspan=\"6\">Sin recepciones recientes.</td></tr>";
+    receiptRowsEl.innerHTML = window.BrasalandSecurity.sanitizeHTML("<tr><td colspan=\"6\">Sin recepciones recientes.</td></tr>");
     receiptLoadMoreEl.disabled = true;
     return;
   }
@@ -968,9 +941,9 @@ function renderReceipts(rows, append = false) {
     .join("");
 
   if (append && receiptRowsEl.innerHTML && !receiptRowsEl.innerHTML.includes("Sin recepciones recientes")) {
-    receiptRowsEl.innerHTML += htmlRows;
+    receiptRowsEl.innerHTML += window.BrasalandSecurity.sanitizeHTML(htmlRows);
   } else {
-    receiptRowsEl.innerHTML = htmlRows;
+    receiptRowsEl.innerHTML = window.BrasalandSecurity.sanitizeHTML(htmlRows);
   }
 
   receiptLoadMoreEl.disabled = rows.length < RECEIPTS_PAGE_SIZE;
@@ -978,10 +951,7 @@ function renderReceipts(rows, append = false) {
 
 async function fetchReceiptsPage(offset) {
   const countryParam = countryFilterEl.value ? `&country=${countryFilterEl.value}` : "";
-  return fetchJsonWithHeaders(`/api/v1/inventory/receipts?limit=${RECEIPTS_PAGE_SIZE}&offset=${offset}${countryParam}`, {
-    "X-API-Role": ALERTS_ROLE,
-    "X-API-Token": ALERTS_TOKEN,
-  });
+  return fetchJsonWithHeaders(`/api/v1/inventory/receipts?limit=${RECEIPTS_PAGE_SIZE}&offset=${offset}${countryParam}`, {});
 }
 
 async function loadMoreReceipts() {
@@ -1004,7 +974,7 @@ async function loadMoreReceipts() {
 
 function renderMarkets(markets, currency) {
   const formatter = getFormatter(currency);
-  marketGridEl.innerHTML = markets
+  marketGridEl.innerHTML = window.BrasalandSecurity.sanitizeHTML(markets
     .map((market) => {
       const wow = Number(market.wow_variation_pct || 0);
       const wowClass = wow >= 0 ? "positive" : "negative";
@@ -1017,18 +987,18 @@ function renderMarkets(markets, currency) {
         </article>
       `;
     })
-    .join("");
+    .join(""));
 }
 
 function renderTrend(trend, currency) {
   if (!trend.length) {
-    trendBarsEl.innerHTML = "<p>Sin datos para el rango seleccionado.</p>";
+    trendBarsEl.innerHTML = window.BrasalandSecurity.sanitizeHTML("<p>Sin datos para el rango seleccionado.</p>");
     return;
   }
 
   const formatter = getFormatter(currency);
   const maxSales = Math.max(...trend.map((point) => point.total_sales), 1);
-  trendBarsEl.innerHTML = trend
+  trendBarsEl.innerHTML = window.BrasalandSecurity.sanitizeHTML(trend
     .map((point) => {
       const pct = Math.max((point.total_sales / maxSales) * 100, 4);
       const day = point.day.slice(5);
@@ -1040,7 +1010,7 @@ function renderTrend(trend, currency) {
         </div>
       `;
     })
-    .join("");
+    .join(""));
 }
 
 function authenticatedHeaders(headers = {}) {
@@ -1071,7 +1041,7 @@ async function fetchJson(path) {
   const startedAt = performance.now();
   let response;
   try {
-    response = await fetch(`${API_BASE}${path}`);
+    response = await fetch(`${API_BASE}${path}`, { headers: window.BrasalandSecurity.authHeaders(API_BASE) });
   } catch (_error) {
     recordApiLatency(path, "GET", 599, startedAt);
     throw new Error("No se pudo conectar con la API. Reintenta en unos minutos.");
@@ -1094,9 +1064,7 @@ async function fetchJsonWithHeaders(path, headers) {
   const startedAt = performance.now();
   let response;
   try {
-    response = await fetch(`${API_BASE}${path}`, {
-      headers: authenticatedHeaders(headers),
-    });
+    response = await fetch(`${API_BASE}${path}`, { headers: window.BrasalandSecurity.authHeaders(API_BASE, headers) });
   } catch (_error) {
     recordApiLatency(path, "GET", 599, startedAt);
     throw new Error("No se pudo conectar con la API. Reintenta en unos minutos.");
@@ -1123,7 +1091,7 @@ async function postJsonWithHeaders(path, payload, headers) {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        ...authenticatedHeaders(headers),
+        ...window.BrasalandSecurity.authHeaders(API_BASE, headers),
       },
       body: JSON.stringify(payload),
     });
@@ -1161,12 +1129,12 @@ function renderSupplierPrices(rows, currency) {
   }
 
   if (!rows.length) {
-    supplierPricesRowsEl.innerHTML = "<p class=\"alerts-empty\">Sin registros de precios para este filtro.</p>";
+    supplierPricesRowsEl.innerHTML = window.BrasalandSecurity.sanitizeHTML("<p class=\"alerts-empty\">Sin registros de precios para este filtro.</p>");
     return;
   }
 
   const formatter = getFormatter(currency);
-  supplierPricesRowsEl.innerHTML = rows
+  supplierPricesRowsEl.innerHTML = window.BrasalandSecurity.sanitizeHTML(rows
     .map((item) => {
       const validFrom = item.valid_from
         ? new Date(item.valid_from).toLocaleString("es-CO", { dateStyle: "short", timeStyle: "short" })
@@ -1180,7 +1148,7 @@ function renderSupplierPrices(rows, currency) {
         </article>
       `;
     })
-    .join("");
+    .join(""));
 }
 
 function renderSupplierConsolidated(summary, currency) {
@@ -1189,7 +1157,7 @@ function renderSupplierConsolidated(summary, currency) {
   }
 
   if (!summary || !Array.isArray(summary.by_country) || !Array.isArray(summary.by_supplier)) {
-    supplierConsolidatedRowsEl.innerHTML = "<p class=\"alerts-empty\">Sin consolidado de compras disponible.</p>";
+    supplierConsolidatedRowsEl.innerHTML = window.BrasalandSecurity.sanitizeHTML("<p class=\"alerts-empty\">Sin consolidado de compras disponible.</p>");
     return;
   }
 
@@ -1223,7 +1191,7 @@ function renderSupplierConsolidated(summary, currency) {
         .join("")
     : "";
 
-  supplierConsolidatedRowsEl.innerHTML = `
+  supplierConsolidatedRowsEl.innerHTML = window.BrasalandSecurity.sanitizeHTML(`
     <article class="supplier-row">
       <p class="alert-store">Total cadena (${summary.period_days} dias)</p>
       <p class="alert-meta">${summary.total_receipts} recepciones · ${summary.total_suppliers} proveedores</p>
@@ -1231,7 +1199,7 @@ function renderSupplierConsolidated(summary, currency) {
     </article>
     ${countryRows}
     ${suppliersRows}
-  `;
+  `);
 }
 
 function renderSupplierAlerts(rows, currency) {
@@ -1240,12 +1208,12 @@ function renderSupplierAlerts(rows, currency) {
   }
 
   if (!rows.length) {
-    supplierAlertsRowsEl.innerHTML = "<p class=\"alerts-empty\">Sin alertas de variacion para este filtro.</p>";
+    supplierAlertsRowsEl.innerHTML = window.BrasalandSecurity.sanitizeHTML("<p class=\"alerts-empty\">Sin alertas de variacion para este filtro.</p>");
     return;
   }
 
   const formatter = getFormatter(currency);
-  supplierAlertsRowsEl.innerHTML = rows
+  supplierAlertsRowsEl.innerHTML = window.BrasalandSecurity.sanitizeHTML(rows
     .map((item) => {
       const validFrom = item.valid_from
         ? new Date(item.valid_from).toLocaleString("es-CO", { dateStyle: "short", timeStyle: "short" })
@@ -1263,7 +1231,7 @@ function renderSupplierAlerts(rows, currency) {
         </article>
       `;
     })
-    .join("");
+    .join(""));
 }
 
 function buildSuppliersQuery(limit) {
@@ -1289,12 +1257,12 @@ function renderCrmOverview(overview, currency) {
     return;
   }
   if (!overview) {
-    crmOverviewRowsEl.innerHTML = "<p class=\"alerts-empty\">Sin datos CRM para este filtro.</p>";
+    crmOverviewRowsEl.innerHTML = window.BrasalandSecurity.sanitizeHTML("<p class=\"alerts-empty\">Sin datos CRM para este filtro.</p>");
     return;
   }
 
   const formatter = getFormatter(currency);
-  crmOverviewRowsEl.innerHTML = `
+  crmOverviewRowsEl.innerHTML = window.BrasalandSecurity.sanitizeHTML(`
     <article class="supplier-row">
       <p class="alert-store">Clientes activos</p>
       <p class="alert-meta">${overview.active_customers}/${overview.total_customers} en ${overview.period_days} dias</p>
@@ -1305,7 +1273,7 @@ function renderCrmOverview(overview, currency) {
       <p class="alert-meta">Canal app/web periodo ${overview.period_days} dias</p>
       <p class="alert-action">${formatter.format(Number(overview.total_revenue || 0))}</p>
     </article>
-  `;
+  `);
 }
 
 function renderCrmCustomers(rows, currency) {
@@ -1313,12 +1281,12 @@ function renderCrmCustomers(rows, currency) {
     return;
   }
   if (!rows || !rows.length) {
-    crmCustomersRowsEl.innerHTML = "<p class=\"alerts-empty\">Sin clientes CRM para este filtro.</p>";
+    crmCustomersRowsEl.innerHTML = window.BrasalandSecurity.sanitizeHTML("<p class=\"alerts-empty\">Sin clientes CRM para este filtro.</p>");
     return;
   }
 
   const formatter = getFormatter(currency);
-  crmCustomersRowsEl.innerHTML = rows.slice(0, 4).map((item) => {
+  crmCustomersRowsEl.innerHTML = window.BrasalandSecurity.sanitizeHTML(rows.slice(0, 4).map((item) => {
     const lastOrder = item.last_order_at
       ? new Date(item.last_order_at).toLocaleString("es-CO", { dateStyle: "short", timeStyle: "short" })
       : "Sin pedido";
@@ -1330,7 +1298,7 @@ function renderCrmCustomers(rows, currency) {
         <p class="alert-meta">Ultimo pedido: ${lastOrder}</p>
       </article>
     `;
-  }).join("");
+  }).join(""));
 }
 
 function renderPersonalization(rows, currency, customerId) {
@@ -1338,19 +1306,19 @@ function renderPersonalization(rows, currency, customerId) {
     return;
   }
   if (!rows || !rows.length) {
-    personalizationRowsEl.innerHTML = "<p class=\"alerts-empty\">Sin recomendaciones disponibles.</p>";
+    personalizationRowsEl.innerHTML = window.BrasalandSecurity.sanitizeHTML("<p class=\"alerts-empty\">Sin recomendaciones disponibles.</p>");
     return;
   }
 
   const formatter = getFormatter(currency);
-  personalizationRowsEl.innerHTML = rows.slice(0, 4).map((item) => `
+  personalizationRowsEl.innerHTML = window.BrasalandSecurity.sanitizeHTML(rows.slice(0, 4).map((item) => `
       <article class="supplier-row">
         <p class="alert-store">${item.name}</p>
         <p class="alert-meta">Cliente objetivo: ${customerId}</p>
         <p class="alert-action">${formatter.format(Number(item.expected_price || 0))} · score ${Number(item.score || 0).toFixed(2)}</p>
         <p class="alert-meta">${item.reason}</p>
       </article>
-    `).join("");
+    `).join(""));
 }
 
 function getFallbackData() {
@@ -1727,7 +1695,7 @@ function resolveRealtimeSocketUrl() {
 
   let baseUrl;
   try {
-    baseUrl = new URL(API_BASE);
+    baseUrl = window.BrasalandSecurity.trustedApi(API_BASE);
   } catch (_error) {
     return null;
   }
@@ -1735,10 +1703,7 @@ function resolveRealtimeSocketUrl() {
   const wsProtocol = baseUrl.protocol === "https:" ? "wss:" : "ws:";
   baseUrl.protocol = wsProtocol;
   baseUrl.pathname = "/ws/realtime";
-  baseUrl.search = new URLSearchParams({
-    role: ALERTS_ROLE,
-    token: ALERTS_TOKEN,
-  }).toString();
+  baseUrl.search = "";
   return baseUrl.toString();
 }
 
@@ -1779,7 +1744,9 @@ function connectRealtimeSocket() {
     return;
   }
 
-  const socket = new WebSocket(socketUrl);
+  const token = window.BrasalandSecurity.getToken();
+  if (!token) return;
+  const socket = new WebSocket(socketUrl, ["brasaland", token]);
   realtimeSocket = socket;
 
   socket.addEventListener("open", () => {
@@ -1878,10 +1845,7 @@ async function submitInventoryReceipt(event) {
     const result = await postJsonWithHeaders(
       "/api/v1/inventory/receipts?days_history=14&target_days=7",
       payload,
-      {
-        "X-API-Role": RECEIPTS_ROLE,
-        "X-API-Token": RECEIPTS_TOKEN,
-      },
+      {},
     );
 
     window.BrasalandTelemetry?.track("inventory_receipt_created", {
@@ -1968,85 +1932,31 @@ async function loadDashboard() {
     const trainingLocaleParam = trainingLocale ? `&locale=${trainingLocale}` : "";
     const [summary, alerts, stores, trend, markets, finance, alertsSla, smartOrders, receipts, supplierPrices, supplierAlerts, supplierConsolidated, crmOverview, crmCustomers, personalization, hrKpis, hrRequests, hrOnboarding, hrEmployees, trainingCatalog, trainingItineraries, trainingUpdates, executiveSummaryUsd, executiveSummaryCop, monthlyTopStores, weeklyReport] = await Promise.all([
       fetchJson(`/api/v1/sales/summary?period=week&${query}`),
-      fetchJsonWithHeaders(`/api/v1/alerts/inactivity?window_minutes=60&limit=6&${query}`, {
-        "X-API-Role": ALERTS_ROLE,
-        "X-API-Token": ALERTS_TOKEN,
-      }),
+      fetchJsonWithHeaders(`/api/v1/alerts/inactivity?window_minutes=60&limit=6&${query}`, {}),
       fetchJson(`/api/v1/sales/by-store?${query}`),
       fetchJson(`/api/v1/sales/daily-trend?${query}`),
       fetchJson(`/api/v1/markets/summary?${query}`),
-      fetchJsonWithHeaders(`/api/v1/finance/kpis?${query}`, {
-        "X-API-Role": FINANCE_ROLE,
-        "X-API-Token": FINANCE_TOKEN,
-      }),
-      fetchJsonWithHeaders(`/api/v1/alerts/inactivity/sla?days=7&sla_target_minutes=30${countryFilterEl.value ? `&country=${countryFilterEl.value}` : ""}`, {
-        "X-API-Role": ALERTS_ROLE,
-        "X-API-Token": ALERTS_TOKEN,
-      }),
-      fetchJsonWithHeaders(`/api/v1/orders/recommendations?days_history=14&target_days=7&only_at_risk=true&limit=6&${query}`, {
-        "X-API-Role": ALERTS_ROLE,
-        "X-API-Token": ALERTS_TOKEN,
-      }),
+      fetchJsonWithHeaders(`/api/v1/finance/kpis?${query}`, {}),
+      fetchJsonWithHeaders(`/api/v1/alerts/inactivity/sla?days=7&sla_target_minutes=30${countryFilterEl.value ? `&country=${countryFilterEl.value}` : ""}`, {}),
+      fetchJsonWithHeaders(`/api/v1/orders/recommendations?days_history=14&target_days=7&only_at_risk=true&limit=6&${query}`, {}),
       fetchReceiptsPage(0),
-      fetchJsonWithHeaders(`/api/v1/suppliers/prices?${suppliersQuery}`, {
-        "X-API-Role": ALERTS_ROLE,
-        "X-API-Token": ALERTS_TOKEN,
-      }),
-      fetchJsonWithHeaders(`/api/v1/suppliers/price-alerts?threshold_pct=5&${suppliersQuery}`, {
-        "X-API-Role": ALERTS_ROLE,
-        "X-API-Token": ALERTS_TOKEN,
-      }),
-      fetchJsonWithHeaders(`/api/v1/suppliers/purchases/consolidated?days=30&${suppliersQuery}`, {
-        "X-API-Role": ALERTS_ROLE,
-        "X-API-Token": ALERTS_TOKEN,
-      }),
-      fetchJsonWithHeaders(`/api/v1/marketing/crm/overview?days=30&${query}`, {
-        "X-API-Role": ALERTS_ROLE,
-        "X-API-Token": ALERTS_TOKEN,
-      }),
-      fetchJsonWithHeaders(`/api/v1/marketing/crm/customers?limit=10&${query}`, {
-        "X-API-Role": ALERTS_ROLE,
-        "X-API-Token": ALERTS_TOKEN,
-      }),
-      fetchJsonWithHeaders(`/api/v1/marketing/personalization/recommendations?customer_id=${marketingCustomerId}&currency=${currencyFilterEl?.value || DEFAULT_CURRENCY}&limit=5`, {
-        "X-API-Role": ALERTS_ROLE,
-        "X-API-Token": ALERTS_TOKEN,
-      }),
-      fetchJsonWithHeaders(`/api/v1/hr/kpis/overview?days=90${countryFilterEl.value ? `&country=${countryFilterEl.value}` : ""}`, {
-        "X-API-Role": ALERTS_ROLE,
-        "X-API-Token": ALERTS_TOKEN,
-      }),
-      fetchJsonWithHeaders(`/api/v1/hr/time-off/requests?status=pending&limit=8${countryFilterEl.value ? `&country=${countryFilterEl.value}` : ""}`, {
-        "X-API-Role": ALERTS_ROLE,
-        "X-API-Token": ALERTS_TOKEN,
-      }),
-      fetchJsonWithHeaders(`/api/v1/hr/onboarding/cases?status=active&limit=8${countryFilterEl.value ? `&country=${countryFilterEl.value}` : ""}`, {
-        "X-API-Role": ALERTS_ROLE,
-        "X-API-Token": ALERTS_TOKEN,
-      }),
-      fetchJsonWithHeaders(`/api/v1/hr/employees?employment_status=active&limit=200${countryFilterEl.value ? `&country=${countryFilterEl.value}` : ""}`, {
-        "X-API-Role": ALERTS_ROLE,
-        "X-API-Token": ALERTS_TOKEN,
-      }),
-      fetchJsonWithHeaders(`/api/v1/training/recipes/search?q=${trainingSearchQuery}${trainingLocaleParam}&limit=8`, {
-        "X-API-Role": ALERTS_ROLE,
-        "X-API-Token": ALERTS_TOKEN,
-      }),
-      fetchJsonWithHeaders(`/api/v1/training/onboarding/itineraries?limit=8${trainingLocale ? `&locale=${trainingLocale}` : ""}`, {
-        "X-API-Role": ALERTS_ROLE,
-        "X-API-Token": ALERTS_TOKEN,
-      }),
-      fetchJsonWithHeaders(`/api/v1/training/recipes/updates?limit=8${trainingLocale ? `&locale=${trainingLocale}` : ""}`, {
-        "X-API-Role": ALERTS_ROLE,
-        "X-API-Token": ALERTS_TOKEN,
-      }),
+      fetchJsonWithHeaders(`/api/v1/suppliers/prices?${suppliersQuery}`, {}),
+      fetchJsonWithHeaders(`/api/v1/suppliers/price-alerts?threshold_pct=5&${suppliersQuery}`, {}),
+      fetchJsonWithHeaders(`/api/v1/suppliers/purchases/consolidated?days=30&${suppliersQuery}`, {}),
+      fetchJsonWithHeaders(`/api/v1/marketing/crm/overview?days=30&${query}`, {}),
+      fetchJsonWithHeaders(`/api/v1/marketing/crm/customers?limit=10&${query}`, {}),
+      fetchJsonWithHeaders(`/api/v1/marketing/personalization/recommendations?customer_id=${marketingCustomerId}&currency=${currencyFilterEl?.value || DEFAULT_CURRENCY}&limit=5`, {}),
+      fetchJsonWithHeaders(`/api/v1/hr/kpis/overview?days=90${countryFilterEl.value ? `&country=${countryFilterEl.value}` : ""}`, {}),
+      fetchJsonWithHeaders(`/api/v1/hr/time-off/requests?status=pending&limit=8${countryFilterEl.value ? `&country=${countryFilterEl.value}` : ""}`, {}),
+      fetchJsonWithHeaders(`/api/v1/hr/onboarding/cases?status=active&limit=8${countryFilterEl.value ? `&country=${countryFilterEl.value}` : ""}`, {}),
+      fetchJsonWithHeaders(`/api/v1/hr/employees?employment_status=active&limit=200${countryFilterEl.value ? `&country=${countryFilterEl.value}` : ""}`, {}),
+      fetchJsonWithHeaders(`/api/v1/training/recipes/search?q=${trainingSearchQuery}${trainingLocaleParam}&limit=8`, {}),
+      fetchJsonWithHeaders(`/api/v1/training/onboarding/itineraries?limit=8${trainingLocale ? `&locale=${trainingLocale}` : ""}`, {}),
+      fetchJsonWithHeaders(`/api/v1/training/recipes/updates?limit=8${trainingLocale ? `&locale=${trainingLocale}` : ""}`, {}),
       fetchJson(`/api/v1/sales/summary?period=week&currency=USD`),
       fetchJson(`/api/v1/sales/summary?period=week&currency=COP`),
       fetchJson(`/api/v1/sales/by-store?currency=USD&start_date=${monthStartIsoDate()}&end_date=${todayIsoDate()}`),
-      fetchJsonWithHeaders(`/api/v1/executive/weekly-report?currency=${currencyFilterEl?.value || DEFAULT_CURRENCY}`, {
-        "X-API-Role": ALERTS_ROLE,
-        "X-API-Token": ALERTS_TOKEN,
-      }),
+      fetchJsonWithHeaders(`/api/v1/executive/weekly-report?currency=${currencyFilterEl?.value || DEFAULT_CURRENCY}`, {}),
     ]);
 
     renderDashboard(summary, alerts, stores);
