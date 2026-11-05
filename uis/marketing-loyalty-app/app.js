@@ -20,10 +20,10 @@ function resolveApiBase() {
 }
 
 const API_BASE = resolveApiBase();
-const EXEC_ROLE = "executive";
-const EXEC_TOKEN = "brasaland-executive-token";
-const OPS_ROLE = "operations";
-const OPS_TOKEN = "brasaland-operations-token";
+
+
+
+
 
 const statusText = document.getElementById("statusText");
 const retryAppButton = document.getElementById("retryApp");
@@ -51,7 +51,7 @@ async function fetchJson(path, headers = {}) {
   }
   let response;
   try {
-    response = await fetch(`${API_BASE}${path}`, { headers });
+    response = await fetch(`${API_BASE}${path}`, { headers: window.BrasalandSecurity.authHeaders(API_BASE, headers) });
   } catch (_error) {
     throw new Error("No se pudo conectar con la API. Reintenta en unos minutos.");
   }
@@ -75,7 +75,7 @@ async function postJson(path, payload, headers = {}) {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        ...headers,
+        ...window.BrasalandSecurity.authHeaders(API_BASE, headers),
       },
       body: JSON.stringify(payload),
     });
@@ -110,11 +110,11 @@ function selectedCurrency() {
 
 function renderRecommendations(rows, currency) {
   if (!rows?.length) {
-    recommendationsRows.innerHTML = '<p class="detail">Sin recomendaciones por ahora.</p>';
+    recommendationsRows.innerHTML = window.BrasalandSecurity.sanitizeHTML('<p class="detail">Sin recomendaciones por ahora.</p>');
     return;
   }
   const format = moneyFormatter(currency);
-  recommendationsRows.innerHTML = rows
+  recommendationsRows.innerHTML = window.BrasalandSecurity.sanitizeHTML(rows
     .map(
       (row) => `
       <article class="row">
@@ -124,12 +124,12 @@ function renderRecommendations(rows, currency) {
       </article>
     `,
     )
-    .join("");
+    .join(""));
 }
 
 function renderHistory(rows, currency) {
   if (!rows?.length) {
-    historyRows.innerHTML = '<p class="detail">Este cliente aun no tiene pedidos digitales.</p>';
+    historyRows.innerHTML = window.BrasalandSecurity.sanitizeHTML('<p class="detail">Este cliente aun no tiene pedidos digitales.</p>');
     ordersMetric.textContent = "0";
     lastOrderDetail.textContent = "Ultimo pedido -";
     return;
@@ -140,7 +140,7 @@ function renderHistory(rows, currency) {
     dateStyle: "short",
     timeStyle: "short",
   })}`;
-  historyRows.innerHTML = rows
+  historyRows.innerHTML = window.BrasalandSecurity.sanitizeHTML(rows
     .map(
       (row) => `
       <article class="row">
@@ -150,35 +150,32 @@ function renderHistory(rows, currency) {
       </article>
     `,
     )
-    .join("");
+    .join(""));
 }
 
 async function loadStores() {
   const rows = await fetchJson("/api/v1/stores");
-  storeSelect.innerHTML = rows
+  storeSelect.innerHTML = window.BrasalandSecurity.sanitizeHTML(rows
     .map((store) => `<option value="${store.id}">${store.name}</option>`)
-    .join("");
+    .join(""));
 }
 
 async function loadCustomers() {
   const currency = selectedCurrency();
   cachedCustomers = await fetchJson(
     `/api/v1/marketing/crm/customers?currency=${currency}&limit=100`,
-    {
-      "X-API-Role": EXEC_ROLE,
-      "X-API-Token": EXEC_TOKEN,
-    },
+    {},
   );
 
   if (!cachedCustomers.length) {
-    customerSelect.innerHTML = "";
+    customerSelect.innerHTML = window.BrasalandSecurity.sanitizeHTML("");
     throw new Error("No hay clientes CRM disponibles");
   }
 
   const previous = customerSelect.value;
-  customerSelect.innerHTML = cachedCustomers
+  customerSelect.innerHTML = window.BrasalandSecurity.sanitizeHTML(cachedCustomers
     .map((customer) => `<option value="${customer.customer_id}">${customer.full_name} (${customer.country})</option>`)
-    .join("");
+    .join(""));
 
   if (previous && cachedCustomers.some((customer) => customer.customer_id === previous)) {
     customerSelect.value = previous;
@@ -190,18 +187,9 @@ async function loadCustomerExperience() {
   const currency = selectedCurrency();
 
   const [profile, history, personalization] = await Promise.all([
-    fetchJson(`/api/v1/customers/${customerId}`, {
-      "X-API-Role": EXEC_ROLE,
-      "X-API-Token": EXEC_TOKEN,
-    }),
-    fetchJson(`/api/v1/marketing/customers/${customerId}/history?limit=8`, {
-      "X-API-Role": EXEC_ROLE,
-      "X-API-Token": EXEC_TOKEN,
-    }),
-    fetchJson(`/api/v1/marketing/personalization/recommendations?customer_id=${customerId}&currency=${currency}&limit=6`, {
-      "X-API-Role": EXEC_ROLE,
-      "X-API-Token": EXEC_TOKEN,
-    }),
+    fetchJson(`/api/v1/customers/${customerId}`, {}),
+    fetchJson(`/api/v1/marketing/customers/${customerId}/history?limit=8`, {}),
+    fetchJson(`/api/v1/marketing/personalization/recommendations?customer_id=${customerId}&currency=${currency}&limit=6`, {}),
   ]);
 
   pointsMetric.textContent = String(profile.points_balance);
@@ -244,10 +232,7 @@ async function submitOrder(event) {
   orderStatus.textContent = "Registrando pedido...";
 
   try {
-    const result = await postJson("/api/v1/marketing/orders", payload, {
-      "X-API-Role": OPS_ROLE,
-      "X-API-Token": OPS_TOKEN,
-    });
+    const result = await postJson("/api/v1/marketing/orders", payload, {});
     orderStatus.textContent = `Pedido ${result.order_id} registrado. +${result.awarded_points} puntos.`;
     await loadCustomers();
     await loadCustomerExperience();

@@ -2,6 +2,18 @@
 
 API central MVP para Brasaland enfocada en operaciones multipais.
 
+## Seguridad y credenciales
+
+La API exige `BRASALAND_JWT_SECRET` y `BRASALAND_AUTH_SECRET` aleatorios de al
+menos 32 bytes. No hay passwords de administrador ni tokens de rol habilitados
+por defecto. Los literales `brasaland-*-token` de ejemplos antiguos NO son
+credenciales validas: provisionar secretos propios, nunca en el navegador.
+El asistente de conocimiento y el informe de telemetria exigen autorizacion.
+
+Consultar el [informe de auditoria](../../docs/security/owasp-top10-audit.es.md)
+y el [runbook de endurecimiento](../../infra/security/README.es.md) antes de
+desplegar. La validacion del servidor real sigue siendo obligatoria.
+
 ## Alcance inicial
 
 - Endpoint de salud.
@@ -13,10 +25,10 @@ API central MVP para Brasaland enfocada en operaciones multipais.
 
 ## Stack
 
-- Python 3.11+
+- Python 3.12+
 - FastAPI
 - Uvicorn
-- python-jose[cryptography] (JWT)
+- PyJWT (JWT)
 - passlib[bcrypt] (hashing de contraseñas)
 
 ## Estructura del codigo fuente

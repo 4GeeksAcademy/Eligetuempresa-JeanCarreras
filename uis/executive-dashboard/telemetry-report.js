@@ -73,7 +73,9 @@ async function loadReport() {
   if (end) parameters.set("end_date", utcBoundary(end, true));
 
   try {
-    const response = await fetch(`${apiBase}/telemetry/report?${parameters}`);
+    const response = await fetch(`${apiBase}/telemetry/report?${parameters}`, {
+      headers: window.BrasalandSecurity.authHeaders(apiBase),
+    });
     const report = await response.json();
     if (!response.ok) throw new Error(report.detail || "No se pudo consultar el reporte.");
 

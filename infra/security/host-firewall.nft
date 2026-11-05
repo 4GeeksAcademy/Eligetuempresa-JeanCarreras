@@ -1,0 +1,21 @@
+define ssh_port = 22
+define admin_ipv4 = 192.0.2.10/32
+define admin_ipv6 = 2001:db8::10/128
+
+add table inet brasaland_security
+flush table inet brasaland_security
+table inet brasaland_security {
+    chain input {
+        type filter hook input priority -10; policy drop;
+        iifname "lo" accept
+        ct state established,related accept
+        ct state invalid drop
+        ip protocol icmp accept
+        meta l4proto ipv6-icmp accept
+        ip saddr $admin_ipv4 tcp dport $ssh_port ct state new accept
+        ip6 saddr $admin_ipv6 tcp dport $ssh_port ct state new accept
+        tcp dport 443 ct state new accept
+        limit rate 5/minute log prefix "brasaland-input-drop "
+        counter drop
+    }
+}

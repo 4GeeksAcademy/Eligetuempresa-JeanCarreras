@@ -1,0 +1,31 @@
+[Unit]
+Description=Brasaland API
+After=network.target
+
+[Service]
+Type=simple
+User=brasaland
+Group=brasaland
+WorkingDirectory=/srv/brasaland/current/services/brasaland-api
+EnvironmentFile=/etc/brasaland/api.env
+Environment=BRASALAND_DB_PATH=/var/lib/brasaland/users.json
+Environment=BRASALAND_SQLITE_PATH=/var/lib/brasaland/brasaland.db
+Environment=DO_NOT_TRACK=1
+ExecStart=/srv/brasaland/current/services/brasaland-api/.venv/bin/python -m uvicorn src.main:app --host 127.0.0.1 --port 8000 --no-proxy-headers
+Restart=on-failure
+RestartSec=5
+UMask=0027
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectSystem=strict
+ProtectHome=yes
+ReadWritePaths=/var/lib/brasaland /var/log/brasaland
+CapabilityBoundingSet=
+AmbientCapabilities=
+RestrictSUIDSGID=yes
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

@@ -225,6 +225,7 @@
     </section>
   </main>
 
+  <script src="../security.js"></script>
   <script>
     const form = document.querySelector("#question-form");
     const questionInput = document.querySelector("#question");
@@ -233,7 +234,8 @@
     const errorMessage = document.querySelector("#error");
     const answerSection = document.querySelector("#answer-section");
     const answerText = document.querySelector("#answer");
-    const apiUrl = document.body.dataset.apiUrl;
+    const apiUrl = ["localhost", "127.0.0.1"].includes(window.location.hostname)
+      ? document.body.dataset.apiUrl : window.location.origin;
 
     form.addEventListener("submit", async (event) => {
       event.preventDefault();
@@ -248,7 +250,7 @@
       try {
         const response = await fetch(`${apiUrl}/knowledge/query`, {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: window.BrasalandSecurity.authHeaders(apiUrl, { "Content-Type": "application/json" }),
           body: JSON.stringify({ question }),
         });
         if (!response.ok) throw new Error("request_failed");
