@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Brasaland | Recepcion de RFP</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=Fraunces:opsz,wght@9..144,600&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="styles.css" />
+    <script type="module" src="app.mjs"></script>
+  </head>
+  <body>
+    <header class="topbar">
+      <a class="brand" href="../reporting/">Brasaland <span>Digital</span></a>
+      <nav aria-label="Navegacion de backoffice">
+        <a href="../reporting/">Informes</a>
+        <a id="login" href="../../auth/">Mi cuenta</a>
+      </nav>
+    </header>
+    <main>
+      <header class="heading">
+        <p class="eyebrow">Ventas · Intake</p>
+        <h1>Recepcion de RFP</h1>
+        <p>Sube una solicitud para identificar los workstreams y responsables.</p>
+      </header>
+      <section class="intake" aria-labelledby="upload-title">
+        <div>
+          <p class="eyebrow">Nuevo ticket</p>
+          <h2 id="upload-title">Documento de solicitud</h2>
+        </div>
+        <form id="upload-form">
+          <label for="rfp-file">Archivo PDF</label>
+          <div class="upload-row">
+            <input id="rfp-file" name="file" type="file" accept="application/pdf,.pdf" required />
+            <button type="submit">Crear ticket</button>
+          </div>
+        </form>
+        <p id="upload-status" class="status" role="status" aria-live="polite"></p>
+      </section>
+      <div class="workspace">
+        <section class="queue" aria-labelledby="queue-title">
+          <div class="section-heading">
+            <div><p class="eyebrow">Seguimiento</p><h2 id="queue-title">Tickets recientes</h2></div>
+            <button id="refresh" class="quiet-button" type="button" title="Actualizar tickets" aria-label="Actualizar tickets">↻</button>
+          </div>
+          <p id="queue-status" class="status" role="status" aria-live="polite">Cargando tickets...</p>
+          <ul id="ticket-list" class="ticket-list"></ul>
+        </section>
+        <section class="detail" aria-labelledby="detail-title">
+          <div class="section-heading">
+            <div><p class="eyebrow">Detalle del ticket</p><h2 id="detail-title">Selecciona una RFP</h2></div>
+            <span id="ticket-status" class="state" hidden></span>
+          </div>
+          <p id="detail-status" class="status" role="status" aria-live="polite">Sin ticket seleccionado.</p>
+          <div id="ticket-detail" aria-busy="false"></div>
+        </section>
+      </div>
+      <footer>La conversion y el analisis se ejecutan en segundo plano.</footer>
+    </main>
+  </body>
+</html>

@@ -38,5 +38,8 @@ VENV_PY="$VENV_DIR/bin/python"
 echo "Instalando/actualizando dependencias desde: $REQ_FILE"
 "$VENV_PY" -m pip install -r "$REQ_FILE"
 
+echo "Descargando recurso NLTK requerido para las metricas de legibilidad"
+"$VENV_PY" -m nltk.downloader punkt_tab
+
 echo "Bootstrap completado. Puedes iniciar la API con:"
 echo "  bash scripts/run_api_local.sh"
