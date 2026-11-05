@@ -45,6 +45,22 @@ const historyRows = document.getElementById("historyRows");
 
 let cachedCustomers = [];
 
+function authenticatedHeaders(headers = {}) {
+  const target = new URL(API_BASE, window.location.href);
+  const local = ["localhost", "127.0.0.1"].includes(window.location.hostname)
+    && target.hostname === window.location.hostname && target.port === "8000"
+    && target.protocol === window.location.protocol;
+  if (!(target.origin === window.location.origin || local)) {
+    throw new Error("Origen de API no autorizado para enviar credenciales.");
+  }
+  const token = window.localStorage.getItem("brasaland_token");
+  if (!token) throw new Error("Inicia sesion antes de consultar datos internos.");
+  const filtered = Object.fromEntries(Object.entries(headers).filter(
+    ([name]) => !/^x-api-(role|token)$/i.test(name),
+  ));
+  return { ...filtered, Authorization: `Bearer ${token}` };
+}
+
 async function fetchJson(path, headers = {}) {
   if (!API_BASE) {
     throw new Error("La conexion con la API no esta disponible. Reintenta en unos minutos.");

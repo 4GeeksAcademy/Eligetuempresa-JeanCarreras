@@ -1013,6 +1013,27 @@ function renderTrend(trend, currency) {
     .join(""));
 }
 
+function authenticatedHeaders(headers = {}) {
+  const target = new URL(API_BASE, window.location.href);
+  const preview = window.location.hostname.match(/^(.*)-\d+(\.(?:app\.)?github\.dev)$/);
+  const local = ["localhost", "127.0.0.1"].includes(window.location.hostname)
+    && target.hostname === window.location.hostname && target.port === "8000"
+    && target.protocol === window.location.protocol;
+  const configured = window.BRASALAND_API_BASE
+    && target.origin === new URL(window.BRASALAND_API_BASE, window.location.href).origin;
+  const codespace = preview && target.protocol === "https:"
+    && target.hostname === `${preview[1]}-8000${preview[2]}`;
+  if (!(target.origin === window.location.origin || local || configured || codespace)) {
+    throw new Error("Origen de API no autorizado para enviar credenciales.");
+  }
+  const token = window.localStorage.getItem("brasaland_token");
+  if (!token) throw new Error("Inicia sesion antes de consultar datos internos.");
+  const filtered = Object.fromEntries(Object.entries(headers).filter(
+    ([name]) => !/^x-api-(role|token)$/i.test(name),
+  ));
+  return { ...filtered, Authorization: `Bearer ${token}` };
+}
+
 async function fetchJson(path) {
   if (!API_BASE) {
     throw new Error("La conexion con la API no esta disponible. Reintenta en unos minutos.");

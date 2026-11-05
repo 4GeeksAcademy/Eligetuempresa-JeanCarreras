@@ -46,6 +46,7 @@ from .brasaland_api.analysis import (
     error_rate_by_type,
     events_per_day,
 )
+from .brasaland_api.security import ConfirmationMiddleware
 from .brasaland_api.telemetry import telemetry_router
 from .brasaland_api.knowledge import knowledge_router
 from .brasaland_api.rfp_intake import rfp_intake_router
@@ -82,6 +83,7 @@ app.add_middleware(
     allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
     allow_headers=["Authorization", "Content-Type", "X-API-Role", "X-API-Token"],
 )
+app.add_middleware(ConfirmationMiddleware, authenticate=get_current_user)
 
 
 @app.middleware("http")

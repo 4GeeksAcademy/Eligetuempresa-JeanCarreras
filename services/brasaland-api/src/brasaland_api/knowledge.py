@@ -1,5 +1,7 @@
 """HTTP interface for Brasaland's internal knowledge assistant."""
 
+import hashlib
+import json
 import logging
 from threading import BoundedSemaphore
 
@@ -27,10 +29,7 @@ class KnowledgeQuery(BaseModel):
     @field_validator("question")
     @classmethod
     def strip_question(cls, value: str) -> str:
-        cleaned = value.strip()
-        if not cleaned:
-            raise ValueError("question must not be blank")
-        return cleaned
+        return safe_text(value, 2000)
 
 
 class KnowledgeAnswer(BaseModel):

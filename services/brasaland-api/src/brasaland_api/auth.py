@@ -12,9 +12,11 @@ Proporciona:
 
 import hmac
 import os
+import secrets
+import sqlite3
 from datetime import datetime, timedelta, timezone
 from enum import Enum
-from typing import Optional
+from typing import Literal, Optional
 
 from dotenv import load_dotenv
 from fastapi import APIRouter, Depends, Header, HTTPException, status
@@ -22,8 +24,9 @@ from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 import jwt
 from jwt import PyJWTError as JWTError
 from passlib.hash import bcrypt as bcrypt_hasher
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, ConfigDict, EmailStr
 from tinydb import TinyDB, Query
+from .security import APPROVAL_TTL_SECONDS, issue_approval, required_secret
 
 load_dotenv()
 
@@ -341,6 +344,8 @@ def get_all_users() -> list[UserInDB]:
 
 def authenticate_user(email: str, password: str) -> UserInDB | None:
     """Autentica un usuario por email + password. Retorna el usuario o None."""
+    if email.lower() in {"admin@brasaland.com", "manager@brasaland.com", "user@brasaland.com"} and len(password) < 16:
+        return None
     user = get_user_by_email(email)
     if user is None:
         return None
@@ -510,12 +515,8 @@ def update_profile_in_db(user_id: str, update_data: ProfileUpdate) -> Profile:
 # Seed de usuarios por defecto
 # ---------------------------------------------------------------------------
 
-DEFAULT_SEED_USERS = [
-    {"email": "admin@brasaland.com", "password": "brasaland-admin", "role": Role.admin, "name": "Admin Brasaland"},
-    {"email": "manager@brasaland.com", "password": "brasaland-manager", "role": Role.manager, "name": "Manager Brasaland"},
-    {"email": "user@brasaland.com", "password": "brasaland-user", "role": Role.user, "name": "Usuario Brasaland"},
-]
-
+# Lista de cuentas demo a revocar al iniciar. Vacía por defecto tras la auditoría de seguridad.
+DEFAULT_SEED_USERS: list[dict] = []
 
 def init_seed_users():
     """Revoca cuentas de demostracion y permite bootstrap explicito en una base vacia."""
@@ -549,6 +550,30 @@ def init_seed_users():
 # ---------------------------------------------------------------------------
 
 auth_router = APIRouter(prefix="/auth", tags=["auth"])
+
+
+class ApprovalRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    method: Literal["POST", "PUT", "PATCH", "DELETE"]
+    target: str
+    payload: dict
+    confirmed: Literal[True]
+
+
+@auth_router.post("/approvals")
+def approve_action(payload: ApprovalRequest, current_user: UserInDB = Depends(get_current_user)):
+    if not current_user.is_active or current_user.role != Role.admin:
+        raise HTTPException(status_code=403, detail="An active administrator must explicitly approve")
+    if len(payload.target) > 500 or not (
+        payload.target.startswith("/") or payload.target == "workflow:weekly-report"
+    ):
+        raise HTTPException(status_code=422, detail="Invalid approval target")
+    try:
+        token = issue_approval(current_user.id, payload.method, payload.target, payload.payload)
+    except (RuntimeError, ValueError, OSError, sqlite3.Error):
+        raise HTTPException(status_code=503, detail="Approval service unavailable") from None
+    return {"approval_token": token, "expires_in": APPROVAL_TTL_SECONDS}
 
 
 @auth_router.post(
