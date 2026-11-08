@@ -29,7 +29,10 @@ class KnowledgeQuery(BaseModel):
     @field_validator("question")
     @classmethod
     def strip_question(cls, value: str) -> str:
-        return safe_text(value, 2000)
+        question = value.strip()
+        if not question:
+            raise ValueError("La pregunta no puede estar vacia.")
+        return question
 
 
 class KnowledgeAnswer(BaseModel):

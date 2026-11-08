@@ -39,6 +39,7 @@ from .brasaland_api.auth import (
     Role,
     UserInDB,
 )
+from .brasaland_api import auth as session_auth
 from .brasaland_api.analysis import (
     availability_by_day_and_source,
     api_latency_by_day,
@@ -50,6 +51,7 @@ from .brasaland_api.security import ConfirmationMiddleware
 from .brasaland_api.telemetry import telemetry_router
 from .brasaland_api.knowledge import knowledge_router
 from .brasaland_api.rfp_intake import rfp_intake_router
+from .brasaland_api.talent import talent_router
 from services.reporting.api import create_reporting_router
 
 load_dotenv(Path(__file__).resolve().parent.parent / ".env")
@@ -110,6 +112,7 @@ app.include_router(profiles_router)
 app.include_router(telemetry_router)
 app.include_router(knowledge_router)
 app.include_router(rfp_intake_router)
+app.include_router(talent_router)
 app.include_router(create_reporting_router(require_roles, lambda: DB_PATH))
 
 
@@ -826,7 +829,7 @@ _telemetry_report_cache: dict[tuple[str | None, str | None], tuple[float, dict]]
 _telemetry_report_cache_lock = Lock()
 AUTH_SECRET = require_secret("BRASALAND_AUTH_SECRET")
 RESET_TOKEN_TTL_MINUTES = int(os.getenv("RESET_TOKEN_TTL_MINUTES", "30"))
-FRONTEND_BASE_URL = os.getenv("FRONTEND_BASE_URL", "http://localhost:5500/uis/auth")
+FRONTEND_BASE_URL = os.getenv("FRONTEND_BASE_URL", "http://localhost:4173/platform/auth")
 FX_COP_PER_USD = 3950.0
 JWT_SECRET = require_secret("BRASALAND_JWT_SECRET")
 JWT_EXPIRATION_HOURS = 8
@@ -1097,6 +1100,15 @@ def get_authenticated_user(authorization: str | None = Header(default=None)) -> 
 def validate_password(password: str) -> None:
     if len(password) < 8:
         raise HTTPException(status_code=400, detail="Password must contain at least 8 characters")
+
+
+async def get_password_user(authorization: str | None = Header(default=None)) -> Row | UserInDB:
+    if authorization and authorization.startswith("Bearer "):
+        try:
+            return await get_current_user(authorization[7:])
+        except HTTPException:
+            pass
+    return get_authenticated_user(authorization)
 
 
 def send_reset_email(email: str, reset_url: str) -> None:
@@ -2494,6 +2506,18 @@ def login(payload: LoginRequest) -> AuthTokenResponse:
 
 @app.post("/auth/forgot-password")
 def forgot_password(payload: ForgotPasswordRequest) -> dict[str, str]:
+    current_user = session_auth.get_user_by_email(payload.email.strip())
+    if current_user is not None:
+        if current_user.is_active:
+            raw_token = secrets.token_urlsafe(32)
+            session_auth.get_db().table("password_resets").insert({
+                "token_hash": hashlib.sha256(raw_token.encode()).hexdigest(),
+                "user_id": current_user.id,
+                "expires_at": (datetime.now(timezone.utc) + timedelta(minutes=RESET_TOKEN_TTL_MINUTES)).isoformat(),
+                "used_at": None,
+            })
+            send_reset_email(payload.email.strip(), f"{FRONTEND_BASE_URL.rstrip('/')}/reset-password?token={raw_token}")
+        return {"message": "Si esa dirección está registrada, recibirás un enlace en breve"}
     with get_db() as db:
         user = db.execute("SELECT id FROM users WHERE email = ? COLLATE NOCASE", (payload.email.strip(),)).fetchone()
         if user is not None:
@@ -2512,6 +2536,18 @@ def reset_password(payload: ResetPasswordRequest) -> dict[str, str]:
     validate_password(payload.new_password)
     now = datetime.now(timezone.utc)
     token_hash = hashlib.sha256(payload.token.encode()).hexdigest()
+    resets = session_auth.get_db().table("password_resets")
+    current_reset = resets.get(lambda record: record.get("token_hash") == token_hash)
+    if current_reset is not None:
+        if current_reset.get("used_at") is not None or datetime.fromisoformat(current_reset["expires_at"]) <= now:
+            raise HTTPException(status_code=400, detail="Invalid, expired, or already used reset token")
+        users = session_auth.get_users_table()
+        current_user = users.get(doc_id=int(current_reset["user_id"]))
+        if current_user is None or not current_user.get("is_active"):
+            raise HTTPException(status_code=400, detail="Invalid, expired, or already used reset token")
+        users.update({"hashed_password": session_auth.hash_password(payload.new_password)}, doc_ids=[int(current_reset["user_id"])])
+        resets.update({"used_at": now.isoformat()}, lambda record: record.get("user_id") == current_reset["user_id"] and record.get("used_at") is None)
+        return {"message": "Password updated successfully"}
     with get_db() as db:
         token = db.execute("SELECT * FROM password_reset_tokens WHERE token_hash = ?", (token_hash,)).fetchone()
         if token is None or token["used_at"] is not None or datetime.fromisoformat(token["expires_at"]) <= now:
@@ -2523,8 +2559,14 @@ def reset_password(payload: ResetPasswordRequest) -> dict[str, str]:
 
 
 @app.post("/auth/change-password")
-def change_password(payload: ChangePasswordRequest, user: Row = Depends(get_authenticated_user)) -> dict[str, str]:
+def change_password(payload: ChangePasswordRequest, user: Row | UserInDB = Depends(get_password_user)) -> dict[str, str]:
     validate_password(payload.new_password)
+    if isinstance(user, UserInDB):
+        if not session_auth.verify_password(payload.current_password, user.hashed_password):
+            raise HTTPException(status_code=400, detail="Current password is incorrect")
+        session_auth.get_users_table().update({"hashed_password": session_auth.hash_password(payload.new_password)}, doc_ids=[int(user.id)])
+        session_auth.get_db().table("password_resets").update({"used_at": datetime.now(timezone.utc).isoformat()}, lambda record: record.get("user_id") == user.id and record.get("used_at") is None)
+        return {"message": "Password updated successfully"}
     if not verify_password(payload.current_password, user["password_hash"]):
         raise HTTPException(status_code=400, detail="Current password is incorrect")
     with get_db() as db:

@@ -6,6 +6,7 @@ function resolveApiBase() {
   if (fromQuery) {
     return fromQuery.replace(/\/$/, "");
   }
+  if (window.BRASALAND_API_BASE) return window.BRASALAND_API_BASE.replace(/\/$/, "");
 
   if (window.location.protocol === "file:") {
     return null;

@@ -336,8 +336,8 @@ export default function CandidateDetailPage() {
 
   return (
     <main className="mx-auto flex w-full max-w-5xl flex-1 flex-col gap-6 px-4 py-8 sm:px-6 lg:px-10">
-      <header className="flex items-center justify-between gap-3 rounded-2xl border bg-[var(--surface-strong)] p-6 shadow-[0_20px_60px_-40px_rgba(26,31,54,0.5)]">
-        <div>
+      <header className="flex flex-col items-start gap-3 rounded-2xl border bg-[var(--surface-strong)] p-6 shadow-[0_20px_60px_-40px_rgba(26,31,54,0.5)] sm:flex-row sm:items-center sm:justify-between">
+        <div className="min-w-0">
           <p className="font-mono text-xs uppercase tracking-[0.18em] text-[var(--brand)]">
             Personas y Cultura | Brasaland
           </p>
@@ -347,7 +347,7 @@ export default function CandidateDetailPage() {
           <p className="mt-1 text-sm text-[var(--muted)]">{candidate.position} | Sede: Colombia / Florida</p>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <button
             type="button"
             onClick={() => setIsDeleteModalOpen(true)}
@@ -359,13 +359,13 @@ export default function CandidateDetailPage() {
           <button
             type="button"
             onClick={() => router.back()}
-            className="rounded-lg border bg-white px-3 py-2 text-sm font-semibold transition hover:bg-[var(--surface)]"
+            className="rounded-lg border bg-white px-3 py-2 text-sm font-semibold text-[#10295b] transition hover:bg-[var(--surface)]"
           >
             Atras
           </button>
           <Link
             href={backHref}
-            className="rounded-lg border bg-white px-3 py-2 text-sm font-semibold transition hover:bg-[var(--surface)]"
+            className="rounded-lg border bg-white px-3 py-2 text-sm font-semibold text-[#10295b] transition hover:bg-[var(--surface)]"
           >
             Ir al listado
           </Link>

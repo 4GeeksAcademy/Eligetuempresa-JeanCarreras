@@ -8,7 +8,7 @@ const warning = document.querySelector("#warning");
 const updated = document.querySelector("#updated");
 const params = new URLSearchParams(location.search);
 const preview = location.hostname.match(/^(.*)-\d+(\.(?:app\.)?github\.dev)$/);
-const apiBase = params.get("apiBase") || (preview
+const apiBase = params.get("apiBase") || window.BRASALAND_API_BASE || (preview
   ? `${location.protocol}//${preview[1]}-8000${preview[2]}`
   : `${location.protocol}//${location.hostname}:8000`);
 const numberFormat = new Intl.NumberFormat("es-CO", { maximumSignificantDigits: 12 });
@@ -119,6 +119,6 @@ async function loadReport(event) {
   }
 }
 
-document.querySelector("#login").href = `../../auth/?${new URLSearchParams({ apiBase })}`;
+document.querySelector("#login").href = `../../auth/?${new URLSearchParams({ apiBase, next: location.pathname + location.search })}`;
 form.addEventListener("submit", loadReport);
 loadReport();

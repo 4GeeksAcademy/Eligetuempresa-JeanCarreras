@@ -11,14 +11,16 @@ export type UserProfile = {
 };
 
 export function getAccessToken(): string | null {
-  return typeof window === "undefined" ? null : window.localStorage.getItem(ACCESS_TOKEN_KEY);
+  return typeof window === "undefined" ? null : window.localStorage.getItem(ACCESS_TOKEN_KEY) || window.localStorage.getItem("brasaland_token");
 }
 
 export function saveAccessToken(token: string): void {
+  window.localStorage.setItem("brasaland_token", token);
   window.localStorage.setItem(ACCESS_TOKEN_KEY, token);
 }
 
 export function clearSession(): void {
+  window.localStorage.removeItem("brasaland_token");
   window.localStorage.removeItem(ACCESS_TOKEN_KEY);
 }
 
