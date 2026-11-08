@@ -8,7 +8,7 @@ import type {
 import { protectedRequestNoContentUrl, protectedRequestUrl } from "./authApi";
 
 function getApiBase(): string {
-  return process.env.NEXT_PUBLIC_TRACKER_API_URL ?? "https://playground.4geeks.com/tracker/api/v1";
+  return process.env.NEXT_PUBLIC_TRACKER_API_URL ?? `${window.location.origin}/backend/api/v1/talent`;
 }
 
 function normalizeRecord(record: CandidateApiRecord): CandidateRecord {

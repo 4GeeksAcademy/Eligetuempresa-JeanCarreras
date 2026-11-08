@@ -48,6 +48,7 @@ button:disabled { cursor: progress; opacity: .65; }
 .status { min-height: 1.4rem; overflow-wrap: anywhere; }
 .status.error, .missing { color: #9b302a; }
 .result-section { padding-top: .75rem; border-top: 1px solid var(--line); }
+.result-section pre { max-height: 400px; overflow: auto; white-space: pre-wrap; overflow-wrap: anywhere; }
 .metadata-list { display: grid; grid-template-columns: minmax(130px, .4fr) minmax(0, 1fr); gap: .45rem .8rem; margin: .75rem 0; }
 .metadata-list dt { color: var(--muted); font-size: .85rem; }
 .metadata-list dd { min-width: 0; margin: 0; overflow-wrap: anywhere; }

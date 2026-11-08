@@ -22,6 +22,8 @@ fi
 PY_BIN=""
 if [[ -x "$SERVICE_DIR/.venv/bin/python" ]]; then
   PY_BIN="$SERVICE_DIR/.venv/bin/python"
+elif [[ -x "$SERVICE_DIR/.venv312/bin/python" ]]; then
+  PY_BIN="$SERVICE_DIR/.venv312/bin/python"
 elif [[ -x "$ROOT_DIR/.venv/bin/python" ]]; then
   PY_BIN="$ROOT_DIR/.venv/bin/python"
 elif command -v python3 >/dev/null 2>&1; then

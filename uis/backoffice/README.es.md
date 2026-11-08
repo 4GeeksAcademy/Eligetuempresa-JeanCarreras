@@ -21,17 +21,33 @@ datos de demostracion, no consulta tablas operativas ni ejecuta el pipeline.
 Desde la raiz del monorepo:
 
 ```bash
-python -m http.server 5510 --bind 0.0.0.0 --directory uis
+npm ci --prefix uis/talent-pipeline-tracker
+bash scripts/run_dashboard_local.sh
 ```
 
-Abrir http://localhost:5510/backoffice/reporting/?apiBase=http://localhost:8000
-con la API de la Parte 2 ejecutandose en el puerto 8000. En Codespaces se deriva
-el host del puerto 8000; `apiBase` permite indicar otra direccion.
+Abrir http://localhost:4173/platform/backoffice/. El script sirve las UIs
+estaticas en el puerto interno 5510 y Next.js en 4173. Next.js expone los modulos
+estaticos bajo `/platform/`, Talento en `/` y las utilidades en `/data-utils`.
+La API se alcanza por `/backend/` en el mismo origen del navegador.
+`DASHBOARD_PORT`, `STATIC_PORT` y `API_PORT` permiten cambiar los puertos.
 
-La pagina usa el token `brasaland_token` de la sesion existente, sin credenciales
-fijas ni tokens en la URL. Iniciar sesion desde Mi cuenta en el mismo origen web.
+El menu comun conecta Inicio, Direccion, Informes, RFP, Conocimiento,
+Fidelizacion, Talento, Utilidades y el sitio publico. Mi cuenta conserva el
+destino de retorno. El login sincroniza las claves de sesion existentes
+`brasaland_token` y `brasaland_access_token`, sin tokens en las URLs.
+El cierre de sesion borra ambas claves. Los destinos de retorno son del mismo origen.
 El endpoint exige uno de los roles `executive`, `finance` o `admin`.
-El origen del dashboard debe estar permitido por la configuracion CORS de la API.
+Talento usa `/api/v1/talent/records` y requiere `admin` o `manager`; ya no usa
+el servicio externo de practicas por defecto. La vista de utilidades importa
+las funciones de `src/utils/` y separa los resumenes por pais y moneda.
+
+Provisionar `BRASALAND_JWT_SECRET` y `BRASALAND_AUTH_SECRET` en el entorno
+de la API. Para una base vacia, el bootstrap de una cuenta administradora requiere
+`BRASALAND_BOOTSTRAP_ADMIN_EMAIL` y `BRASALAND_BOOTSTRAP_ADMIN_PASSWORD`.
+No hay cuentas ni passwords fijas. Consultar la configuracion de la API para
+Supabase, RAG/LLM y correo; las pruebas temporales no sustituyen estos servicios.
+Configurar `FRONTEND_BASE_URL` con el origen publicado y `/platform/auth`
+para que los enlaces enviados por correo apunten a la aplicacion correcta.
 
 ## Contrato y limites
 
@@ -55,15 +71,22 @@ node --test uis/backoffice/reporting/client.test.mjs
 Estas pruebas del consumidor son adicionales; no sustituyen los tests de las
 tasks Python requeridos en `tests/pipelines/test_pipeline.py`.
 
-## Pendientes de integracion
+## Estado y limites de validacion
 
-La rama de Parte 3 no incluye aun el servicio de reporting de Parte 2.
-Hasta integrarlo, la pagina mostrara un estado de servicio no disponible.
+El router de reporting y los endpoints de respuesta RFP de Parte 2 estan
+registrados en la API. La UI de RFP conecta generacion, consulta de borradores,
+evaluaciones, decisiones por departamento, arbitraje, trazabilidad y descarga
+del documento final como JSON. Las decisiones requieren confirmacion explicita.
+La ejecucion real de RFP requiere Supabase, sus migraciones y el proveedor LLM.
 El acceso de Copilot a `data/` esta excluido por politica empresarial: no se han
 modificado ni leido los archivos protegidos para construir esta pagina.
 
 Los titulos actuales derivan de los nombres de columnas, reemplazando guiones
 bajos por espacios. Falta contrastarlos con los nombres y unidades exactos del
 diseno de KPIs antes de considerar esta vista una entrega final de negocio.
-Tambien quedan pendientes las pruebas con datos reales y la verificacion visual
-en navegador. No se afirma cobertura de todos los KPIs del documento excluido.
+La navegacion por clics, el login y logout se verificaron en Chromium con una
+cuenta y bases temporales. El home se verifico visualmente en escritorio y movil.
+Tambien se ejecutaron las pruebas existentes de reporting, passwords y respuesta
+RFP, y comprobaciones aisladas de CRUD de Talento y renderizado de RFP.
+Quedan pendientes las pruebas con datos y servicios reales. No se afirma
+cobertura de todos los KPIs del documento excluido ni cierre del capstone en produccion.

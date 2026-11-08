@@ -169,17 +169,29 @@ textarea:focus {
 
 .session-nav {
   display: flex;
-  position: fixed;
-  top: 1rem;
-  right: 1rem;
+  flex-wrap: wrap;
+  position: relative;
+  padding: 16px 24px;
+  background: #fff;
+  color: #172820;
+  border-bottom: 1px solid var(--line);
   z-index: 50;
-  gap: 0.5rem;
+  gap: 8px 16px;
   align-items: center;
-  font-size: 0.85rem;
+  font-size: 14px;
 }
 
 .session-nav a,
-.session-nav button,
+.session-nav button {
+  border: 0;
+  border-radius: 0;
+  padding: 6px 0;
+  background: transparent;
+  color: inherit;
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+
 .auth-form button {
   border: 1px solid var(--line);
   border-radius: 0.5rem;

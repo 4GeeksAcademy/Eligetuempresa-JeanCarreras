@@ -17,7 +17,7 @@ export type RegisterPayload = {
 };
 
 function getApiBase(): string {
-  const apiBase = process.env.NEXT_PUBLIC_API_URL;
+  const apiBase = process.env.NEXT_PUBLIC_API_URL || (typeof window !== "undefined" ? `${window.location.origin}/backend` : "");
   if (!apiBase) {
     throw new Error(API_UNAVAILABLE_MESSAGE);
   }
@@ -83,7 +83,8 @@ export async function register(payload: RegisterPayload): Promise<void> {
 }
 
 export async function getCurrentProfile(): Promise<UserProfile> {
-  return await protectedRequest<UserProfile>("/auth/me");
+  const response = await protectedRequest<UserProfile & { profile?: Omit<UserProfile, "email"> | null }>("/auth/me");
+  return { ...response, ...(response.profile || {}) };
 }
 
 export async function updateCurrentProfile(profile: Omit<UserProfile, "email">): Promise<UserProfile> {

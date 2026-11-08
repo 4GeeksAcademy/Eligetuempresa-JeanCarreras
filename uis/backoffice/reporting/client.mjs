@@ -12,7 +12,7 @@ export function reportingUrl(apiBase, { startDate, endDate, country = "", storeI
   if (!["", "CO", "US"].includes(country)) {
     throw new Error("Selecciona Colombia, Estados Unidos o todos los paises.");
   }
-  const url = new URL("/api/v1/reporting/kpis", base);
+  const url = new URL(`${base.href.replace(/\/$/, "")}/api/v1/reporting/kpis`);
   url.search = new URLSearchParams({ start_date: startDate, end_date: endDate, limit: "500" });
   if (country) url.searchParams.set("country", country);
   if (storeId.trim()) url.searchParams.set("store_id", storeId.trim());
