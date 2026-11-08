@@ -14,5 +14,6 @@ py-readability-metrics>=1.4.5
 python-jose[cryptography]>=3.5.0
 python-multipart>=0.0.32
 prefect>=3
-qdrant-client>=1.14,<2
+qdrant-client>=1.14,<1.15
 tinydb>=4.8.0
+fastembed>=0.7,<1
