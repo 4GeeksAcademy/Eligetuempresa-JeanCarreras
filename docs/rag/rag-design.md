@@ -33,6 +33,45 @@ El parser conserva el árbol de encabezados Markdown como `section` y utiliza lo
 
 Qdrant usa distancia COSINE. El umbral inicial es `RAG_MIN_SCORE=0.35` en el rango de score coseno de Qdrant; es una configuración inicial, no un umbral calibrado sobre resultados reales. `data/eval/evaluate_retrieval.py` calcula Recall@3 con el umbral configurado. Antes de declarar el 80% de Recall@3, se debe ejecutar contra el Qdrant y el modelo de embeddings reales y ajustar el umbral con esos resultados.
 
+## Alternativa Local Con Groq
+
+Para usar embeddings sin otra clave de proveedor, la pasarela
+`services/brasaland-api/src/brasaland_api/local_llm.py` expone `/v1/embeddings`
+con FastEmbed en CPU y `/v1/chat/completions` con Groq. Escucha solo en
+`127.0.0.1` y exige `BRASALAND_LOCAL_LLM_KEY` como Bearer. No acepta streaming.
+
+Modelo local verificado: `sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2`,
+384 dimensiones. La primera ejecucion descarga aproximadamente 241 MB; despues
+reutiliza la cache. No se reportan consumos de tokens inventados para el modelo local.
+`BRASALAND_EMBED_CACHE` permite fijar una cache persistente.
+
+Configurar estas variables en el entorno de los procesos, sin pegar claves en
+el chat ni incorporarlas a Git:
+
+```sh
+export BRASALAND_LOCAL_LLM_KEY="$(python3 -c 'import secrets; print(secrets.token_hex(32))')"
+export LLM_API_KEY="$BRASALAND_LOCAL_LLM_KEY"
+export LLM_API_BASE_URL=http://127.0.0.1:8010/v1
+export RAG_EMBEDDING_MODEL=sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2
+# Configurar GROQ_API_KEY de forma privada y elegir un modelo disponible en Groq.
+# RAG_GENERATION_MODEL y GROQ_GENERATION_MODEL deben indicar ese modelo real.
+bash scripts/run_local_llm.sh
+```
+
+La API, el indexador y la pasarela deben compartir esa configuracion. Los exports
+de un terminal no se propagan automaticamente a otros terminales ni a servidores
+ya iniciados. Para clientes que usan las variables estandar del SDK OpenAI,
+configurar `OPENAI_BASE_URL` con la misma URL local y `OPENAI_API_KEY` con la
+misma clave local, no con la clave de Groq. `GROQ_GENERATION_MODEL` permite
+dirigir los nombres de modelo de esos clientes al modelo real de Groq.
+
+Cambiar de modelo invalida la compatibilidad con vectores previos. Reindexar el
+corpus oficial solo en una coleccion de desarrollo confirmada: `setup()` elimina
+y recrea la coleccion. No se ejecuto esa operacion ni se tocaron archivos de
+`data/` para implementar la pasarela. Despues de reindexar, volver a evaluar
+Recall@3 y calibrar el umbral; las 384 dimensiones no implican calidad de retrieval
+validada. La conexion real a Groq requiere la clave y el modelo de la cuenta.
+
 ## Idempotencia y seguridad de respuesta
 
 En desarrollo, `setup()` calcula los embeddings antes de cambiar la colección; luego elimina y recrea `brasaland_knowledge`. Los IDs de points son UUID5 deterministas basados en `source_document` y `chunk_index`, por lo que repetir la carga no duplica puntos. Esta estrategia de recreación no debe ejecutarse en una colección productiva con datos ajenos al corpus.
