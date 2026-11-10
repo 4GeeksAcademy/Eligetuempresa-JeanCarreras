@@ -56,7 +56,7 @@ cleanup() {
 trap cleanup EXIT
 
 is_api_up() {
-  curl -fsS "$API_BASE/health" >/dev/null 2>&1
+  curl -sS -w "HTTP_STATUS:%{http_code}" "$API_BASE/health" >/dev/null 2>&1
 }
 
 ensure_api_running() {
@@ -104,11 +104,11 @@ echo "Rango=$START_DATE..$END_DATE"
 ensure_api_running
 
 # 1) Health
-health_body="$(curl -fsS "$API_BASE/health")"
+health_body="$(curl -sS -w "HTTP_STATUS:%{http_code}" "$API_BASE/health")"
 assert_contains "health" '"status":"ok"' "$health_body"
 
 # 2) Sales summary (con token legacy de operations)
-summary_body="$(curl -fsS "$API_BASE/api/v1/sales/summary?period=week&currency=$CURRENCY&start_date=$START_DATE&end_date=$END_DATE" \
+summary_body="$(curl -sS -w "HTTP_STATUS:%{http_code}" "$API_BASE/api/v1/sales/summary?period=week&currency=$CURRENCY&start_date=$START_DATE&end_date=$END_DATE" \
   -H "X-API-Role: operations" \
   -H "X-API-Token: $OPS_TOKEN")"
 assert_contains "sales summary" '"total_sales"' "$summary_body"
